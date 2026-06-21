@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>mira — handmade flour tortillas, Lisboa</title>
+  <meta name="description" content="mira tortillas — flour tortillas made by hand in Lisboa with four ingredients: flour, water, avocado oil, salt. Par-cooked, finished by you. Small, medium & large.">
+  <meta name="theme-color" content="#2fa63a">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Ccircle cx='32' cy='32' r='30' fill='%23ecd9af'/%3E%3Ccircle cx='22' cy='20' r='4' fill='%23b98a4e' opacity='.6'/%3E%3Ccircle cx='44' cy='28' r='3' fill='%23b98a4e' opacity='.6'/%3E%3Ccircle cx='30' cy='44' r='4' fill='%23b98a4e' opacity='.6'/%3E%3C/svg%3E">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css?v=14">
+</head>
+<body>
+
+  <!-- ───────── preloader ───────── -->
+  <div class="loader" id="loader" aria-hidden="true">
+    <div class="loader__inner">
+      <img class="loader__mark" src="assets/mira-wordmark.png" alt="">
+      <div class="loader__row">
+        <span class="loader__label mono">warming up the comal</span>
+        <span class="loader__count mono" id="loaderCount">0%</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ───────── custom cursor ───────── -->
+  <div class="cursor" id="cursor" aria-hidden="true"></div>
+
+  <!-- ───────── nav ───────── -->
+  <header class="nav" id="nav">
+    <a href="#top" class="nav__logo" aria-label="mira tortillas — home">
+      <img src="assets/mira-wordmark.png" alt="mira">
+    </a>
+    <nav class="nav__links mono" aria-label="Main">
+      <a href="#tamanhos" data-hover data-i18n="nav_sizes">sizes</a>
+      <a href="#ingredientes" data-hover data-i18n="nav_ing">ingredients</a>
+      <a href="#como" data-hover data-i18n="nav_heat">how-to</a>
+    </nav>
+    <div class="nav__right">
+      <button class="nav__lang mono" id="langToggle" data-hover aria-label="Mudar para português">PT</button>
+      <a href="#tamanhos" class="btn btn--ink nav__cta" data-hover><span data-i18n="nav_order">order</span><span class="btn__dot"></span></a>
+    </div>
+  </header>
+
+  <main id="top">
+
+    <!-- ───────── hero ───────── -->
+    <section class="hero" id="hero">
+      <div class="hero__tag mono" data-hero-fade data-i18n="hero_tag">
+        <span>made by hand</span> <span>·</span> <span>lisboa</span>
+      </div>
+
+      <h1 class="hero__title" aria-label="mira tortillas">
+        <span class="hero__stage">
+          <img class="hero__mark" src="assets/mira-wordmark.png" alt="mira" data-hero-mark>
+        </span>
+        <span class="hero__line"><span class="hero__word" data-split>tortillas</span></span>
+      </h1>
+
+      <div class="hero__foot">
+        <p class="hero__blurb" data-hero-fade data-i18n="hero_blurb">Four ingredients, pressed &amp; par-cooked in small batches in Lisboa.<br>You give them the final toast at home.</p>
+        <a href="#tamanhos" class="btn btn--green" data-hover data-hero-fade data-i18n="hero_cta">choose your size<span class="btn__dot"></span></a>
+      </div>
+
+      <div class="hero__scroll mono" data-hero-fade>scroll<span class="hero__scroll-line"></span></div>
+    </section>
+
+    <!-- ───────── marquee ───────── -->
+    <div class="marquee" aria-hidden="true">
+      <div class="marquee__track" id="marqueeTrack">
+        <span class="marquee__chunk" data-i18n="marquee">flour <i>·</i> water <i>·</i> avocado oil <i>·</i> salt <i>·</i>&nbsp;</span>
+      </div>
+    </div>
+
+    <!-- ───────── sizes / pricing ───────── -->
+    <section class="sizes" id="tamanhos">
+      <div class="sizes__head">
+        <span class="kicker mono" data-reveal data-i18n="sizes_kicker">01 — pick your size</span>
+        <h2 class="sizes__title"><span data-split-lines data-i18n="sizes_title">one dough.<br>three sizes.</span></h2>
+        <p class="sizes__sub" data-reveal data-i18n="sizes_sub">Taco night, burrito Sunday or snack-size quesadillas — there's a stack for that.</p>
+      </div>
+
+      <div class="sizes__grid">
+        <article class="card card--sky" data-card>
+          <header class="card__top">
+            <span class="card__size mono">S</span>
+            <span class="card__count mono">×12</span>
+          </header>
+          <div class="card__tortilla card__tortilla--s" aria-hidden="true"><span></span></div>
+          <h3 class="card__name" data-i18n="s_name">small</h3>
+          <p class="card__desc" data-i18n="s_desc">10&nbsp;cm — street-taco size. Two-bite wonders, party favourites.</p>
+          <footer class="card__foot">
+            <div class="card__price"><span class="card__eur">€8</span></div>
+            <a class="btn btn--ink card__btn" data-hover data-buy="small" href="mailto:ola@miratortillas.pt?subject=Order%20%E2%80%94%2012%20small%20tortillas%20(%E2%82%AC8)&body=Ol%C3%A1%20mira!%20I%27d%20like%20to%20order%2012%20small%20tortillas%20(%E2%82%AC8)."><span data-i18n="s_btn">buy small · €8</span><span class="btn__dot"></span></a>
+          </footer>
+        </article>
+
+        <article class="card card--green card--featured" data-card>
+          <span class="card__flag mono">a favorita</span>
+          <header class="card__top">
+            <span class="card__size mono">M</span>
+            <span class="card__count mono">×12</span>
+          </header>
+          <div class="card__tortilla card__tortilla--m" aria-hidden="true"><span></span></div>
+          <h3 class="card__name" data-i18n="m_name">medium</h3>
+          <p class="card__desc" data-i18n="m_desc">15&nbsp;cm — the everyday hero. Wraps, quesadillas, breakfast burritos.</p>
+          <footer class="card__foot">
+            <div class="card__price"><span class="card__eur">€10</span></div>
+            <a class="btn btn--cream card__btn" data-hover data-buy="medium" href="mailto:ola@miratortillas.pt?subject=Order%20%E2%80%94%2012%20medium%20tortillas%20(%E2%82%AC10)&body=Ol%C3%A1%20mira!%20I%27d%20like%20to%20order%2012%20medium%20tortillas%20(%E2%82%AC10)."><span data-i18n="m_btn">buy medium · €10</span><span class="btn__dot"></span></a>
+          </footer>
+        </article>
+
+        <article class="card card--oxblood" data-card>
+          <header class="card__top">
+            <span class="card__size mono">L</span>
+            <span class="card__count mono">×6</span>
+          </header>
+          <div class="card__tortilla card__tortilla--l" aria-hidden="true"><span></span></div>
+          <h3 class="card__name" data-i18n="l_name">large</h3>
+          <p class="card__desc" data-i18n="l_desc">25&nbsp;cm — burrito territory. Big enough to wrap your whole evening.</p>
+          <footer class="card__foot">
+            <div class="card__price"><span class="card__eur">€9</span></div>
+            <a class="btn btn--cream card__btn" data-hover data-buy="large" href="mailto:ola@miratortillas.pt?subject=Order%20%E2%80%94%206%20large%20tortillas%20(%E2%82%AC9)&body=Ol%C3%A1%20mira!%20I%27d%20like%20to%20order%206%20large%20tortillas%20(%E2%82%AC9)."><span data-i18n="l_btn">buy large · €9</span><span class="btn__dot"></span></a>
+          </footer>
+        </article>
+      </div>
+      <p class="sizes__pay mono" data-reveal data-i18n="pay_note">secure checkout by stripe — card · apple pay · google pay · mb way / multibanco</p>
+    </section>
+
+    <!-- ───────── ingredients ───────── -->
+    <section class="ingredients" id="ingredientes">
+      <div class="ingredients__head">
+        <span class="kicker mono" data-reveal data-i18n="ing_kicker">02 — the recipe</span>
+        <h2 class="ingredients__title"><span data-split-lines data-i18n="ing_title">only four<br>ingredients.</span></h2>
+        <span class="ingredients__big" data-count-4 aria-hidden="true">4</span>
+      </div>
+      <ul class="ingredients__list">
+        <li class="ing" data-ing>
+          <span class="ing__num mono">01</span>
+          <span class="ing__en">flour</span>
+          <span class="ing__pt mono">farinha</span>
+        </li>
+        <li class="ing" data-ing>
+          <span class="ing__num mono">02</span>
+          <span class="ing__en">water</span>
+          <span class="ing__pt mono">água</span>
+        </li>
+        <li class="ing" data-ing>
+          <span class="ing__num mono">03</span>
+          <span class="ing__en">avocado oil</span>
+          <span class="ing__pt mono">óleo de abacate</span>
+        </li>
+        <li class="ing" data-ing>
+          <span class="ing__num mono">04</span>
+          <span class="ing__en">salt</span>
+          <span class="ing__pt mono">sal</span>
+        </li>
+      </ul>
+      <p class="ingredients__note" data-reveal data-i18n="ing_note">The whole label, start to finish. Mixed, rolled and pressed by hand in Lisboa.</p>
+    </section>
+
+    <!-- ───────── how to heat (par-cooked) ───────── -->
+    <section class="heat" id="como">
+      <div class="heat__head">
+        <span class="kicker kicker--cream mono" data-reveal data-i18n="heat_kicker">03 — fire it up</span>
+        <h2 class="heat__title"><span data-split-lines data-i18n="heat_title">par-cooked by us.<br>finished by you.</span></h2>
+        <p class="heat__sub" data-reveal data-i18n="heat_sub">Every mira tortilla leaves our kitchen 90% done. The last 40 seconds happen in your pan — that final toast is what makes them taste fresh-made.</p>
+      </div>
+
+      <div class="heat__grid">
+        <div class="heat__scene" data-reveal aria-label="Animation: tortilla toasting in a dry pan, flipping, then joining a warm stack">
+          <svg id="heatScene" viewBox="0 0 640 460" role="img">
+            <defs>
+              <!-- wobbles every stroke so the whole scene reads as ink on paper -->
+              <filter id="rough" x="-6%" y="-6%" width="112%" height="112%">
+                <feTurbulence type="fractalNoise" baseFrequency="0.018" numOctaves="3" seed="11" result="n"/>
+                <feDisplacementMap in="SourceGraphic" in2="n" scale="6"/>
+              </filter>
+            </defs>
+
+            <!-- label pill (crisp UI, not part of the drawing) -->
+            <g id="heatLabelG" transform="translate(320,52)">
+              <rect x="-128" y="-27" width="256" height="54" rx="27" fill="#f4eee1"/>
+              <text id="heatLabel" x="0" y="7" text-anchor="middle" font-family="'IBM Plex Mono', monospace" font-size="19" fill="#141412">dry pan · no oil</text>
+            </g>
+
+            <g filter="url(#rough)">
+              <!-- steam squiggles -->
+              <g id="steam" stroke="#f4eee1" stroke-width="3.5" stroke-linecap="round" fill="none" opacity="0.9">
+                <path class="steam-p" d="M225 268 c 8 -14 -10 -22 -2 -38 c 6 -12 -6 -20 2 -34" opacity="0"/>
+                <path class="steam-p" d="M285 262 c 9 -15 -9 -23 -1 -39 c 6 -12 -7 -21 1 -35" opacity="0"/>
+                <path class="steam-p" d="M345 268 c 8 -14 -10 -22 -2 -38 c 6 -12 -6 -20 2 -34" opacity="0"/>
+              </g>
+
+              <!-- tortilla -->
+              <g id="tort" transform="translate(285,295)">
+                <path id="tortBody" d="M-92 0 Q-90 -13 0 -13 Q90 -13 92 0 Q90 13 0 13 Q-90 13 -92 0 Z" fill="#ecd9af" stroke="#f4eee1" stroke-width="3.5"/>
+                <g id="tortSpots" stroke="#b98a4e" stroke-width="3" stroke-linecap="round" fill="none">
+                  <path class="spot" d="M-58 -3 q 6 -4 12 0"/>
+                  <path class="spot" d="M-16 -6 q 5 -3 10 0"/>
+                  <path class="spot" d="M26 -4 q 6 -4 12 0"/>
+                  <path class="spot" d="M58 -2 q 4 -3 9 0"/>
+                  <path class="spot" d="M4 3 q 5 3 10 0"/>
+                  <path class="spot" d="M-36 4 q 4 3 9 0"/>
+                </g>
+              </g>
+
+              <!-- pan, drawn as one ink line -->
+              <g id="pan" stroke="#f4eee1" stroke-linecap="round" stroke-linejoin="round" fill="none">
+                <path d="M147 306 l 2 12 q 2 10 14 10 l 246 0 q 12 0 14 -10 l 2 -12" stroke-width="4.5"/>
+                <path d="M426 312 l 108 -2 q 12 -1 12 8 q 0 8 -12 7 l -22 -1" stroke-width="4"/>
+                <path d="M160 318 l 252 0" stroke-width="2.5" opacity="0.5"/>
+              </g>
+
+              <!-- gas flames, outlined -->
+              <g id="flames" fill="none" stroke="#ff8a3d" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round">
+                <path class="flame" transform="translate(205,392)" d="M0 0 C -11 -14 -4 -26 0 -40 C 4 -26 11 -14 0 0 Z"/>
+                <path class="flame" transform="translate(255,396)" d="M0 0 C -10 -13 -4 -24 0 -36 C 4 -24 10 -13 0 0 Z"/>
+                <path class="flame" transform="translate(305,392)" d="M0 0 C -11 -14 -4 -26 0 -40 C 4 -26 11 -14 0 0 Z"/>
+                <path class="flame" transform="translate(355,396)" d="M0 0 C -10 -13 -4 -24 0 -36 C 4 -24 10 -13 0 0 Z"/>
+              </g>
+
+              <!-- finished stack on a plate -->
+              <g id="stackG">
+                <path d="M28 420 q 64 18 128 0" fill="none" stroke="#f4eee1" stroke-width="4" stroke-linecap="round"/>
+                <ellipse class="stack-t" cx="92" cy="412" rx="55" ry="9" fill="#ecd9af" stroke="#f4eee1" stroke-width="3" opacity="0"/>
+                <ellipse class="stack-t" cx="92" cy="400" rx="55" ry="9" fill="#ecd9af" stroke="#f4eee1" stroke-width="3" opacity="0"/>
+                <ellipse class="stack-t" cx="92" cy="388" rx="55" ry="9" fill="#ecd9af" stroke="#f4eee1" stroke-width="3" opacity="0"/>
+                <ellipse class="stack-t" cx="92" cy="376" rx="55" ry="9" fill="#ecd9af" stroke="#f4eee1" stroke-width="3" opacity="0"/>
+              </g>
+            </g>
+          </svg>
+        </div>
+
+        <ol class="heat__steps">
+          <li class="hstep" data-step>
+            <img class="hstep__icon" src="assets/step-1.png?v=14" alt="" aria-hidden="true">
+            <div>
+              <h3 data-i18n="step1_h">dry pan, high heat</h3>
+              <p class="mono" data-i18n="step1_p">Pan, griddle or grill — no oil. Get it properly hot, about 15–20 seconds per side.</p>
+            </div>
+          </li>
+          <li class="hstep" data-step>
+            <img class="hstep__icon" src="assets/step-2.png?v=14" alt="" aria-hidden="true">
+            <div>
+              <h3 data-i18n="step2_h">see bubbles? flip it</h3>
+              <p class="mono" data-i18n="step2_p">When tiny bubbles start forming, flip to the other side.</p>
+            </div>
+          </li>
+          <li class="hstep" data-step>
+            <img class="hstep__icon" src="assets/step-3.png?v=14" alt="" aria-hidden="true">
+            <div>
+              <h3 data-i18n="step3_h">15–20 more — it puffs up</h3>
+              <p class="mono" data-i18n="step3_p">Ready to eat! Stack them in a clean cloth so they stay warm and soft.</p>
+            </div>
+          </li>
+        </ol>
+      </div>
+
+      <p class="heat__store mono" data-reveal data-i18n="heat_store">keep refrigerated · 7 days&nbsp;&nbsp;/&nbsp;&nbsp;or freeze · 3 months</p>
+    </section>
+
+    <!-- ───────── gallery — real packs ───────── -->
+    <section class="gallery" id="fotos">
+      <div class="gallery__head">
+        <span class="kicker kicker--cream mono" data-reveal data-i18n="gal_kicker">04 — the drops</span>
+        <h2 class="gallery__title"><span data-split-lines data-i18n="gal_title">packed, dated,<br>delivered.</span></h2>
+      </div>
+      <div class="gallery__row" id="galleryRow">
+        <figure class="gallery__item" data-g-item>
+          <img src="assets/photo-1.jpg?v=14" alt="A pack of mira tortillas with the green label on a blue tiled table">
+          <figcaption class="mono" data-i18n="gal_cap1">labeled &amp; dated by hand</figcaption>
+        </figure>
+        <figure class="gallery__item gallery__item--cafe" data-g-item>
+          <img src="assets/photo-3.jpg?v=14" alt="A pack of mira tortillas being delivered to a café table">
+          <figcaption class="mono" data-i18n="gal_cap3">drop-off day in lisboa</figcaption>
+        </figure>
+      </div>
+    </section>
+
+    <!-- ───────── footer / cta ───────── -->
+    <footer class="footer" id="footer">
+      <p class="footer__kicker mono" data-reveal data-i18n="foot_kicker">hungry? / fome?</p>
+      <a href="mailto:ola@miratortillas.pt?subject=Order%20%E2%80%94%20mira%20tortillas" class="footer__cta" data-hover>
+        <span data-split-lines data-i18n="foot_cta">order<br>a stack</span>
+        <svg class="footer__arrow" viewBox="0 0 48 48" aria-hidden="true"><path d="M10 38 38 10M38 10H16M38 10v22" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="square"/></svg>
+      </a>
+      <img class="footer__mark" src="assets/mira-wordmark-cream.png" alt="mira" data-footer-mark>
+      <div class="footer__row mono">
+        <span>miratortillas.pt</span>
+        <a href="https://instagram.com/miratortillas" target="_blank" rel="noopener" data-hover>@miratortillas</a>
+        <span data-i18n="foot_made">made in lisboa 🇵🇹</span>
+      </div>
+      <div class="footer__legal mono">
+        <span>© 2026 paleta peculiar lda</span>
+        <span data-i18n="foot_site">site — estúdio peculiar</span>
+      </div>
+    </footer>
+
+  </main>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.7/gsap.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.7/ScrollTrigger.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/lenis@1.1.20/dist/lenis.min.js"></script>
+  <script src="main.js?v=14"></script>
+</body>
+</html>
