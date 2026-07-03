@@ -10,7 +10,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=14">
+  <link rel="stylesheet" href="styles.css?v=15">
 </head>
 <body>
 
@@ -37,6 +37,7 @@
       <a href="#tamanhos" data-hover data-i18n="nav_sizes">sizes</a>
       <a href="#ingredientes" data-hover data-i18n="nav_ing">ingredients</a>
       <a href="#como" data-hover data-i18n="nav_heat">how-to</a>
+      <a href="#eventos" data-hover data-i18n="nav_events">events</a>
     </nav>
     <div class="nav__right">
       <button class="nav__lang mono" id="langToggle" data-hover aria-label="Mudar para português">PT</button>
@@ -48,10 +49,6 @@
 
     <!-- ───────── hero ───────── -->
     <section class="hero" id="hero">
-      <div class="hero__tag mono" data-hero-fade data-i18n="hero_tag">
-        <span>made by hand</span> <span>·</span> <span>lisboa</span>
-      </div>
-
       <h1 class="hero__title" aria-label="mira tortillas">
         <span class="hero__stage">
           <img class="hero__mark" src="assets/mira-wordmark.png" alt="mira" data-hero-mark>
@@ -280,6 +277,16 @@
       </div>
     </section>
 
+    <!-- ───────── events ───────── -->
+    <section class="events" id="eventos">
+      <div class="events__head">
+        <span class="kicker mono" data-reveal data-i18n="ev_kicker">05 — find us</span>
+        <h2 class="events__title"><span data-split-lines data-i18n="ev_title">upcoming<br>drops &amp; markets.</span></h2>
+      </div>
+      <ul class="events__list" id="eventsList"></ul>
+      <p class="events__empty mono" id="eventsEmpty" data-i18n="ev_empty">nothing on the calendar right now — follow @miratortillas for the next drop.</p>
+    </section>
+
     <!-- ───────── footer / cta ───────── -->
     <footer class="footer" id="footer">
       <p class="footer__kicker mono" data-reveal data-i18n="foot_kicker">hungry? / fome?</p>
@@ -294,8 +301,8 @@
         <span data-i18n="foot_made">made in lisboa 🇵🇹</span>
       </div>
       <div class="footer__legal mono">
-        <span>© 2026 paleta peculiar lda</span>
-        <span data-i18n="foot_site">site — estúdio peculiar</span>
+        <span>© 2026 mira tortillas · paleta peculiar lda</span>
+        <span>1170-199 lisboa · produzido em portugal</span>
       </div>
     </footer>
 
@@ -304,6 +311,6 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.7/gsap.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.7/ScrollTrigger.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/lenis@1.1.20/dist/lenis.min.js"></script>
-  <script src="main.js?v=14"></script>
+  <script src="main.js?v=15"></script>
 </body>
 </html>

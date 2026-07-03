@@ -14,6 +14,18 @@
     large: "",   // 6 large — €9
   };
 
+  /* ─────────────────────────────────────────────
+     UPCOMING EVENTS — edit this list, that's it.
+     date: "YYYY-MM-DD" (past dates hide themselves)
+     name: { en: "...", pt: "..." }
+     place: shown as-is · url: optional "more info" link
+     Example:
+       { date: "2026-07-19", name: { en: "saturday market", pt: "mercado de sábado" },
+         place: "campo de ourique · lisboa", url: "" },
+  ───────────────────────────────────────────── */
+  const EVENTS = [
+  ];
+
   /* ───────── i18n ───────── */
   const I18N = {
     en: {
@@ -21,7 +33,6 @@
       nav_heat: "how-to",
       nav_sizes: "sizes",
       nav_order: "order",
-      hero_tag: "<span>made by hand</span> <span>·</span> <span>lisboa</span>",
       hero_blurb: "Four ingredients, pressed &amp; par-cooked in small batches in Lisboa.<br>You give them the final toast at home.",
       hero_cta: 'choose your size<span class="btn__dot"></span>',
       ing_kicker: "02 — the recipe",
@@ -41,6 +52,10 @@
       gal_title: "packed, dated,<br>delivered.",
       gal_cap1: "a dozen, packed & dated by hand",
       gal_cap3: "drop-off day in lisboa",
+      nav_events: "find us",
+      ev_kicker: "05 — find us",
+      ev_title: "upcoming<br>drops &amp; markets.",
+      ev_empty: "nothing on the calendar right now — follow @miratortillas for the next drop.",
       sizes_kicker: "01 — pick your size",
       sizes_title: "one dough.<br>three sizes.",
       sizes_sub: "Taco night, burrito Sunday or snack-size quesadillas — there's a stack for that.",
@@ -52,7 +67,6 @@
       foot_kicker: "hungry? / fome?",
       foot_cta: "order<br>a stack",
       foot_made: "made in lisboa 🇵🇹",
-      foot_site: "site — estúdio peculiar",
       scene_start: "dry pan · no oil",
       scene_side1: "side 1 · 15–20s",
       scene_flip: "tiny bubbles? flip!",
@@ -65,7 +79,6 @@
       nav_heat: "como aquecer",
       nav_sizes: "tamanhos",
       nav_order: "encomendar",
-      hero_tag: "<span>feitas à mão</span> <span>·</span> <span>lisboa</span>",
       hero_blurb: "Quatro ingredientes, prensadas e meio cozidas em pequenos lotes em Lisboa.<br>Tu dás-lhes a tostadela final em casa.",
       hero_cta: 'escolhe o tamanho<span class="btn__dot"></span>',
       ing_kicker: "02 — a receita",
@@ -85,6 +98,10 @@
       gal_title: "embaladas, datadas,<br>entregues.",
       gal_cap1: "uma dúzia, embalada e datada à mão",
       gal_cap3: "dia de entregas em lisboa",
+      nav_events: "onde estamos",
+      ev_kicker: "05 — onde estamos",
+      ev_title: "próximos<br>drops &amp; mercados.",
+      ev_empty: "nada agendado de momento — segue @miratortillas para o próximo drop.",
       sizes_kicker: "01 — escolhe o tamanho",
       sizes_title: "uma massa.<br>três tamanhos.",
       sizes_sub: "Noite de tacos, burrito ao domingo ou quesadillas para o lanche — há uma pilha para isso.",
@@ -96,7 +113,6 @@
       foot_kicker: "fome? / hungry?",
       foot_cta: "encomenda<br>uma pilha",
       foot_made: "feito em lisboa 🇵🇹",
-      foot_site: "site — estúdio peculiar",
       scene_start: "frigideira seca · sem óleo",
       scene_side1: "lado 1 · 15–20s",
       scene_flip: "bolhas? vira!",
@@ -112,6 +128,45 @@
   })();
 
   const langBtn = document.getElementById("langToggle");
+
+  /* render the upcoming-events list (past dates auto-hide) */
+  const EV_MONTHS = {
+    en: ["jan","feb","mar","apr","may","jun","jul","aug","sep","oct","nov","dec"],
+    pt: ["jan","fev","mar","abr","mai","jun","jul","ago","set","out","nov","dez"],
+  };
+  const EV_DAYS = {
+    en: ["sun","mon","tue","wed","thu","fri","sat"],
+    pt: ["dom","seg","ter","qua","qui","sex","sáb"],
+  };
+  function renderEvents(l) {
+    const list = document.getElementById("eventsList");
+    const empty = document.getElementById("eventsEmpty");
+    if (!list || !empty) return;
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const upcoming = EVENTS
+      .map((ev) => {
+        const [y, m, d] = ev.date.split("-").map(Number);
+        return { ev, when: new Date(y, m - 1, d) };
+      })
+      .filter((x) => x.when >= today)
+      .sort((a, b) => a.when - b.when);
+    list.innerHTML = upcoming
+      .map(({ ev, when }) => {
+        const dateStr = `${EV_DAYS[l][when.getDay()]} · ${when.getDate()} ${EV_MONTHS[l][when.getMonth()]}`;
+        const link = ev.url
+          ? `<a class="event__link mono" data-hover href="${ev.url}" target="_blank" rel="noopener">info ↗</a>`
+          : `<span class="event__link mono"></span>`;
+        return `<li class="event">
+          <span class="event__date mono">${dateStr}</span>
+          <span class="event__name">${ev.name[l] || ev.name.en}</span>
+          <span class="event__place mono">${ev.place}</span>
+          ${link}
+        </li>`;
+      })
+      .join("");
+    empty.style.display = upcoming.length ? "none" : "";
+  }
 
   function applyLang(next, resplit) {
     lang = next;
@@ -129,6 +184,7 @@
     });
     langBtn.textContent = lang === "en" ? "PT" : "EN";
     langBtn.setAttribute("aria-label", lang === "en" ? "Mudar para português" : "Switch to English");
+    renderEvents(lang);
     try { localStorage.setItem("mira-lang", lang); } catch (e) {}
   }
 
@@ -307,6 +363,18 @@
 
   /* ───────── ingredients ───────── */
   gsap.utils.toArray("[data-ing]").forEach((row, i) => {
+    gsap.from(row, {
+      xPercent: -6,
+      opacity: 0,
+      duration: 0.7,
+      delay: i * 0.06,
+      ease: "power3.out",
+      scrollTrigger: { trigger: row, start: "top 90%" },
+    });
+  });
+
+  /* events rows — same entrance as ingredients */
+  gsap.utils.toArray(".event").forEach((row, i) => {
     gsap.from(row, {
       xPercent: -6,
       opacity: 0,
