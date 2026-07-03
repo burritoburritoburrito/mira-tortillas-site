@@ -9,9 +9,9 @@
      buy buttons fall back to an order email.
   ───────────────────────────────────────────── */
   const STRIPE_LINKS = {
-    small: "",   // 12 small — €8
-    medium: "",  // 12 medium — €10
-    large: "",   // 6 large — €9
+    small: "https://buy.stripe.com/6oUbIU5ve5G9fpH4sF6J200",   // 12 small — €8
+    medium: "https://buy.stripe.com/3cIbIU8Hq1pT3GZf7j6J201",  // 12 medium — €10
+    large: "https://buy.stripe.com/7sYdR24rab0tb9r5wJ6J202",   // 6 large — €9
   };
 
   /* ─────────────────────────────────────────────
