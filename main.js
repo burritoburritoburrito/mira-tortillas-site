@@ -75,6 +75,11 @@
       foot_kicker: "hungry? / fome?",
       foot_cta: "order<br>a stack",
       foot_made: "made in lisboa 🇵🇹",
+      cart_title: "your stack",
+      cart_empty: "nothing here yet.",
+      cart_total: "total",
+      cart_checkout: "checkout",
+      cart_back: "back to site",
       scene_start: "dry pan · no oil",
       scene_side1: "side 1 · 15–20s",
       scene_flip: "tiny bubbles? flip!",
@@ -129,6 +134,11 @@
       foot_kicker: "fome? / hungry?",
       foot_cta: "encomenda<br>uma pilha",
       foot_made: "feito em lisboa 🇵🇹",
+      cart_title: "a tua pilha",
+      cart_empty: "ainda nada aqui.",
+      cart_total: "total",
+      cart_checkout: "finalizar",
+      cart_back: "voltar ao site",
       scene_start: "frigideira seca · sem óleo",
       scene_side1: "lado 1 · 15–20s",
       scene_flip: "bolhas? vira!",
@@ -201,6 +211,7 @@
     langBtn.textContent = lang === "en" ? "PT" : "EN";
     langBtn.setAttribute("aria-label", lang === "en" ? "Mudar para português" : "Switch to English");
     renderEvents(lang);
+    if (document.body.classList.contains("cart-mode")) renderCart();
     try { localStorage.setItem("mira-lang", lang); } catch (e) {}
   }
 
@@ -218,6 +229,185 @@
     const link = STRIPE_LINKS[a.dataset.buy];
     if (link) { a.href = link; a.removeAttribute("target"); }
   });
+
+  /* ─────────────────────────────────────────────
+     CART + EMBEDDED CHECKOUT
+     Activates only when the site runs behind the
+     Cloudflare Worker (/api/config responds).
+     On GitHub Pages it stays dormant and the buy
+     buttons keep their payment-link behaviour.
+  ───────────────────────────────────────────── */
+  const CATALOG = {
+    small:  { price: "price_1Tp6jR2KMRu6Fi6htz56SDPI", eur: 8,  pack: "×12", nameKey: "s_name" },
+    medium: { price: "price_1Tp6jS2KMRu6Fi6hI68OSLWD", eur: 10, pack: "×12", nameKey: "m_name" },
+    large:  { price: "price_1Tp6jU2KMRu6Fi6hj58ozoRh", eur: 9,  pack: "×6",  nameKey: "l_name" },
+  };
+  const SUB_PRICES = {
+    "small:weekly":    "price_1Tp6je2KMRu6Fi6hri2mQkM8",
+    "small:biweekly":  "price_1Tp6jf2KMRu6Fi6hnOZhEOkg",
+    "small:monthly":   "price_1Tp6jg2KMRu6Fi6h26hVNFiV",
+    "medium:weekly":   "price_1Tp6jh2KMRu6Fi6hvlaea75S",
+    "medium:biweekly": "price_1Tp6jj2KMRu6Fi6hCJSEMrlK",
+    "medium:monthly":  "price_1Tp6jk2KMRu6Fi6h7svhoyec",
+    "large:weekly":    "price_1Tp6jm2KMRu6Fi6hJ0jJ2qVn",
+    "large:biweekly":  "price_1Tp6jn2KMRu6Fi6h47lAOYZs",
+    "large:monthly":   "price_1Tp6jo2KMRu6Fi6hOAHj9Uo4",
+  };
+  const CART_KEY = "mira-cart";
+  let publishableKey = null;
+  let embedded = null;
+
+  const readCart = () => {
+    try { return JSON.parse(localStorage.getItem(CART_KEY)) || {}; } catch (e) { return {}; }
+  };
+  const writeCart = (c) => {
+    try { localStorage.setItem(CART_KEY, JSON.stringify(c)); } catch (e) {}
+  };
+
+  function renderCart() {
+    const list = document.getElementById("cartItems");
+    if (!list) return;
+    const cart = readCart();
+    const skus = Object.keys(cart).filter((s) => CATALOG[s] && cart[s] > 0);
+    let total = 0;
+    list.innerHTML = skus.map((sku) => {
+      const it = CATALOG[sku];
+      const qty = cart[sku];
+      total += it.eur * qty;
+      return `<li class="citem">
+        <span class="citem__name">${I18N[lang][it.nameKey]} <span class="citem__pack mono">${it.pack}</span></span>
+        <span class="citem__qty mono">
+          <button data-dec="${sku}" data-hover aria-label="less">−</button><b>${qty}</b><button data-inc="${sku}" data-hover aria-label="more">+</button>
+        </span>
+        <span class="citem__eur mono">€${it.eur * qty}</span>
+      </li>`;
+    }).join("");
+    document.getElementById("cartEmpty").style.display = skus.length ? "none" : "";
+    document.getElementById("cartCheckout").style.display = skus.length ? "" : "none";
+    document.getElementById("cartTotal").textContent = "€" + total;
+    const count = skus.reduce((n, s) => n + cart[s], 0);
+    const badge = document.getElementById("cartCount");
+    badge.hidden = !count;
+    badge.textContent = count;
+  }
+
+  function addToCart(sku, qty) {
+    const cart = readCart();
+    cart[sku] = Math.min((cart[sku] || 0) + qty, 20);
+    if (cart[sku] <= 0) delete cart[sku];
+    writeCart(cart);
+    renderCart();
+  }
+
+  const drawer = document.getElementById("cartDrawer");
+  const shade = document.getElementById("cartShade");
+  function openCart() { drawer.classList.add("is-open"); shade.classList.add("is-on"); }
+  function closeCart() { drawer.classList.remove("is-open"); shade.classList.remove("is-on"); }
+
+  function loadStripeJs() {
+    return new Promise((resolve, reject) => {
+      if (window.Stripe) return resolve();
+      const s = document.createElement("script");
+      s.src = "https://js.stripe.com/v3/";
+      s.onload = resolve; s.onerror = reject;
+      document.head.appendChild(s);
+    });
+  }
+
+  async function startCheckout(items) {
+    try {
+      const r = await fetch("/api/checkout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ items }),
+      });
+      const d = await r.json();
+      if (!d.clientSecret) throw new Error(d.error || "checkout failed");
+      await loadStripeJs();
+      const stripe = Stripe(publishableKey);
+      if (embedded) { embedded.destroy(); embedded = null; }
+      embedded = await stripe.initEmbeddedCheckout({ clientSecret: d.clientSecret });
+      closeCart();
+      document.getElementById("scWrap").hidden = false;
+      document.body.style.overflow = "hidden";
+      embedded.mount("#scMount");
+    } catch (e) {
+      showToast((lang === "pt" ? "erro no checkout — tenta de novo. " : "checkout error — try again. ") + (e.message || ""));
+    }
+  }
+
+  function closeCheckout() {
+    if (embedded) { embedded.destroy(); embedded = null; }
+    document.getElementById("scWrap").hidden = true;
+    document.body.style.overflow = "";
+  }
+
+  let toastTimer = null;
+  function showToast(msg) {
+    const t = document.getElementById("toast");
+    t.textContent = msg;
+    t.hidden = false;
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => { t.hidden = true; }, 6000);
+  }
+
+  function initCart() {
+    document.body.classList.add("cart-mode");
+    /* buy buttons become add-to-cart */
+    document.querySelectorAll("[data-buy]").forEach((a) => {
+      a.addEventListener("click", (e) => {
+        e.preventDefault();
+        addToCart(a.dataset.buy, 1);
+        openCart();
+      });
+    });
+    /* subscription pills → embedded subscription checkout */
+    document.querySelectorAll("[data-sub]").forEach((a) => {
+      a.addEventListener("click", (e) => {
+        e.preventDefault();
+        startCheckout([{ price: SUB_PRICES[a.dataset.sub], quantity: 1 }]);
+      });
+    });
+    /* nav order button opens the cart */
+    document.getElementById("navOrder").addEventListener("click", (e) => {
+      e.preventDefault(); openCart();
+    });
+    document.getElementById("cartClose").addEventListener("click", closeCart);
+    shade.addEventListener("click", closeCart);
+    document.getElementById("scClose").addEventListener("click", closeCheckout);
+    document.getElementById("cartItems").addEventListener("click", (e) => {
+      const inc = e.target.closest("[data-inc]"), dec = e.target.closest("[data-dec]");
+      if (inc) addToCart(inc.dataset.inc, 1);
+      if (dec) addToCart(dec.dataset.dec, -1);
+    });
+    document.getElementById("cartCheckout").addEventListener("click", () => {
+      const cart = readCart();
+      const items = Object.keys(cart)
+        .filter((s) => CATALOG[s] && cart[s] > 0)
+        .map((s) => ({ price: CATALOG[s].price, quantity: cart[s] }));
+      if (items.length) startCheckout(items);
+    });
+    renderCart();
+  }
+
+  /* activate cart mode only when the worker API is live */
+  fetch("/api/config")
+    .then((r) => (r.ok ? r.json() : null))
+    .then((cfg) => {
+      if (cfg && cfg.publishableKey) { publishableKey = cfg.publishableKey; initCart(); }
+    })
+    .catch(() => {});
+
+  /* back from a successful embedded checkout */
+  if (new URLSearchParams(location.search).get("checkout") === "success") {
+    writeCart({});
+    history.replaceState(null, "", location.pathname);
+    setTimeout(() => {
+      showToast(lang === "pt"
+        ? "obrigado! encomenda confirmada — vê o teu email. 🌮"
+        : "obrigado! order confirmed — check your email. 🌮");
+    }, 600);
+  }
 
   langBtn.addEventListener("click", () => {
     applyLang(lang === "en" ? "pt" : "en", true);
