@@ -207,6 +207,47 @@ a { color: inherit; text-decoration: none; }
 }
 .kicker--cream { border-color: var(--cream); color: var(--cream); }
 
+/* ───────── subscriptions ───────── */
+.subs {
+  background: var(--sky);
+  padding: clamp(4.5rem, 10vw, 8.5rem) var(--pad);
+  overflow: clip;
+}
+.subs__head { margin-bottom: clamp(2.5rem, 5vw, 4.5rem); }
+.subs__title {
+  font-size: clamp(2.6rem, 7.5vw, 6.5rem);
+  font-weight: 700; letter-spacing: -.03em; line-height: 1.02;
+  margin-top: 1.2rem;
+}
+.subs__sub {
+  margin-top: 1.2rem; font-size: clamp(1rem, 2vw, 1.25rem);
+  max-width: 44ch; line-height: 1.55;
+}
+.subs__list { list-style: none; border-top: 3px solid var(--ink); }
+.sub {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  align-items: center; gap: clamp(1rem, 3vw, 2.5rem);
+  padding: clamp(1.1rem, 2.5vw, 1.8rem) 0;
+  border-bottom: 3px solid var(--ink);
+  transition: padding-left .35s ease;
+}
+.sub:hover { padding-left: clamp(.75rem, 2vw, 1.5rem); }
+.sub__name { font-size: clamp(1.9rem, 5.5vw, 4.2rem); font-weight: 700; letter-spacing: -.02em; line-height: 1; }
+.sub__meta { font-size: clamp(.8rem, 1.8vw, 1.05rem); opacity: .8; white-space: nowrap; }
+.sub__opts { display: flex; gap: .6rem; flex-wrap: wrap; }
+.sub__opt {
+  font-size: .85rem; padding: .55rem 1.05rem;
+  border: 2px solid var(--ink); border-radius: 999px;
+  transition: background .25s ease, color .25s ease;
+}
+.sub__opt:hover { background: var(--ink); color: var(--cream); }
+.subs__note { margin-top: 2.2rem; font-size: .9rem; opacity: .7; }
+@media (max-width: 700px) {
+  .sub { grid-template-columns: 1fr auto; gap: .8rem 1rem; }
+  .sub__opts { grid-column: 1 / -1; }
+}
+
 /* ───────── ingredients ───────── */
 .ingredients {
   background: var(--green);
