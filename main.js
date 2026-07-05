@@ -610,7 +610,14 @@
     const spots = gsap.utils.toArray("#tortSpots .spot");
     const stack = gsap.utils.toArray(".stack-t");
     const label = document.getElementById("heatLabel");
-    const setLabel = (key) => () => { label.textContent = I18N[lang][key]; };
+    const labelPill = document.querySelector("#heatLabelG rect");
+    const fitLabelPill = () => {
+      const w = Math.max(Math.ceil(label.getComputedTextLength()) + 48, 150);
+      labelPill.setAttribute("width", w);
+      labelPill.setAttribute("x", -w / 2);
+    };
+    const setLabel = (key) => () => { label.textContent = I18N[lang][key]; fitLabelPill(); };
+    fitLabelPill();
 
     /* flames flicker constantly */
     const flameAnim = gsap.to(".flame", {
