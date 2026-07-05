@@ -53,7 +53,7 @@ export default {
         return json({ error: "subscriptions check out one at a time" }, 400);
 
       const p = new URLSearchParams();
-      p.set("ui_mode", "embedded");
+      p.set("ui_mode", "embedded_page");
       p.set("mode", mode);
       p.set("return_url", `${url.origin}/?checkout=success&session_id={CHECKOUT_SESSION_ID}`);
       p.set("shipping_address_collection[allowed_countries][0]", "PT");
