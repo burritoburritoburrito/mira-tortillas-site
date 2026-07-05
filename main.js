@@ -33,7 +33,7 @@
       nav_heat: "how-to",
       nav_sizes: "sizes",
       nav_order: "order",
-      hero_blurb: "Four ingredients, pressed &amp; par-cooked in small batches in Lisboa.<br>You give them the final toast at home.",
+      hero_blurb: "Flour tortillas — four ingredients, pressed &amp; par-cooked in small batches in Lisboa.<br>You give them the final toast at home.",
       hero_cta: 'choose your size<span class="btn__dot"></span>',
       nav_sub: "subscribe",
       sub_kicker: "02 — subscriptions",
@@ -56,12 +56,11 @@
       step3_h: "15–20 more — it puffs up",
       step3_p: "Ready to eat! Stack them in a clean cloth so they stay warm and soft.",
       heat_store: "keep refrigerated · 7 days&nbsp;&nbsp;/&nbsp;&nbsp;or freeze · 3 months",
-      gal_kicker: "05 — the drops",
-      gal_title: "packed, dated,<br>delivered.",
-      gal_cap1: "a dozen, packed & dated by hand",
-      gal_cap3: "drop-off day in lisboa",
+      sub_meta_s: "12 tortillas · €8 per delivery",
+      sub_meta_m: "12 tortillas · €10 per delivery",
+      sub_meta_l: "6 tortillas · €9 per delivery",
       nav_events: "find us",
-      ev_kicker: "06 — find us",
+      ev_kicker: "05 — find us",
       ev_title: "upcoming<br>drops &amp; markets.",
       ev_empty: "nothing on the calendar right now — follow @miratortillas for the next drop.",
       sizes_kicker: "01 — pick your size",
@@ -85,14 +84,14 @@
       scene_flip: "tiny bubbles? flip!",
       scene_side2: "side 2 · 15–20s",
       scene_done: "puffed up — ready to eat!",
-      doc_title: "mira — handmade flour tortillas, Lisboa",
+      doc_title: "mira tortillas — flour tortillas, Lisboa",
     },
     pt: {
       nav_ing: "ingredientes",
       nav_heat: "como aquecer",
       nav_sizes: "tamanhos",
       nav_order: "encomendar",
-      hero_blurb: "Quatro ingredientes, prensadas e meio cozidas em pequenos lotes em Lisboa.<br>Tu dás-lhes a tostadela final em casa.",
+      hero_blurb: "Tortillas de trigo — quatro ingredientes, prensadas e meio cozidas em pequenos lotes em Lisboa.<br>Tu dás-lhes a tostadela final em casa.",
       hero_cta: 'escolhe o tamanho<span class="btn__dot"></span>',
       nav_sub: "assinar",
       sub_kicker: "02 — assinaturas",
@@ -115,12 +114,11 @@
       step3_h: "mais 15–20 — e incha",
       step3_p: "Prontas a comer! Empilha-as num pano limpo para ficarem quentes e macias.",
       heat_store: "conservar no frigorífico · 7 dias&nbsp;&nbsp;/&nbsp;&nbsp;ou congelar · 3 meses",
-      gal_kicker: "05 — as entregas",
-      gal_title: "embaladas, datadas,<br>entregues.",
-      gal_cap1: "uma dúzia, embalada e datada à mão",
-      gal_cap3: "dia de entregas em lisboa",
+      sub_meta_s: "12 tortillas · €8 por entrega",
+      sub_meta_m: "12 tortillas · €10 por entrega",
+      sub_meta_l: "6 tortillas · €9 por entrega",
       nav_events: "onde estamos",
-      ev_kicker: "06 — onde estamos",
+      ev_kicker: "05 — onde estamos",
       ev_title: "próximos<br>drops &amp; mercados.",
       ev_empty: "nada agendado de momento — segue @miratortillas para o próximo drop.",
       sizes_kicker: "01 — escolhe o tamanho",
@@ -144,7 +142,7 @@
       scene_flip: "bolhas? vira!",
       scene_side2: "lado 2 · 15–20s",
       scene_done: "estufada — pronta a comer!",
-      doc_title: "mira — tortilhas de farinha feitas à mão, Lisboa",
+      doc_title: "mira tortillas — tortillas de trigo, Lisboa",
     },
   };
 
@@ -702,37 +700,6 @@
        where no enter callback fires */
     setRunning(sceneST.isActive);
   })();
-
-  /* ───────── gallery — row drifts sideways with scroll ───────── */
-  const galleryRow = document.getElementById("galleryRow");
-  if (galleryRow) {
-    const mm = gsap.matchMedia();
-    mm.add("(min-width: 761px)", () => {
-      const overflow = galleryRow.scrollWidth - window.innerWidth;
-      if (overflow > 0) {
-        gsap.to(galleryRow, {
-          x: -overflow,
-          ease: "none",
-          scrollTrigger: {
-            trigger: ".gallery",
-            start: "top 70%",
-            end: "bottom 10%",
-            scrub: 1,
-          },
-        });
-      }
-      gsap.utils.toArray("[data-g-item]").forEach((item, i) => {
-        gsap.from(item, {
-          y: 60,
-          opacity: 0,
-          duration: 0.8,
-          delay: i * 0.07,
-          ease: "power3.out",
-          scrollTrigger: { trigger: ".gallery__row", start: "top 85%" },
-        });
-      });
-    });
-  }
 
   /* size cards & how-to steps render without entrance animations —
      they must always sit level, in every scroll/visibility state */
