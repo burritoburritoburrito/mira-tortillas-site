@@ -4,7 +4,7 @@
   // Required settings → Variables:
   //   STRIPE_SECRET_KEY      (secret)  — restricted key, Checkout Sessions: write
   //   STRIPE_PUBLISHABLE_KEY (plaintext)
-  "name": "mira-tortillas",
+  "name": "mira-shop",
   "main": "src/worker.js",
   "compatibility_date": "2026-06-01",
   "assets": {
