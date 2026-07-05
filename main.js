@@ -319,8 +319,10 @@
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ items }),
       });
-      const d = await r.json();
-      if (!d.clientSecret) throw new Error(d.error || "checkout failed");
+      const raw = await r.text();
+      let d;
+      try { d = JSON.parse(raw); } catch (e) { d = {}; }
+      if (!d.clientSecret) throw new Error(d.error || "");
       await loadStripeJs();
       const stripe = Stripe(publishableKey);
       if (embedded) { embedded.destroy(); embedded = null; }
