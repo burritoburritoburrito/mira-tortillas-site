@@ -121,6 +121,11 @@ async function processSession(env, session) {
 
   const customer = await env.DB.prepare(`SELECT * FROM customers WHERE email = ?1`).bind(email).first();
 
+  /* newsletter consent from the checkout checkbox (only ever upgrades to yes) */
+  if (session.consent && session.consent.promotions === "opt_in") {
+    await env.DB.prepare(`UPDATE customers SET marketing_ok = 1 WHERE id = ?1`).bind(customer.id).run();
+  }
+
   const paid = session.payment_status === "paid" || session.payment_status === "no_payment_required";
   if (paid) {
     const points = Math.floor((session.amount_total || 0) / 100);
@@ -179,6 +184,8 @@ export default {
       const p = new URLSearchParams();
       p.set("ui_mode", "embedded_page");
       p.set("mode", mode);
+      /* optional "email me about news & offers" checkbox (GDPR consent) */
+      p.set("consent_collection[promotions]", "auto");
       if (redeemer) {
         p.set("discounts[0][coupon]", POINTS_COUPON);
         p.set("metadata[points_redeemed]", "100");
