@@ -15,7 +15,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=28">
+  <link rel="stylesheet" href="styles.css?v=29">
 </head>
 <body>
 
@@ -68,6 +68,11 @@
       <div class="hero__foot">
         <p class="hero__blurb" data-hero-fade data-i18n="hero_blurb">Flour tortillas — four ingredients, pressed &amp; par-cooked in small batches in Lisboa.<br>You give them the final toast at home.</p>
         <a href="#escolher" data-offset="-100" class="btn btn--green" data-hover data-hero-fade data-i18n="hero_cta">choose your size<span class="btn__dot"></span></a>
+        <div class="hero__quick mono" data-hero-fade aria-label="quick order">
+          <button data-quick="small" data-hover>S · €8</button>
+          <button data-quick="medium" data-hover>M · €10</button>
+          <button data-quick="large" data-hover>L · €9</button>
+        </div>
       </div>
 
       <div class="hero__scroll mono" data-hero-fade>scroll<span class="hero__scroll-line"></span></div>
@@ -142,35 +147,25 @@
         <h2 class="subs__title"><span data-split-lines data-i18n="sub_title">never run out.</span></h2>
         <p class="subs__sub" data-reveal data-i18n="sub_sub">Pick a size, pick a rhythm — tortillas on repeat. Pause or cancel anytime.</p>
       </div>
-      <ul class="subs__list">
-        <li class="sub" data-ing>
-          <span class="sub__name" data-i18n="s_name">small</span>
-          <span class="sub__meta mono" data-i18n="sub_meta_s">12 tortillas · €8 per delivery</span>
-          <span class="sub__opts">
-            <a class="sub__opt mono" data-hover data-sub="small:weekly" href="https://buy.stripe.com/bJe14g9Lu1pTgtLe3f6J203" data-i18n="sub_weekly">weekly</a>
-            <a class="sub__opt mono" data-hover data-sub="small:biweekly" href="https://buy.stripe.com/28E4gs7DmfgJa5ne3f6J204" data-i18n="sub_biweekly">every 2 weeks</a>
-            <a class="sub__opt mono" data-hover data-sub="small:monthly" href="https://buy.stripe.com/6oUbIUf5O6Kd1yR7ER6J205" data-i18n="sub_monthly">monthly</a>
-          </span>
-        </li>
-        <li class="sub" data-ing>
-          <span class="sub__name" data-i18n="m_name">medium</span>
-          <span class="sub__meta mono" data-i18n="sub_meta_m">12 tortillas · €10 per delivery</span>
-          <span class="sub__opts">
-            <a class="sub__opt mono" data-hover data-sub="medium:weekly" href="https://buy.stripe.com/00w9AMe1K2tX1yR3oB6J206" data-i18n="sub_weekly">weekly</a>
-            <a class="sub__opt mono" data-hover data-sub="medium:biweekly" href="https://buy.stripe.com/14AbIU6zi8Slcdv9MZ6J207" data-i18n="sub_biweekly">every 2 weeks</a>
-            <a class="sub__opt mono" data-hover data-sub="medium:monthly" href="https://buy.stripe.com/7sY9AM7Dm0lP3GZ7ER6J208" data-i18n="sub_monthly">monthly</a>
-          </span>
-        </li>
-        <li class="sub" data-ing>
-          <span class="sub__name" data-i18n="l_name">large</span>
-          <span class="sub__meta mono" data-i18n="sub_meta_l">6 tortillas · €9 per delivery</span>
-          <span class="sub__opts">
-            <a class="sub__opt mono" data-hover data-sub="large:weekly" href="https://buy.stripe.com/fZuaEQ6zi5G90uN6AN6J209" data-i18n="sub_weekly">weekly</a>
-            <a class="sub__opt mono" data-hover data-sub="large:biweekly" href="https://buy.stripe.com/4gMaEQf5Ob0t4L3bV76J20a" data-i18n="sub_biweekly">every 2 weeks</a>
-            <a class="sub__opt mono" data-hover data-sub="large:monthly" href="https://buy.stripe.com/9B64gsg9Sb0t0uN1gt6J20b" data-i18n="sub_monthly">monthly</a>
-          </span>
-        </li>
-      </ul>
+      <div class="subpick" data-reveal>
+        <div class="subpick__row">
+          <span class="subpick__label mono" data-i18n="sub_size">size</span>
+          <div class="subpick__opts" id="subSize">
+            <button class="subpick__opt" data-size="small"><b data-i18n="s_name">small</b><em class="mono">×12 · €8</em></button>
+            <button class="subpick__opt is-on" data-size="medium"><b data-i18n="m_name">medium</b><em class="mono">×12 · €10</em></button>
+            <button class="subpick__opt" data-size="large"><b data-i18n="l_name">large</b><em class="mono">×6 · €9</em></button>
+          </div>
+        </div>
+        <div class="subpick__row">
+          <span class="subpick__label mono" data-i18n="sub_rhythm">rhythm</span>
+          <div class="subpick__opts" id="subCad">
+            <button class="subpick__opt is-on" data-cad="weekly"><b data-i18n="sub_weekly">weekly</b></button>
+            <button class="subpick__opt" data-cad="biweekly"><b data-i18n="sub_biweekly">every 2 weeks</b></button>
+            <button class="subpick__opt" data-cad="monthly"><b data-i18n="sub_monthly">monthly</b></button>
+          </div>
+        </div>
+        <button class="btn btn--ink subpick__go" id="subGo" data-hover><span id="subGoLabel">subscribe — €10 / week</span><span class="btn__dot"></span></button>
+      </div>
       <p class="subs__note mono" data-reveal data-i18n="sub_note">manage, pause or cancel anytime — no strings attached.</p>
     </section>
 
@@ -349,6 +344,7 @@
       <ul class="cart__items" id="cartItems"></ul>
       <p class="cart__empty mono" id="cartEmpty" data-i18n="cart_empty">nothing here yet.</p>
       <footer class="cart__foot">
+        <p class="cart__ship mono" id="cartShip" hidden></p>
         <label class="cart__points mono" id="cartPoints" hidden>
           <input type="checkbox" id="usePoints">
           <span data-i18n="cart_usepoints">use 100 points — €8 off</span>
@@ -372,6 +368,6 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.7/gsap.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.7/ScrollTrigger.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/lenis@1.1.20/dist/lenis.min.js"></script>
-  <script src="main.js?v=28"></script>
+  <script src="main.js?v=29"></script>
 </body>
 </html>

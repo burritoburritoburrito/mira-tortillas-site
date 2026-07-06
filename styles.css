@@ -500,6 +500,37 @@ a { color: inherit; text-decoration: none; }
   .event__name { grid-column: 1 / -1; order: -1; }
 }
 
+/* ───────── hero quick-order chips ───────── */
+.hero__quick { display: flex; gap: .5rem; margin-top: .9rem; }
+.hero__quick button {
+  font-family: var(--font-mono); font-size: .78rem;
+  border: 2px solid var(--ink); border-radius: 999px;
+  background: transparent; color: var(--ink);
+  padding: .45rem .95rem; cursor: pointer;
+  transition: background .2s, color .2s, transform .2s;
+}
+.hero__quick button:hover { background: var(--ink); color: var(--cream); transform: translateY(-2px); }
+
+/* ───────── subscription picker ───────── */
+.subpick { max-width: 720px; }
+.subpick__row { display: flex; align-items: center; gap: 1.2rem; margin-bottom: 1.1rem; flex-wrap: wrap; }
+.subpick__label { font-size: .72rem; text-transform: uppercase; letter-spacing: .14em; opacity: .6; min-width: 4.5rem; }
+.subpick__opts { display: flex; gap: .55rem; flex-wrap: wrap; }
+.subpick__opt {
+  display: flex; align-items: baseline; gap: .5rem;
+  border: 2px solid var(--ink); border-radius: 999px;
+  background: transparent; color: var(--ink);
+  padding: .55rem 1.1rem; cursor: pointer;
+  font-family: var(--font-display); font-size: .95rem;
+  transition: background .2s, color .2s;
+}
+.subpick__opt b { font-weight: 700; }
+.subpick__opt em { font-style: normal; font-size: .7rem; opacity: .65; }
+.subpick__opt:hover { background: color-mix(in srgb, var(--ink) 10%, transparent); }
+.subpick__opt.is-on { background: var(--ink); color: var(--cream); }
+.subpick__opt.is-on em { opacity: .8; }
+.subpick__go { margin-top: .6rem; font-size: 1rem; padding: 1rem 2rem; }
+
 /* ───────── cart drawer + embedded checkout ───────── */
 .nav__badge[hidden] { display: none; }
 .nav__badge {
@@ -563,6 +594,11 @@ a { color: inherit; text-decoration: none; }
   display: flex; justify-content: space-between;
   font-size: 1rem; margin-bottom: 1.1rem;
 }
+.cart__ship {
+  font-size: .74rem; margin-bottom: .8rem;
+  color: var(--green-deep);
+}
+.cart__ship[hidden] { display: none; }
 .cart__points {
   display: flex; align-items: center; gap: .55rem;
   font-size: .78rem; margin-bottom: .9rem; cursor: pointer;

@@ -82,6 +82,8 @@
       cart_back: "back to site",
       cart_usepoints: "use 100 points — €8 off",
       cart_clear: "clear",
+      sub_size: "size",
+      sub_rhythm: "rhythm",
       sc_note: "secure checkout · stripe",
       ship_note: "lisboa: free local delivery &nbsp;·&nbsp; mainland portugal: ctt 24h — €7 from 3 packs, free over €40",
       scene_start: "dry pan · no oil",
@@ -145,6 +147,8 @@
       cart_back: "voltar ao site",
       cart_usepoints: "usar 100 pontos — €8 de desconto",
       cart_clear: "limpar",
+      sub_size: "tamanho",
+      sub_rhythm: "ritmo",
       sc_note: "pagamento seguro · stripe",
       ship_note: "lisboa: entrega local grátis &nbsp;·&nbsp; portugal continental: ctt 24h — €7 a partir de 3 packs, grátis acima de €40",
       scene_start: "frigideira seca · sem óleo",
@@ -219,6 +223,7 @@
     langBtn.textContent = lang === "en" ? "PT" : "EN";
     langBtn.setAttribute("aria-label", lang === "en" ? "Mudar para português" : "Switch to English");
     renderEvents(lang);
+    if (window.__subPickReady) updateSubGo();
     if (document.body.classList.contains("cart-mode")) renderCart();
     try { localStorage.setItem("mira-lang", lang); } catch (e) {}
   }
@@ -309,6 +314,21 @@
     badge.textContent = count;
     const clearBtn = document.getElementById("cartClear");
     if (clearBtn) clearBtn.hidden = !count;
+    /* free-shipping nudge: €40 unlocks free mainland shipping */
+    const ship = document.getElementById("cartShip");
+    if (ship) {
+      if (total > 0 && total < 40) {
+        ship.hidden = false;
+        ship.textContent = lang === "pt"
+          ? `faltam €${40 - total} para envio grátis (portugal continental)`
+          : `€${40 - total} away from free mainland shipping`;
+      } else if (total >= 40) {
+        ship.hidden = false;
+        ship.textContent = lang === "pt" ? "envio grátis desbloqueado ✓" : "free mainland shipping unlocked ✓";
+      } else {
+        ship.hidden = true;
+      }
+    }
   }
 
   function addToCart(sku, qty) {
@@ -430,6 +450,70 @@
       }
     });
     renderCart();
+  }
+
+  /* hero quick-order chips: add to cart when live, otherwise scroll to the cards */
+  document.querySelectorAll("[data-quick]").forEach((b) => {
+    b.addEventListener("click", () => {
+      if (document.body.classList.contains("cart-mode")) {
+        addToCart(b.dataset.quick, 1);
+        openCart();
+      } else {
+        const cta = document.querySelector('a[href="#escolher"].btn--green');
+        if (cta) cta.click();
+      }
+    });
+  });
+
+  /* subscription picker: size + rhythm -> one subscribe button with live price */
+  const SUB_LINKS = {
+    "small:weekly": "https://buy.stripe.com/bJe14g9Lu1pTgtLe3f6J203",
+    "small:biweekly": "https://buy.stripe.com/28E4gs7DmfgJa5ne3f6J204",
+    "small:monthly": "https://buy.stripe.com/6oUbIUf5O6Kd1yR7ER6J205",
+    "medium:weekly": "https://buy.stripe.com/00w9AMe1K2tX1yR3oB6J206",
+    "medium:biweekly": "https://buy.stripe.com/14AbIU6zi8Slcdv9MZ6J207",
+    "medium:monthly": "https://buy.stripe.com/7sY9AM7Dm0lP3GZ7ER6J208",
+    "large:weekly": "https://buy.stripe.com/fZuaEQ6zi5G90uN6AN6J209",
+    "large:biweekly": "https://buy.stripe.com/4gMaEQf5Ob0t4L3bV76J20a",
+    "large:monthly": "https://buy.stripe.com/9B64gsg9Sb0t0uN1gt6J20b",
+  };
+  const subState = { size: "medium", cad: "weekly" };
+  const CAD_SUFFIX = {
+    en: { weekly: "/ week", biweekly: "/ 2 weeks", monthly: "/ month" },
+    pt: { weekly: "/ semana", biweekly: "/ 2 semanas", monthly: "/ mês" },
+  };
+  function updateSubGo() {
+    const label = document.getElementById("subGoLabel");
+    if (!label) return;
+    const eur = CATALOG[subState.size].eur;
+    label.textContent = `${lang === "pt" ? "assinar" : "subscribe"} — €${eur} ${CAD_SUFFIX[lang][subState.cad]}`;
+  }
+  function bindPick(groupId, key) {
+    const group = document.getElementById(groupId);
+    if (!group) return;
+    group.querySelectorAll(".subpick__opt").forEach((b) => {
+      b.addEventListener("click", () => {
+        group.querySelectorAll(".subpick__opt").forEach((x) => x.classList.remove("is-on"));
+        b.classList.add("is-on");
+        subState[key] = b.dataset[key === "size" ? "size" : "cad"];
+        updateSubGo();
+      });
+    });
+  }
+  bindPick("subSize", "size");
+  bindPick("subCad", "cad");
+  window.__subPickReady = true;
+  updateSubGo();
+  const subGo = document.getElementById("subGo");
+  if (subGo) {
+    subGo.addEventListener("click", () => {
+      const combo = `${subState.size}:${subState.cad}`;
+      if (document.body.classList.contains("cart-mode")) {
+        startCheckout([{ price: SUB_PRICES[combo], quantity: 1 }]);
+      } else {
+        window.location.href = SUB_LINKS[combo];
+      }
+    });
   }
 
   /* activate cart mode only when the worker API is live */
