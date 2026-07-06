@@ -417,13 +417,13 @@
     })
     .catch(() => {});
 
-  /* signed-in visitors see the account link */
+  /* signed-in visitors get a green account dot */
   fetch("/api/me")
     .then((r) => (r.ok ? r.json() : null))
     .then((me) => {
       if (me && me.loggedIn) {
         const a = document.getElementById("navAccount");
-        if (a) a.hidden = false;
+        if (a) a.classList.add("is-in");
       }
     })
     .catch(() => {});
@@ -448,7 +448,7 @@
       }
       if (claimed && claimed.ok) {
         const a = document.getElementById("navAccount");
-        if (a) a.hidden = false;
+        if (a) a.classList.add("is-in");
         showToast(lang === "pt"
           ? `obrigado! encomenda confirmada — tens ${claimed.points} pontos na tua conta. 🌮`
           : `obrigado! order confirmed — you've got ${claimed.points} points in your account. 🌮`);
