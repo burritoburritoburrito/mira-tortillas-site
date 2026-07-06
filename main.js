@@ -80,6 +80,7 @@
       cart_total: "total",
       cart_checkout: "checkout",
       cart_back: "back to site",
+      cart_usepoints: "use 100 points — €8 off",
       sc_note: "secure checkout · stripe",
       ship_note: "lisboa: free local delivery &nbsp;·&nbsp; mainland portugal: ctt 24h — €7 from 3 packs, free over €40",
       scene_start: "dry pan · no oil",
@@ -141,6 +142,7 @@
       cart_total: "total",
       cart_checkout: "finalizar",
       cart_back: "voltar ao site",
+      cart_usepoints: "usar 100 pontos — €8 de desconto",
       sc_note: "pagamento seguro · stripe",
       ship_note: "lisboa: entrega local grátis &nbsp;·&nbsp; portugal continental: ctt 24h — €7 a partir de 3 packs, grátis acima de €40",
       scene_start: "frigideira seca · sem óleo",
@@ -289,6 +291,16 @@
     document.getElementById("cartEmpty").style.display = skus.length ? "none" : "";
     document.getElementById("cartCheckout").style.display = skus.length ? "" : "none";
     document.getElementById("cartTotal").textContent = "€" + total;
+    const pointsRow = document.getElementById("cartPoints");
+    if (pointsRow) {
+      const eligible = window.__miraMe && window.__miraMe.loggedIn &&
+        window.__miraMe.customer.points >= 100 && total >= 8;
+      pointsRow.hidden = !eligible;
+      if (!eligible) {
+        const cb = document.getElementById("usePoints");
+        if (cb) cb.checked = false;
+      }
+    }
     const count = skus.reduce((n, s) => n + cart[s], 0);
     const badge = document.getElementById("cartCount");
     badge.hidden = !count;
@@ -318,12 +330,12 @@
     });
   }
 
-  async function startCheckout(items) {
+  async function startCheckout(items, usePoints) {
     try {
       const r = await fetch("/api/checkout", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ items }),
+        body: JSON.stringify({ items, usePoints: !!usePoints }),
       });
       const raw = await r.text();
       let d;
@@ -404,7 +416,10 @@
       const items = Object.keys(cart)
         .filter((s) => CATALOG[s] && cart[s] > 0)
         .map((s) => ({ price: CATALOG[s].price, quantity: cart[s] }));
-      if (items.length) startCheckout(items);
+      if (items.length) {
+        const cb = document.getElementById("usePoints");
+        startCheckout(items, !!(cb && cb.checked && !document.getElementById("cartPoints").hidden));
+      }
     });
     renderCart();
   }
@@ -421,9 +436,11 @@
   fetch("/api/me")
     .then((r) => (r.ok ? r.json() : null))
     .then((me) => {
+      window.__miraMe = me;
       if (me && me.loggedIn) {
         const a = document.getElementById("navAccount");
         if (a) a.classList.add("is-in");
+        if (document.body.classList.contains("cart-mode")) renderCart();
       }
     })
     .catch(() => {});

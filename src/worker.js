@@ -61,6 +61,37 @@ async function stripeGet(env, path) {
   return res.ok ? data : null;
 }
 
+async function stripePost(env, path, params) {
+  const res = await fetch(`https://api.stripe.com${path}`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${env.STRIPE_SECRET_KEY}`,
+      "Content-Type": "application/x-www-form-urlencoded",
+    },
+    body: params,
+  });
+  const data = await res.json();
+  return res.ok ? data : null;
+}
+
+/* transactional email via Brevo (BREVO_API_KEY + MAIL_FROM env) */
+async function sendEmail(env, to, subject, text) {
+  if (!env.BREVO_API_KEY) return false;
+  const res = await fetch("https://api.brevo.com/v3/smtp/email", {
+    method: "POST",
+    headers: { "api-key": env.BREVO_API_KEY, "Content-Type": "application/json" },
+    body: JSON.stringify({
+      sender: { name: "mira tortillas", email: env.MAIL_FROM || "ola@miratortillas.pt" },
+      to: [{ email: to }],
+      subject,
+      textContent: text,
+    }),
+  });
+  return res.ok;
+}
+
+const POINTS_COUPON = "MIRA-POINTS-800"; // 100 points → €8 off
+
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
@@ -91,9 +122,20 @@ export default {
       if (mode === "subscription" && items.length > 1)
         return json({ error: "subscriptions check out one at a time" }, 400);
 
+      /* points redemption: 100 pts = €8 off, one-off orders of €8+, signed-in only */
+      let redeemer = null;
+      if (body.usePoints === true && mode === "payment" && subtotal >= 800) {
+        const c = await currentCustomer(env, request);
+        if (c && c.points >= 100) redeemer = c;
+      }
+
       const p = new URLSearchParams();
       p.set("ui_mode", "embedded_page");
       p.set("mode", mode);
+      if (redeemer) {
+        p.set("discounts[0][coupon]", POINTS_COUPON);
+        p.set("metadata[points_redeemed]", "100");
+      }
       p.set("return_url", `${url.origin}/?checkout=success&session_id={CHECKOUT_SESSION_ID}`);
       p.set("shipping_address_collection[allowed_countries][0]", "PT");
       p.set("phone_number_collection[enabled]", "true");
@@ -180,6 +222,11 @@ export default {
       if (inserted.meta.changes > 0 && points > 0) {
         await env.DB.prepare(`UPDATE customers SET points = points + ?1 WHERE id = ?2`).bind(points, customer.id).run();
       }
+      /* deduct redeemed points (only on first claim of this session) */
+      const redeemed = parseInt((session.metadata && session.metadata.points_redeemed) || "0", 10);
+      if (inserted.meta.changes > 0 && redeemed > 0) {
+        await env.DB.prepare(`UPDATE customers SET points = MAX(points - ?1, 0) WHERE id = ?2`).bind(redeemed, customer.id).run();
+      }
 
       const cookie = await createSession(env, customer.id);
       const fresh = await env.DB.prepare(`SELECT points FROM customers WHERE id = ?1`).bind(customer.id).first();
@@ -203,6 +250,9 @@ export default {
             .map((s) => {
               const it = s.items && s.items.data[0];
               return {
+                id: s.id,
+                cancelAtEnd: !!s.cancel_at_period_end,
+                paused: !!s.pause_collection,
                 status: s.status,
                 plan: (it && it.price && it.price.nickname) || "subscription",
                 amount: it && it.price ? it.price.unit_amount * (it.quantity || 1) : null,
@@ -223,6 +273,70 @@ export default {
         orders: orders.results || [],
         subscriptions: subs,
       });
+    }
+
+    /* email login — step 1: send a 6-digit code */
+    if (url.pathname === "/api/login-request" && request.method === "POST") {
+      let body;
+      try { body = await request.json(); } catch { return json({ error: "bad json" }, 400); }
+      const email = String(body.email || "").trim().toLowerCase();
+      if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return json({ error: "invalid email" }, 400);
+      if (!env.BREVO_API_KEY)
+        return json({ error: "email login isn't connected yet — your account signs in automatically after any order" }, 503);
+      const code = String(Math.floor(100000 + Math.random() * 900000));
+      await env.DB.prepare(
+        `INSERT INTO login_codes (email, code, attempts, expires_at)
+         VALUES (?1, ?2, 0, datetime('now', '+10 minutes'))
+         ON CONFLICT(email) DO UPDATE SET code = excluded.code, attempts = 0,
+           expires_at = excluded.expires_at, created_at = datetime('now')`
+      ).bind(email, code).run();
+      const sent = await sendEmail(env, email, "your mira login code",
+        `your login code: ${code}\n\nit's valid for 10 minutes.\n\no teu código de acesso: ${code} (válido 10 minutos)\n\n— mira tortillas`);
+      if (!sent) return json({ error: "couldn't send the email — try again in a minute" }, 502);
+      return json({ ok: true });
+    }
+
+    /* email login — step 2: verify the code, open a session */
+    if (url.pathname === "/api/login-verify" && request.method === "POST") {
+      let body;
+      try { body = await request.json(); } catch { return json({ error: "bad json" }, 400); }
+      const email = String(body.email || "").trim().toLowerCase();
+      const code = String(body.code || "").trim();
+      const row = await env.DB.prepare(
+        `SELECT * FROM login_codes WHERE email = ?1 AND expires_at > datetime('now')`
+      ).bind(email).first();
+      if (!row || row.attempts >= 5) return json({ error: "code expired — request a new one" }, 400);
+      if (row.code !== code) {
+        await env.DB.prepare(`UPDATE login_codes SET attempts = attempts + 1 WHERE email = ?1`).bind(email).run();
+        return json({ error: "wrong code" }, 400);
+      }
+      await env.DB.prepare(`DELETE FROM login_codes WHERE email = ?1`).bind(email).run();
+      await env.DB.prepare(`INSERT OR IGNORE INTO customers (email) VALUES (?1)`).bind(email).run();
+      const customer = await env.DB.prepare(`SELECT * FROM customers WHERE email = ?1`).bind(email).first();
+      const cookie = await createSession(env, customer.id);
+      return json({ ok: true }, 200, { "Set-Cookie": cookie });
+    }
+
+    /* manage own subscription: cancel at period end / keep / pause / resume */
+    if (url.pathname === "/api/sub-action" && request.method === "POST") {
+      const c = await currentCustomer(env, request);
+      if (!c || !c.stripe_customer_id) return json({ error: "not signed in" }, 401);
+      let body;
+      try { body = await request.json(); } catch { return json({ error: "bad json" }, 400); }
+      const id = String(body.id || "");
+      const action = String(body.action || "");
+      if (!/^sub_[A-Za-z0-9]+$/.test(id)) return json({ error: "bad id" }, 400);
+      const sub = await stripeGet(env, `/v1/subscriptions/${id}`);
+      if (!sub || sub.customer !== c.stripe_customer_id) return json({ error: "not yours" }, 403);
+      const p = new URLSearchParams();
+      if (action === "cancel") p.set("cancel_at_period_end", "true");
+      else if (action === "keep") p.set("cancel_at_period_end", "false");
+      else if (action === "pause") p.set("pause_collection[behavior]", "void");
+      else if (action === "resume") p.set("pause_collection", "");
+      else return json({ error: "bad action" }, 400);
+      const updated = await stripePost(env, `/v1/subscriptions/${id}`, p);
+      if (!updated) return json({ error: "stripe error" }, 502);
+      return json({ ok: true });
     }
 
     if (url.pathname === "/api/logout" && request.method === "POST") {

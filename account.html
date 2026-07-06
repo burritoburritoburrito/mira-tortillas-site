@@ -9,7 +9,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=25">
+  <link rel="stylesheet" href="styles.css?v=26">
   <style>
     body { cursor: auto; }
     .acct { max-width: 860px; margin: 0 auto; padding: 1.4rem var(--pad) 5rem; }
@@ -39,6 +39,13 @@
     .acct__login p { max-width: 42ch; margin: 0 auto 1.6rem; line-height: 1.6; }
     .pill { display: inline-block; font-family: var(--font-mono); font-size: .68rem; text-transform: uppercase; letter-spacing: .1em; border: 2px solid var(--ink); border-radius: 999px; padding: .15rem .6rem; }
     .pill--on { background: var(--green); }
+    .subbtn {
+      font-family: var(--font-mono); font-size: .72rem; text-transform: uppercase; letter-spacing: .08em;
+      border: 2px solid var(--ink); border-radius: 999px; background: none; color: var(--ink);
+      padding: .3rem .8rem; cursor: pointer; transition: background .2s, color .2s;
+    }
+    .subbtn:hover { background: var(--ink); color: var(--cream); }
+    .subbtn--warn:hover { background: var(--oxblood); border-color: var(--oxblood); color: var(--cream); }
   </style>
 </head>
 <body>
@@ -60,11 +67,49 @@
     if (!me.loggedIn) {
       box.innerHTML = `
         <div class="acct__login">
-          <h1 class="acct__hi">no account yet.</h1>
-          <p>Your mira account is created automatically with your first order — points, address and order history included.<br><br>
-          A tua conta mira é criada automaticamente com a primeira encomenda.</p>
-          <a class="btn btn--green" href="/#escolher">order a stack<span class="btn__dot"></span></a>
+          <h1 class="acct__hi">sign in.</h1>
+          <p>Enter your email and we'll send you a 6-digit code — no passwords here.<br>
+          Escreve o teu email e enviamos-te um código de 6 dígitos — sem passwords.</p>
+          <div id="loginBox" style="max-width:340px;margin:0 auto;display:grid;gap:.7rem">
+            <input id="loginEmail" type="email" placeholder="email" autocomplete="email"
+              style="font-family:var(--font-mono);font-size:.95rem;padding:.85rem 1rem;border:3px solid var(--ink);border-radius:12px;background:#fff;width:100%">
+            <button class="btn btn--green" id="sendCode" style="justify-content:center;width:100%">send code · enviar código</button>
+            <div id="codeRow" hidden style="display:grid;gap:.7rem">
+              <input id="loginCode" inputmode="numeric" maxlength="6" placeholder="123456" autocomplete="one-time-code"
+                style="font-family:var(--font-mono);font-size:1.3rem;letter-spacing:.4em;text-align:center;padding:.85rem 1rem;border:3px solid var(--ink);border-radius:12px;background:#fff;width:100%">
+              <button class="btn btn--ink" id="verifyCode" style="justify-content:center;width:100%">sign in · entrar</button>
+            </div>
+            <p id="loginMsg" class="acct__empty" style="min-height:1.2em"></p>
+          </div>
+          <p style="margin-top:2rem;font-family:var(--font-mono);font-size:.75rem;opacity:.6">
+            first time? your account is also created automatically with any order.<br>
+            primeira vez? a tua conta também é criada automaticamente com qualquer encomenda.</p>
+          <p style="margin-top:1rem"><a class="btn btn--green" href="/#escolher">order a stack<span class="btn__dot"></span></a></p>
         </div>`;
+
+      const msg = () => document.getElementById("loginMsg");
+      document.getElementById("sendCode").addEventListener("click", async () => {
+        const email = document.getElementById("loginEmail").value.trim();
+        if (!email) { msg().textContent = "enter your email first"; return; }
+        msg().textContent = "sending…";
+        try {
+          const r = await fetch("/api/login-request", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email }) });
+          const d = await r.json();
+          if (d.ok) { document.getElementById("codeRow").hidden = false; msg().textContent = "code sent — check your inbox (and spam)"; }
+          else msg().textContent = d.error || "something went wrong";
+        } catch (e) { msg().textContent = "network error — try again"; }
+      });
+      document.getElementById("verifyCode").addEventListener("click", async () => {
+        const email = document.getElementById("loginEmail").value.trim();
+        const code = document.getElementById("loginCode").value.trim();
+        msg().textContent = "checking…";
+        try {
+          const r = await fetch("/api/login-verify", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email, code }) });
+          const d = await r.json();
+          if (d.ok) location.reload();
+          else msg().textContent = d.error || "wrong code";
+        } catch (e) { msg().textContent = "network error — try again"; }
+      });
       return;
     }
 
@@ -73,11 +118,19 @@
     const addr = [c.address.line1, c.address.line2, [c.address.postal_code, c.address.city].filter(Boolean).join(" ")]
       .filter(Boolean).join("<br>");
 
+    const subActions = (s) => {
+      if (s.status !== "active" && s.status !== "past_due" && !s.paused) return "";
+      if (s.cancelAtEnd) return `<button class="subbtn" data-sub="${s.id}" data-act="keep">keep it · manter</button>`;
+      if (s.paused) return `<button class="subbtn" data-sub="${s.id}" data-act="resume">resume · retomar</button>`;
+      return `<button class="subbtn" data-sub="${s.id}" data-act="pause">pause · pausar</button>
+              <button class="subbtn subbtn--warn" data-sub="${s.id}" data-act="cancel">cancel · cancelar</button>`;
+    };
     const subsHtml = me.subscriptions.length
       ? me.subscriptions.map((s) => `
-          <div class="acct__row">
-            <span>${s.plan || "subscription"} <span class="pill ${s.status === "active" ? "pill--on" : ""}">${s.status}</span></span>
-            <span class="mono">${s.amount ? eur(s.amount) : ""} / ${s.interval || ""}${s.renews ? " · next: " + s.renews : ""}</span>
+          <div class="acct__row" style="flex-wrap:wrap">
+            <span>${s.plan || "subscription"} <span class="pill ${s.status === "active" && !s.paused && !s.cancelAtEnd ? "pill--on" : ""}">${s.paused ? "paused" : s.cancelAtEnd ? "ending" : s.status}</span></span>
+            <span class="mono">${s.amount ? eur(s.amount) : ""} / ${s.interval || ""}${s.renews ? (s.cancelAtEnd ? " · ends: " : " · next: ") + s.renews : ""}</span>
+            <span style="flex-basis:100%;display:flex;gap:.5rem;margin-top:.4rem">${subActions(s)}</span>
           </div>`).join("")
       : `<p class="acct__empty">no subscription yet / ainda sem assinatura</p>`;
 
@@ -93,6 +146,7 @@
       <h1 class="acct__hi">olá, ${firstName}.</h1>
       <p class="acct__sub">${c.email}${c.phone ? " · " + c.phone : ""}</p>
       <div class="acct__points"><b>${c.points}</b><span>points / pontos</span></div>
+      <p class="acct__empty" style="margin:-1.6rem 0 2rem">100 points = €8 off — tick "use points" in the cart / 100 pontos = €8 de desconto no carrinho</p>
       <div class="acct__grid">
         <div class="acct__card">
           <h2>subscriptions <small>assinaturas</small></h2>
@@ -118,6 +172,24 @@
     document.getElementById("logout").addEventListener("click", async () => {
       await fetch("/api/logout", { method: "POST" });
       location.href = "/";
+    });
+
+    document.querySelectorAll(".subbtn").forEach((b) => {
+      b.addEventListener("click", async () => {
+        const act = b.dataset.act;
+        const asks = {
+          cancel: "cancel this subscription at the end of the current period? / cancelar no fim do período atual?",
+          pause: "pause deliveries until you resume? / pausar entregas até retomares?",
+          resume: "resume deliveries? / retomar entregas?",
+          keep: "keep the subscription going? / manter a assinatura?",
+        };
+        if (!confirm(asks[act])) return;
+        b.disabled = true; b.textContent = "…";
+        const r = await fetch("/api/sub-action", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: b.dataset.sub, action: act }) });
+        const d = await r.json();
+        if (d.ok) location.reload();
+        else { alert(d.error || "something went wrong"); b.disabled = false; }
+      });
     });
   })();
   </script>
