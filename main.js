@@ -376,6 +376,17 @@
     document.getElementById("navOrder").addEventListener("click", (e) => {
       e.preventDefault(); openCart();
     });
+    /* footer CTA: shop instead of the mailto (no inbox until the domain email exists) */
+    const footCta = document.querySelector(".footer__cta");
+    if (footCta) {
+      footCta.addEventListener("click", (e) => {
+        e.preventDefault();
+        const cart = readCart();
+        if (Object.keys(cart).some((s) => CATALOG[s] && cart[s] > 0)) { openCart(); return; }
+        const grid = document.getElementById("escolher");
+        if (grid) grid.scrollIntoView({ behavior: "smooth", block: "start" });
+      });
+    }
     document.getElementById("cartClose").addEventListener("click", closeCart);
     shade.addEventListener("click", closeCart);
     document.getElementById("scClose").addEventListener("click", closeCheckout);
@@ -408,8 +419,8 @@
     history.replaceState(null, "", location.pathname);
     setTimeout(() => {
       showToast(lang === "pt"
-        ? "obrigado! encomenda confirmada — vê o teu email. 🌮"
-        : "obrigado! order confirmed — check your email. 🌮");
+        ? "obrigado! encomenda confirmada — entraremos em contacto para combinar a entrega. 🌮"
+        : "obrigado! order confirmed — we'll be in touch to arrange delivery. 🌮");
     }, 600);
   }
 
