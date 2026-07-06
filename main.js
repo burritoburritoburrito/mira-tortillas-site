@@ -81,6 +81,7 @@
       cart_checkout: "checkout",
       cart_back: "back to site",
       cart_usepoints: "use 100 points — €8 off",
+      cart_clear: "clear",
       sc_note: "secure checkout · stripe",
       ship_note: "lisboa: free local delivery &nbsp;·&nbsp; mainland portugal: ctt 24h — €7 from 3 packs, free over €40",
       scene_start: "dry pan · no oil",
@@ -143,6 +144,7 @@
       cart_checkout: "finalizar",
       cart_back: "voltar ao site",
       cart_usepoints: "usar 100 pontos — €8 de desconto",
+      cart_clear: "limpar",
       sc_note: "pagamento seguro · stripe",
       ship_note: "lisboa: entrega local grátis &nbsp;·&nbsp; portugal continental: ctt 24h — €7 a partir de 3 packs, grátis acima de €40",
       scene_start: "frigideira seca · sem óleo",
@@ -305,6 +307,8 @@
     const badge = document.getElementById("cartCount");
     badge.hidden = !count;
     badge.textContent = count;
+    const clearBtn = document.getElementById("cartClear");
+    if (clearBtn) clearBtn.hidden = !count;
   }
 
   function addToCart(sku, qty) {
@@ -404,6 +408,10 @@
       });
     }
     document.getElementById("cartClose").addEventListener("click", closeCart);
+    document.getElementById("cartClear").addEventListener("click", () => {
+      writeCart({});
+      renderCart();
+    });
     shade.addEventListener("click", closeCart);
     document.getElementById("scClose").addEventListener("click", closeCheckout);
     document.getElementById("cartItems").addEventListener("click", (e) => {
