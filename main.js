@@ -332,7 +332,9 @@
       if (embedded) { embedded.destroy(); embedded = null; }
       embedded = await stripe.initEmbeddedCheckout({ clientSecret: d.clientSecret });
       closeCart();
-      document.getElementById("scWrap").hidden = false;
+      const wrap = document.getElementById("scWrap");
+      wrap.hidden = false;
+      wrap.scrollTop = 0;
       document.body.style.overflow = "hidden";
       embedded.mount("#scMount");
     } catch (e) {
