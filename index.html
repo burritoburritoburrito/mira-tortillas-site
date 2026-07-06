@@ -10,7 +10,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=20">
+  <link rel="stylesheet" href="styles.css?v=21">
 </head>
 <body>
 
@@ -124,6 +124,7 @@
         </article>
       </div>
       <p class="sizes__pay mono" data-reveal data-i18n="pay_note">secure checkout by stripe — card · apple pay · google pay · mb way / multibanco</p>
+      <p class="sizes__ship mono" data-reveal data-i18n="ship_note">lisboa: free local delivery &nbsp;·&nbsp; mainland portugal: ctt 24h — €7 from 3 packs, free over €40</p>
     </section>
 
     <!-- ───────── subscriptions ───────── -->
@@ -344,6 +345,10 @@
     </aside>
     <div class="sc" id="scWrap" hidden>
       <button class="sc__close mono" id="scClose" data-hover>× <span data-i18n="cart_back">back to site</span></button>
+      <div class="sc__head">
+        <img src="assets/mira-wordmark.png" alt="mira">
+        <span class="mono" data-i18n="sc_note">secure checkout · stripe</span>
+      </div>
       <div class="sc__mount" id="scMount"></div>
     </div>
     <div class="toast mono" id="toast" hidden></div>
@@ -353,6 +358,6 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.7/gsap.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.7/ScrollTrigger.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/lenis@1.1.20/dist/lenis.min.js"></script>
-  <script src="main.js?v=19"></script>
+  <script src="main.js?v=21"></script>
 </body>
 </html>

@@ -3,10 +3,10 @@
 
 /* every price this API will sell — anything else is rejected */
 const PRICES = {
-  // one-off
-  "price_1Tp6jR2KMRu6Fi6htz56SDPI": { mode: "payment" },      // small ×12 €8
-  "price_1Tp6jS2KMRu6Fi6hI68OSLWD": { mode: "payment" },      // medium ×12 €10
-  "price_1Tp6jU2KMRu6Fi6hj58ozoRh": { mode: "payment" },      // large ×6 €9
+  // one-off (amount = cents per pack, used for shipping rules)
+  "price_1Tp6jR2KMRu6Fi6htz56SDPI": { mode: "payment", amount: 800 },   // small ×12 €8
+  "price_1Tp6jS2KMRu6Fi6hI68OSLWD": { mode: "payment", amount: 1000 },  // medium ×12 €10
+  "price_1Tp6jU2KMRu6Fi6hj58ozoRh": { mode: "payment", amount: 900 },   // large ×6 €9
   // subscriptions
   "price_1Tp6je2KMRu6Fi6hri2mQkM8": { mode: "subscription" }, // small weekly
   "price_1Tp6jf2KMRu6Fi6hnOZhEOkg": { mode: "subscription" }, // small 2-weekly
@@ -41,12 +41,15 @@ export default {
       if (!items.length || items.length > 10) return json({ error: "bad cart" }, 400);
 
       let mode = "payment";
+      let subtotal = 0;
+      let packs = 0;
       for (const it of items) {
         const known = PRICES[it.price];
         const qty = Number(it.quantity);
         if (!known || !Number.isInteger(qty) || qty < 1 || qty > 20)
           return json({ error: "bad item" }, 400);
         if (known.mode === "subscription") mode = "subscription";
+        else { subtotal += known.amount * qty; packs += qty; }
       }
       // Stripe: one subscription per checkout — keep subs single-item
       if (mode === "subscription" && items.length > 1)
@@ -62,6 +65,25 @@ export default {
         p.set(`line_items[${i}][price]`, it.price);
         p.set(`line_items[${i}][quantity]`, String(it.quantity));
       });
+
+      /* shipping choices (one-off orders only):
+         Lisbon hand delivery always free · mainland CTT €7 from 3 packs · free over €40 */
+      if (mode === "payment") {
+        const rates = [
+          { name: "Lisboa · entrega local / local delivery", amount: 0 },
+        ];
+        if (subtotal >= 4000) {
+          rates.push({ name: "Portugal continental · CTT expresso — grátis / free", amount: 0 });
+        } else if (packs >= 3) {
+          rates.push({ name: "Portugal continental · CTT expresso", amount: 700 });
+        }
+        rates.forEach((r, i) => {
+          p.set(`shipping_options[${i}][shipping_rate_data][display_name]`, r.name);
+          p.set(`shipping_options[${i}][shipping_rate_data][type]`, "fixed_amount");
+          p.set(`shipping_options[${i}][shipping_rate_data][fixed_amount][amount]`, String(r.amount));
+          p.set(`shipping_options[${i}][shipping_rate_data][fixed_amount][currency]`, "eur");
+        });
+      }
 
       const res = await fetch("https://api.stripe.com/v1/checkout/sessions", {
         method: "POST",
