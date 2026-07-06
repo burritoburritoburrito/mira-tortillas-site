@@ -60,6 +60,7 @@
       sub_meta_m: "12 tortillas · €10 per delivery",
       sub_meta_l: "6 tortillas · €9 per delivery",
       nav_events: "find us",
+      nav_account: "account",
       ev_kicker: "05 — find us",
       ev_title: "upcoming<br>drops &amp; markets.",
       ev_empty: "nothing on the calendar right now — follow @miratortillas for the next drop.",
@@ -120,6 +121,7 @@
       sub_meta_m: "12 tortillas · €10 por entrega",
       sub_meta_l: "6 tortillas · €9 por entrega",
       nav_events: "onde estamos",
+      nav_account: "conta",
       ev_kicker: "05 — onde estamos",
       ev_title: "próximos<br>drops &amp; mercados.",
       ev_empty: "nada agendado de momento — segue @miratortillas para o próximo drop.",
@@ -415,15 +417,47 @@
     })
     .catch(() => {});
 
-  /* back from a successful embedded checkout */
-  if (new URLSearchParams(location.search).get("checkout") === "success") {
+  /* signed-in visitors see the account link */
+  fetch("/api/me")
+    .then((r) => (r.ok ? r.json() : null))
+    .then((me) => {
+      if (me && me.loggedIn) {
+        const a = document.getElementById("navAccount");
+        if (a) a.hidden = false;
+      }
+    })
+    .catch(() => {});
+
+  /* back from a successful embedded checkout: create/refresh the mira account */
+  const qs = new URLSearchParams(location.search);
+  if (qs.get("checkout") === "success") {
+    const sid = qs.get("session_id");
     writeCart({});
     history.replaceState(null, "", location.pathname);
-    setTimeout(() => {
-      showToast(lang === "pt"
-        ? "obrigado! encomenda confirmada — entraremos em contacto para combinar a entrega. 🌮"
-        : "obrigado! order confirmed — we'll be in touch to arrange delivery. 🌮");
-    }, 600);
+    (async () => {
+      let claimed = null;
+      if (sid) {
+        try {
+          const r = await fetch("/api/claim", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ session_id: sid }),
+          });
+          claimed = await r.json();
+        } catch (e) {}
+      }
+      if (claimed && claimed.ok) {
+        const a = document.getElementById("navAccount");
+        if (a) a.hidden = false;
+        showToast(lang === "pt"
+          ? `obrigado! encomenda confirmada — tens ${claimed.points} pontos na tua conta. 🌮`
+          : `obrigado! order confirmed — you've got ${claimed.points} points in your account. 🌮`);
+      } else {
+        showToast(lang === "pt"
+          ? "obrigado! encomenda confirmada — entraremos em contacto para combinar a entrega. 🌮"
+          : "obrigado! order confirmed — we'll be in touch to arrange delivery. 🌮");
+      }
+    })();
   }
 
   langBtn.addEventListener("click", () => {

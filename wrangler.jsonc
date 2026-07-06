@@ -15,5 +15,12 @@
   "assets": {
     "directory": ".",
     "not_found_handling": "404-page"
-  }
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "mira-db",
+      "database_id": "b08406b8-d1f5-4aad-ae43-fbbbd56f685c"
+    }
+  ]
 }

@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>my account — mira tortillas</title>
+  <meta name="robots" content="noindex">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Ccircle cx='32' cy='32' r='30' fill='%23ecd9af'/%3E%3Ccircle cx='22' cy='20' r='4' fill='%23b98a4e' opacity='.6'/%3E%3Ccircle cx='44' cy='28' r='3' fill='%23b98a4e' opacity='.6'/%3E%3Ccircle cx='30' cy='44' r='4' fill='%23b98a4e' opacity='.6'/%3E%3C/svg%3E">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css?v=24">
+  <style>
+    body { cursor: auto; }
+    .acct { max-width: 860px; margin: 0 auto; padding: 1.4rem var(--pad) 5rem; }
+    .acct__nav { display: flex; align-items: center; justify-content: space-between; padding: .4rem 0 2.2rem; }
+    .acct__nav img { height: clamp(26px, 3.4vw, 34px); width: auto; }
+    .acct__nav a.back { font-family: var(--font-mono); font-size: .85rem; text-decoration: underline; text-underline-offset: .25em; }
+    .acct__hi { font-size: clamp(2.2rem, 6vw, 3.6rem); font-weight: 700; letter-spacing: -.03em; line-height: 1.05; margin-bottom: .4rem; }
+    .acct__sub { font-family: var(--font-mono); font-size: .8rem; text-transform: uppercase; letter-spacing: .12em; opacity: .6; margin-bottom: 2rem; }
+    .acct__points {
+      display: inline-flex; align-items: baseline; gap: .6rem;
+      border: 3px solid var(--ink); border-radius: 999px;
+      padding: .7rem 1.4rem; margin-bottom: 2.4rem; background: var(--green);
+    }
+    .acct__points b { font-size: 1.6rem; font-weight: 700; }
+    .acct__points span { font-family: var(--font-mono); font-size: .75rem; text-transform: uppercase; letter-spacing: .12em; }
+    .acct__grid { display: grid; gap: 1.2rem; }
+    .acct__card { border: 3px solid var(--ink); border-radius: var(--radius); padding: 1.3rem 1.5rem; background: #fff; }
+    .acct__card h2 { font-size: 1.15rem; font-weight: 700; letter-spacing: -.01em; margin-bottom: .9rem; }
+    .acct__card h2 small { font-family: var(--font-mono); font-weight: 400; font-size: .7rem; text-transform: uppercase; letter-spacing: .12em; opacity: .55; margin-left: .5rem; }
+    .acct__row { display: flex; justify-content: space-between; gap: 1rem; padding: .55rem 0; border-bottom: 2px solid var(--cream-dim); font-size: .92rem; }
+    .acct__row:last-child { border-bottom: 0; }
+    .acct__row .mono { font-size: .8rem; opacity: .75; white-space: nowrap; }
+    .acct__empty { font-family: var(--font-mono); font-size: .8rem; opacity: .6; }
+    .acct__note { margin-top: 2rem; font-family: var(--font-mono); font-size: .78rem; line-height: 1.7; opacity: .65; }
+    .acct__logout { margin-top: 1.4rem; background: none; border: 0; font-family: var(--font-mono); font-size: .8rem; text-decoration: underline; text-underline-offset: .25em; cursor: pointer; color: var(--ink); }
+    .acct__login { text-align: center; padding: 4rem 0; }
+    .acct__login p { max-width: 42ch; margin: 0 auto 1.6rem; line-height: 1.6; }
+    .pill { display: inline-block; font-family: var(--font-mono); font-size: .68rem; text-transform: uppercase; letter-spacing: .1em; border: 2px solid var(--ink); border-radius: 999px; padding: .15rem .6rem; }
+    .pill--on { background: var(--green); }
+  </style>
+</head>
+<body>
+  <div class="acct">
+    <div class="acct__nav">
+      <a href="/"><img src="assets/mira-wordmark.png" alt="mira"></a>
+      <a class="back" href="/">← back to site / voltar</a>
+    </div>
+    <div id="content"><p class="acct__empty">loading…</p></div>
+  </div>
+
+  <script>
+  (async function () {
+    const box = document.getElementById("content");
+    const eur = (cents) => "€" + (cents / 100).toFixed(2).replace(".00", "");
+    let me;
+    try { me = await (await fetch("/api/me")).json(); } catch (e) { me = { loggedIn: false }; }
+
+    if (!me.loggedIn) {
+      box.innerHTML = `
+        <div class="acct__login">
+          <h1 class="acct__hi">no account yet.</h1>
+          <p>Your mira account is created automatically with your first order — points, address and order history included.<br><br>
+          A tua conta mira é criada automaticamente com a primeira encomenda.</p>
+          <a class="btn btn--green" href="/#escolher">order a stack<span class="btn__dot"></span></a>
+        </div>`;
+      return;
+    }
+
+    const c = me.customer;
+    const firstName = (c.name || c.email).split(" ")[0];
+    const addr = [c.address.line1, c.address.line2, [c.address.postal_code, c.address.city].filter(Boolean).join(" ")]
+      .filter(Boolean).join("<br>");
+
+    const subsHtml = me.subscriptions.length
+      ? me.subscriptions.map((s) => `
+          <div class="acct__row">
+            <span>${s.plan || "subscription"} <span class="pill ${s.status === "active" ? "pill--on" : ""}">${s.status}</span></span>
+            <span class="mono">${s.amount ? eur(s.amount) : ""} / ${s.interval || ""}${s.renews ? " · next: " + s.renews : ""}</span>
+          </div>`).join("")
+      : `<p class="acct__empty">no subscription yet / ainda sem assinatura</p>`;
+
+    const ordersHtml = me.orders.length
+      ? me.orders.map((o) => `
+          <div class="acct__row">
+            <span>${o.created_at.slice(0, 10)} · ${o.mode === "subscription" ? "subscription" : "order"}</span>
+            <span class="mono">${eur(o.amount_total)} · +${o.points_earned} pts</span>
+          </div>`).join("")
+      : `<p class="acct__empty">no orders yet / ainda sem encomendas</p>`;
+
+    box.innerHTML = `
+      <h1 class="acct__hi">olá, ${firstName}.</h1>
+      <p class="acct__sub">${c.email}${c.phone ? " · " + c.phone : ""}</p>
+      <div class="acct__points"><b>${c.points}</b><span>points / pontos</span></div>
+      <div class="acct__grid">
+        <div class="acct__card">
+          <h2>subscriptions <small>assinaturas</small></h2>
+          ${subsHtml}
+        </div>
+        <div class="acct__card">
+          <h2>orders <small>encomendas</small></h2>
+          ${ordersHtml}
+        </div>
+        <div class="acct__card">
+          <h2>delivery address <small>morada de entrega</small></h2>
+          ${addr ? `<p style="line-height:1.7">${addr}</p>` : `<p class="acct__empty">added automatically at checkout / adicionada no checkout</p>`}
+        </div>
+      </div>
+      <p class="acct__note">
+        to change a subscription, address or anything else — message us on instagram
+        <a href="https://instagram.com/miratortillas" target="_blank" rel="noopener" style="text-decoration:underline">@miratortillas</a>
+        and we'll sort it. self-service controls are coming here soon.<br>
+        para alterar a assinatura ou morada, manda-nos mensagem — em breve podes gerir tudo aqui.
+      </p>
+      <button class="acct__logout" id="logout">log out / sair</button>`;
+
+    document.getElementById("logout").addEventListener("click", async () => {
+      await fetch("/api/logout", { method: "POST" });
+      location.href = "/";
+    });
+  })();
+  </script>
+</body>
+</html>

@@ -19,11 +19,47 @@ const PRICES = {
   "price_1Tp6jo2KMRu6Fi6hOAHj9Uo4": { mode: "subscription" }, // large monthly
 };
 
-const json = (data, status = 200) =>
+const json = (data, status = 200, extraHeaders = {}) =>
   new Response(JSON.stringify(data), {
     status,
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json", ...extraHeaders },
   });
+
+/* ── mira's own accounts (D1) ── */
+const SESSION_DAYS = 90;
+
+function getCookie(request, name) {
+  const raw = request.headers.get("Cookie") || "";
+  const m = raw.match(new RegExp(`(?:^|;\\s*)${name}=([^;]+)`));
+  return m ? m[1] : null;
+}
+
+async function currentCustomer(env, request) {
+  const token = getCookie(request, "mira_session");
+  if (!token) return null;
+  const row = await env.DB.prepare(
+    `SELECT c.* FROM sessions s JOIN customers c ON c.id = s.customer_id
+     WHERE s.token = ?1 AND s.expires_at > datetime('now')`
+  ).bind(token).first();
+  return row || null;
+}
+
+async function createSession(env, customerId) {
+  const token = crypto.randomUUID() + crypto.randomUUID().replace(/-/g, "");
+  await env.DB.prepare(
+    `INSERT INTO sessions (token, customer_id, expires_at)
+     VALUES (?1, ?2, datetime('now', '+${SESSION_DAYS} days'))`
+  ).bind(token, customerId).run();
+  return `mira_session=${token}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=${SESSION_DAYS * 86400}`;
+}
+
+async function stripeGet(env, path) {
+  const res = await fetch(`https://api.stripe.com${path}`, {
+    headers: { Authorization: `Bearer ${env.STRIPE_SECRET_KEY}` },
+  });
+  const data = await res.json();
+  return res.ok ? data : null;
+}
 
 export default {
   async fetch(request, env) {
@@ -96,6 +132,105 @@ export default {
       const session = await res.json();
       if (!res.ok) return json({ error: session.error?.message || "stripe error" }, 502);
       return json({ clientSecret: session.client_secret });
+    }
+
+    /* after a successful checkout: create/refresh the mira account + sign in */
+    if (url.pathname === "/api/claim" && request.method === "POST") {
+      let body;
+      try { body = await request.json(); } catch { return json({ error: "bad json" }, 400); }
+      const sid = String(body.session_id || "");
+      if (!/^cs_(live|test)_[A-Za-z0-9]+$/.test(sid)) return json({ error: "bad session" }, 400);
+
+      const session = await stripeGet(env, `/v1/checkout/sessions/${sid}`);
+      if (!session || session.status !== "complete") return json({ error: "not a completed checkout" }, 400);
+
+      const cd = session.customer_details || {};
+      const email = (cd.email || "").toLowerCase();
+      if (!email) return json({ error: "no email on session" }, 400);
+      const addr = (session.shipping_details && session.shipping_details.address) || cd.address || {};
+
+      await env.DB.prepare(
+        `INSERT INTO customers (email, name, phone, address_line1, address_line2, postal_code, city, country, stripe_customer_id)
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)
+         ON CONFLICT(email) DO UPDATE SET
+           name = COALESCE(excluded.name, name),
+           phone = COALESCE(excluded.phone, phone),
+           address_line1 = COALESCE(excluded.address_line1, address_line1),
+           address_line2 = COALESCE(excluded.address_line2, address_line2),
+           postal_code = COALESCE(excluded.postal_code, postal_code),
+           city = COALESCE(excluded.city, city),
+           country = COALESCE(excluded.country, country),
+           stripe_customer_id = COALESCE(excluded.stripe_customer_id, stripe_customer_id),
+           updated_at = datetime('now')`
+      ).bind(
+        email, cd.name || null, cd.phone || null,
+        addr.line1 || null, addr.line2 || null, addr.postal_code || null,
+        addr.city || null, addr.country || "PT",
+        typeof session.customer === "string" ? session.customer : null
+      ).run();
+
+      const customer = await env.DB.prepare(`SELECT * FROM customers WHERE email = ?1`).bind(email).first();
+
+      /* record the order + award points (1 point per €) — once per checkout session */
+      const points = Math.floor((session.amount_total || 0) / 100);
+      const inserted = await env.DB.prepare(
+        `INSERT OR IGNORE INTO orders (customer_id, stripe_session_id, amount_total, currency, mode, points_earned)
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6)`
+      ).bind(customer.id, sid, session.amount_total || 0, session.currency || "eur", session.mode, points).run();
+      if (inserted.meta.changes > 0 && points > 0) {
+        await env.DB.prepare(`UPDATE customers SET points = points + ?1 WHERE id = ?2`).bind(points, customer.id).run();
+      }
+
+      const cookie = await createSession(env, customer.id);
+      const fresh = await env.DB.prepare(`SELECT points FROM customers WHERE id = ?1`).bind(customer.id).first();
+      return json({ ok: true, email, name: customer.name, points: fresh.points }, 200, { "Set-Cookie": cookie });
+    }
+
+    /* who am i + my orders + my subscriptions */
+    if (url.pathname === "/api/me" && request.method === "GET") {
+      const c = await currentCustomer(env, request);
+      if (!c) return json({ loggedIn: false }, 200);
+      const orders = await env.DB.prepare(
+        `SELECT amount_total, currency, mode, points_earned, created_at
+         FROM orders WHERE customer_id = ?1 ORDER BY id DESC LIMIT 20`
+      ).bind(c.id).all();
+      let subs = [];
+      if (c.stripe_customer_id) {
+        const list = await stripeGet(env, `/v1/subscriptions?customer=${c.stripe_customer_id}&status=all&limit=10`);
+        if (list && list.data) {
+          subs = list.data
+            .filter((s) => s.status !== "incomplete_expired" && s.status !== "incomplete")
+            .map((s) => {
+              const it = s.items && s.items.data[0];
+              return {
+                status: s.status,
+                plan: (it && it.price && it.price.nickname) || "subscription",
+                amount: it && it.price ? it.price.unit_amount * (it.quantity || 1) : null,
+                interval: it && it.price && it.price.recurring
+                  ? `${it.price.recurring.interval_count > 1 ? it.price.recurring.interval_count + " " : ""}${it.price.recurring.interval}`
+                  : null,
+                renews: s.current_period_end ? new Date(s.current_period_end * 1000).toISOString().slice(0, 10) : null,
+              };
+            });
+        }
+      }
+      return json({
+        loggedIn: true,
+        customer: {
+          email: c.email, name: c.name, phone: c.phone, points: c.points,
+          address: { line1: c.address_line1, line2: c.address_line2, postal_code: c.postal_code, city: c.city, country: c.country },
+        },
+        orders: orders.results || [],
+        subscriptions: subs,
+      });
+    }
+
+    if (url.pathname === "/api/logout" && request.method === "POST") {
+      const token = getCookie(request, "mira_session");
+      if (token) await env.DB.prepare(`DELETE FROM sessions WHERE token = ?1`).bind(token).run();
+      return json({ ok: true }, 200, {
+        "Set-Cookie": "mira_session=; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=0",
+      });
     }
 
     return json({ error: "not found" }, 404);
