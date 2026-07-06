@@ -10,7 +10,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=18">
+  <link rel="stylesheet" href="styles.css?v=19">
 </head>
 <body>
 
@@ -42,7 +42,7 @@
     </nav>
     <div class="nav__right">
       <button class="nav__lang mono" id="langToggle" data-hover aria-label="Mudar para português">PT</button>
-      <a href="#tamanhos" class="btn btn--ink nav__cta" data-hover id="navOrder"><span data-i18n="nav_order">order</span><span class="nav__badge mono" id="cartCount" hidden>0</span><span class="btn__dot"></span></a>
+      <a href="#escolher" data-offset="-100" class="btn btn--ink nav__cta" data-hover id="navOrder"><span data-i18n="nav_order">order</span><span class="nav__badge mono" id="cartCount" hidden>0</span><span class="btn__dot"></span></a>
     </div>
   </header>
 
@@ -59,7 +59,7 @@
 
       <div class="hero__foot">
         <p class="hero__blurb" data-hero-fade data-i18n="hero_blurb">Flour tortillas — four ingredients, pressed &amp; par-cooked in small batches in Lisboa.<br>You give them the final toast at home.</p>
-        <a href="#tamanhos" class="btn btn--green" data-hover data-hero-fade data-i18n="hero_cta">choose your size<span class="btn__dot"></span></a>
+        <a href="#escolher" data-offset="-100" class="btn btn--green" data-hover data-hero-fade data-i18n="hero_cta">choose your size<span class="btn__dot"></span></a>
       </div>
 
       <div class="hero__scroll mono" data-hero-fade>scroll<span class="hero__scroll-line"></span></div>
@@ -80,7 +80,7 @@
         <p class="sizes__sub" data-reveal data-i18n="sizes_sub">Taco night, burrito Sunday or snack-size quesadillas — there's a stack for that.</p>
       </div>
 
-      <div class="sizes__grid">
+      <div class="sizes__grid" id="escolher">
         <article class="card card--sky" data-card>
           <header class="card__top">
             <span class="card__size mono">S</span>
@@ -353,6 +353,6 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.7/gsap.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.7/ScrollTrigger.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/lenis@1.1.20/dist/lenis.min.js"></script>
-  <script src="main.js?v=18"></script>
+  <script src="main.js?v=19"></script>
 </body>
 </html>

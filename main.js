@@ -734,7 +734,14 @@
         const target = document.querySelector(a.getAttribute("href"));
         if (target) {
           e.preventDefault();
-          lenis.scrollTo(target, { offset: -20 });
+          const offset = parseInt(a.dataset.offset || "-20", 10);
+          lenis.scrollTo(target, { offset });
+          /* layout can still be settling right after load — re-aim once if we landed short */
+          setTimeout(() => {
+            if (!lenis.isScrolling && Math.abs(target.getBoundingClientRect().top + offset) > 60) {
+              lenis.scrollTo(target, { offset });
+            }
+          }, 1400);
         }
       });
     });

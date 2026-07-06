@@ -389,6 +389,7 @@ a { color: inherit; text-decoration: none; }
   grid-template-columns: repeat(3, 1fr);
   gap: clamp(1rem, 2vw, 1.75rem);
   align-items: stretch;
+  scroll-margin-top: 100px;
 }
 @media (max-width: 900px) { .sizes__grid { grid-template-columns: 1fr; max-width: 540px; } }
 .sizes__pay {
@@ -483,6 +484,7 @@ a { color: inherit; text-decoration: none; }
 }
 
 /* ───────── cart drawer + embedded checkout ───────── */
+.nav__badge[hidden] { display: none; }
 .nav__badge {
   display: inline-grid; place-items: center;
   min-width: 1.35em; height: 1.35em; padding: 0 .25em;
