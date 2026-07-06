@@ -7,6 +7,11 @@
   "name": "mira-shop",
   "main": "src/worker.js",
   "compatibility_date": "2026-06-01",
+  // dashboard-added secrets/vars survive deploys; pk is public so it lives here
+  "keep_vars": true,
+  "vars": {
+    "STRIPE_PUBLISHABLE_KEY": "pk_live_51TgPT92KMRu6Fi6hSB5b3Kd1FjbQ6C9d6cHuFvIrwTj0NR11fHycwv2hnZDsO9nYyaIfOha9dCCHdc9VsGbP2oCX00Yg9vYzTC"
+  },
   "assets": {
     "directory": ".",
     "not_found_handling": "404-page"
