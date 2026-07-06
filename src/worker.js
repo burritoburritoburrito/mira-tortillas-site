@@ -92,6 +92,53 @@ async function sendEmail(env, to, subject, text) {
 
 const POINTS_COUPON = "MIRA-POINTS-800"; // 100 points → €8 off
 
+/* upsert customer + (if paid) record order & settle points. Idempotent per session. */
+async function processSession(env, session) {
+  const cd = session.customer_details || {};
+  const email = (cd.email || "").toLowerCase();
+  if (!email) return null;
+  const addr = (session.shipping_details && session.shipping_details.address) || cd.address || {};
+
+  await env.DB.prepare(
+    `INSERT INTO customers (email, name, phone, address_line1, address_line2, postal_code, city, country, stripe_customer_id)
+     VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)
+     ON CONFLICT(email) DO UPDATE SET
+       name = COALESCE(excluded.name, name),
+       phone = COALESCE(excluded.phone, phone),
+       address_line1 = COALESCE(excluded.address_line1, address_line1),
+       address_line2 = COALESCE(excluded.address_line2, address_line2),
+       postal_code = COALESCE(excluded.postal_code, postal_code),
+       city = COALESCE(excluded.city, city),
+       country = COALESCE(excluded.country, country),
+       stripe_customer_id = COALESCE(excluded.stripe_customer_id, stripe_customer_id),
+       updated_at = datetime('now')`
+  ).bind(
+    email, cd.name || null, cd.phone || null,
+    addr.line1 || null, addr.line2 || null, addr.postal_code || null,
+    addr.city || null, addr.country || "PT",
+    typeof session.customer === "string" ? session.customer : null
+  ).run();
+
+  const customer = await env.DB.prepare(`SELECT * FROM customers WHERE email = ?1`).bind(email).first();
+
+  const paid = session.payment_status === "paid" || session.payment_status === "no_payment_required";
+  if (paid) {
+    const points = Math.floor((session.amount_total || 0) / 100);
+    const inserted = await env.DB.prepare(
+      `INSERT OR IGNORE INTO orders (customer_id, stripe_session_id, amount_total, currency, mode, points_earned)
+       VALUES (?1, ?2, ?3, ?4, ?5, ?6)`
+    ).bind(customer.id, session.id, session.amount_total || 0, session.currency || "eur", session.mode, points).run();
+    if (inserted.meta.changes > 0) {
+      if (points > 0)
+        await env.DB.prepare(`UPDATE customers SET points = points + ?1 WHERE id = ?2`).bind(points, customer.id).run();
+      const redeemed = parseInt((session.metadata && session.metadata.points_redeemed) || "0", 10);
+      if (redeemed > 0)
+        await env.DB.prepare(`UPDATE customers SET points = MAX(points - ?1, 0) WHERE id = ?2`).bind(redeemed, customer.id).run();
+    }
+  }
+  return customer;
+}
+
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
@@ -186,51 +233,30 @@ export default {
       const session = await stripeGet(env, `/v1/checkout/sessions/${sid}`);
       if (!session || session.status !== "complete") return json({ error: "not a completed checkout" }, 400);
 
-      const cd = session.customer_details || {};
-      const email = (cd.email || "").toLowerCase();
-      if (!email) return json({ error: "no email on session" }, 400);
-      const addr = (session.shipping_details && session.shipping_details.address) || cd.address || {};
-
-      await env.DB.prepare(
-        `INSERT INTO customers (email, name, phone, address_line1, address_line2, postal_code, city, country, stripe_customer_id)
-         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)
-         ON CONFLICT(email) DO UPDATE SET
-           name = COALESCE(excluded.name, name),
-           phone = COALESCE(excluded.phone, phone),
-           address_line1 = COALESCE(excluded.address_line1, address_line1),
-           address_line2 = COALESCE(excluded.address_line2, address_line2),
-           postal_code = COALESCE(excluded.postal_code, postal_code),
-           city = COALESCE(excluded.city, city),
-           country = COALESCE(excluded.country, country),
-           stripe_customer_id = COALESCE(excluded.stripe_customer_id, stripe_customer_id),
-           updated_at = datetime('now')`
-      ).bind(
-        email, cd.name || null, cd.phone || null,
-        addr.line1 || null, addr.line2 || null, addr.postal_code || null,
-        addr.city || null, addr.country || "PT",
-        typeof session.customer === "string" ? session.customer : null
-      ).run();
-
-      const customer = await env.DB.prepare(`SELECT * FROM customers WHERE email = ?1`).bind(email).first();
-
-      /* record the order + award points (1 point per €) — once per checkout session */
-      const points = Math.floor((session.amount_total || 0) / 100);
-      const inserted = await env.DB.prepare(
-        `INSERT OR IGNORE INTO orders (customer_id, stripe_session_id, amount_total, currency, mode, points_earned)
-         VALUES (?1, ?2, ?3, ?4, ?5, ?6)`
-      ).bind(customer.id, sid, session.amount_total || 0, session.currency || "eur", session.mode, points).run();
-      if (inserted.meta.changes > 0 && points > 0) {
-        await env.DB.prepare(`UPDATE customers SET points = points + ?1 WHERE id = ?2`).bind(points, customer.id).run();
-      }
-      /* deduct redeemed points (only on first claim of this session) */
-      const redeemed = parseInt((session.metadata && session.metadata.points_redeemed) || "0", 10);
-      if (inserted.meta.changes > 0 && redeemed > 0) {
-        await env.DB.prepare(`UPDATE customers SET points = MAX(points - ?1, 0) WHERE id = ?2`).bind(redeemed, customer.id).run();
-      }
+      const customer = await processSession(env, session);
+      if (!customer) return json({ error: "no email on session" }, 400);
 
       const cookie = await createSession(env, customer.id);
       const fresh = await env.DB.prepare(`SELECT points FROM customers WHERE id = ?1`).bind(customer.id).first();
-      return json({ ok: true, email, name: customer.name, points: fresh.points }, 200, { "Set-Cookie": cookie });
+      return json({ ok: true, email: customer.email, name: customer.name, points: fresh.points }, 200, { "Set-Cookie": cookie });
+    }
+
+    /* Stripe webhook: records orders/points even if the buyer never returns to the site
+       (closed tab, or async methods like Multibanco that settle later).
+       Payload is untrusted — we only take the session id and re-fetch from Stripe. */
+    if (url.pathname === "/api/webhook" && request.method === "POST") {
+      let evt;
+      try { evt = await request.json(); } catch { return json({ received: true }); }
+      const type = evt.type || "";
+      const objId = evt.data && evt.data.object && evt.data.object.id;
+      if (
+        (type === "checkout.session.completed" || type === "checkout.session.async_payment_succeeded") &&
+        /^cs_(live|test)_[A-Za-z0-9]+$/.test(objId || "")
+      ) {
+        const session = await stripeGet(env, `/v1/checkout/sessions/${objId}`);
+        if (session && session.status === "complete") await processSession(env, session);
+      }
+      return json({ received: true });
     }
 
     /* who am i + my orders + my subscriptions */
@@ -283,6 +309,11 @@ export default {
       if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return json({ error: "invalid email" }, 400);
       if (!env.BREVO_API_KEY)
         return json({ error: "email login isn't connected yet — your account signs in automatically after any order" }, 503);
+      /* max one code per email per minute */
+      const recent = await env.DB.prepare(
+        `SELECT 1 AS hit FROM login_codes WHERE email = ?1 AND created_at > datetime('now', '-60 seconds')`
+      ).bind(email).first();
+      if (recent) return json({ error: "code already sent — wait a minute before requesting another" }, 429);
       const code = String(Math.floor(100000 + Math.random() * 900000));
       await env.DB.prepare(
         `INSERT INTO login_codes (email, code, attempts, expires_at)
