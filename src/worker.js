@@ -121,8 +121,8 @@ async function processSession(env, session) {
 
   const customer = await env.DB.prepare(`SELECT * FROM customers WHERE email = ?1`).bind(email).first();
 
-  /* newsletter consent from the checkout checkbox (only ever upgrades to yes) */
-  if (session.consent && session.consent.promotions === "opt_in") {
+  /* newsletter consent from our cart checkbox (only ever upgrades to yes) */
+  if (session.metadata && session.metadata.newsletter === "1") {
     await env.DB.prepare(`UPDATE customers SET marketing_ok = 1 WHERE id = ?1`).bind(customer.id).run();
   }
 
@@ -189,9 +189,9 @@ export default {
       const p = new URLSearchParams();
       p.set("ui_mode", "embedded_page");
       p.set("mode", mode);
-      /* optional "email me about news & offers" checkbox (GDPR consent) —
-         Stripe only supports it in payment mode */
-      if (mode === "payment") p.set("consent_collection[promotions]", "auto");
+      /* newsletter opt-in from our own cart checkbox (Stripe's consent_collection
+         isn't available for PT accounts) */
+      if (body.newsletter === true) p.set("metadata[newsletter]", "1");
       if (redeemer) {
         p.set("discounts[0][coupon]", POINTS_COUPON);
         p.set("metadata[points_redeemed]", "100");

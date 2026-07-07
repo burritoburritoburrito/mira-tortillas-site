@@ -81,6 +81,7 @@
       cart_checkout: "checkout",
       cart_back: "back to site",
       cart_usepoints: "use 100 points — €8 off",
+      cart_news: "email me about drops & news",
       cart_clear: "clear",
       sub_size: "your box",
       sub_rhythm: "rhythm",
@@ -146,6 +147,7 @@
       cart_checkout: "finalizar",
       cart_back: "voltar ao site",
       cart_usepoints: "usar 100 pontos — €8 de desconto",
+      cart_news: "quero receber novidades por email",
       cart_clear: "limpar",
       sub_size: "a tua caixa",
       sub_rhythm: "ritmo",
@@ -356,10 +358,11 @@
 
   async function startCheckout(items, usePoints) {
     try {
+      const news = document.getElementById("newsOpt");
       const r = await fetch("/api/checkout", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ items, usePoints: !!usePoints }),
+        body: JSON.stringify({ items, usePoints: !!usePoints, newsletter: !!(news && news.checked) }),
       });
       const raw = await r.text();
       let d;

@@ -15,7 +15,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=32">
+  <link rel="stylesheet" href="styles.css?v=33">
 </head>
 <body>
 
@@ -355,6 +355,10 @@
       <p class="cart__empty mono" id="cartEmpty" data-i18n="cart_empty">nothing here yet.</p>
       <footer class="cart__foot">
         <p class="cart__ship mono" id="cartShip" hidden></p>
+        <label class="cart__points mono">
+          <input type="checkbox" id="newsOpt">
+          <span data-i18n="cart_news">email me about drops &amp; news</span>
+        </label>
         <label class="cart__points mono" id="cartPoints" hidden>
           <input type="checkbox" id="usePoints">
           <span data-i18n="cart_usepoints">use 100 points — €8 off</span>
@@ -378,6 +382,6 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.7/gsap.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.7/ScrollTrigger.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/lenis@1.1.20/dist/lenis.min.js"></script>
-  <script src="main.js?v=32"></script>
+  <script src="main.js?v=33"></script>
 </body>
 </html>
