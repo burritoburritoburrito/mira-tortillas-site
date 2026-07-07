@@ -717,6 +717,69 @@ a { color: inherit; text-decoration: none; }
 .line-mask > .line-inner { display: block; }
 
 /* ───────── reduced motion ───────── */
+/* ═════════ SKY POP skin (concept F) — visual layer only, all machinery untouched ═════════ */
+body { background: var(--sky); }
+.loader { background: var(--sky); }
+.hero { background: var(--sky); }
+.sizes { background: var(--sky); }
+.subs { background: var(--cream); }
+.events { background: var(--sky); }
+.nav.nav--solid { background: color-mix(in srgb, var(--sky) 88%, transparent); }
+.card--sky { background: var(--cream); }
+
+/* chunky poster type with hard offset shadows */
+.hero__word {
+  font-family: "Archivo Black", var(--font-display);
+  text-transform: uppercase; letter-spacing: 0; font-weight: 400;
+  text-shadow: 5px 5px 0 var(--cream);
+}
+.sizes__title, .events__title {
+  font-family: "Archivo Black", var(--font-display);
+  text-transform: uppercase; letter-spacing: 0; font-weight: 400;
+  font-size: clamp(2.1rem, 6vw, 5rem);
+  text-shadow: 4px 4px 0 var(--cream);
+}
+.subs__title {
+  font-family: "Archivo Black", var(--font-display);
+  text-transform: uppercase; letter-spacing: 0; font-weight: 400;
+  font-size: clamp(2.1rem, 6vw, 5rem);
+  text-shadow: 4px 4px 0 var(--masa);
+}
+.ingredients__title {
+  font-family: "Archivo Black", var(--font-display);
+  text-transform: uppercase; letter-spacing: 0; font-weight: 400;
+  font-size: clamp(2.1rem, 6vw, 5rem);
+  text-shadow: 4px 4px 0 var(--cream);
+}
+.heat__title {
+  font-family: "Archivo Black", var(--font-display);
+  text-transform: uppercase; letter-spacing: 0; font-weight: 400;
+  font-size: clamp(2rem, 5.5vw, 4.4rem);
+  text-shadow: 4px 4px 0 rgba(20, 20, 18, .55);
+}
+.footer__cta {
+  font-family: "Archivo Black", var(--font-display);
+  text-transform: uppercase; letter-spacing: 0; font-weight: 400;
+  font-size: clamp(2.6rem, 9vw, 7.5rem);
+  text-shadow: 5px 5px 0 var(--green);
+}
+.card__name, .sub__name, .subq__name b { letter-spacing: -.01em; }
+
+/* price stickers */
+.stick {
+  position: absolute; z-index: 1;
+  width: clamp(84px, 9vw, 120px); aspect-ratio: 1; border-radius: 50%;
+  display: grid; place-items: center;
+  font-family: "Archivo Black", var(--font-display);
+  font-size: clamp(1.1rem, 1.8vw, 1.5rem);
+  color: var(--cream);
+  box-shadow: 4px 6px 0 var(--ink);
+  pointer-events: none;
+}
+.stick--1 { top: 16%; left: 9%; background: var(--oxblood); transform: rotate(-12deg); }
+.stick--2 { bottom: 24%; right: 9%; background: var(--green); transform: rotate(9deg); }
+@media (max-width: 760px) { .stick { display: none; } }
+
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
     animation-duration: .01ms !important;
