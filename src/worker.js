@@ -189,8 +189,9 @@ export default {
       const p = new URLSearchParams();
       p.set("ui_mode", "embedded_page");
       p.set("mode", mode);
-      /* optional "email me about news & offers" checkbox (GDPR consent) */
-      p.set("consent_collection[promotions]", "auto");
+      /* optional "email me about news & offers" checkbox (GDPR consent) —
+         Stripe only supports it in payment mode */
+      if (mode === "payment") p.set("consent_collection[promotions]", "auto");
       if (redeemer) {
         p.set("discounts[0][coupon]", POINTS_COUPON);
         p.set("metadata[points_redeemed]", "100");
