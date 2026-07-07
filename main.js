@@ -82,7 +82,7 @@
       cart_back: "back to site",
       cart_usepoints: "use 100 points — €8 off",
       cart_clear: "clear",
-      sub_size: "size",
+      sub_size: "your box",
       sub_rhythm: "rhythm",
       sc_note: "secure checkout · stripe",
       ship_note: "lisboa: free local delivery &nbsp;·&nbsp; mainland portugal: ctt 24h — €7 from 3 packs, free over €40",
@@ -147,7 +147,7 @@
       cart_back: "voltar ao site",
       cart_usepoints: "usar 100 pontos — €8 de desconto",
       cart_clear: "limpar",
-      sub_size: "tamanho",
+      sub_size: "a tua caixa",
       sub_rhythm: "ritmo",
       sc_note: "pagamento seguro · stripe",
       ship_note: "lisboa: entrega local grátis &nbsp;·&nbsp; portugal continental: ctt 24h — €7 a partir de 3 packs, grátis acima de €40",
@@ -477,41 +477,66 @@
     "large:biweekly": "https://buy.stripe.com/4gMaEQf5Ob0t4L3bV76J20a",
     "large:monthly": "https://buy.stripe.com/9B64gsg9Sb0t0uN1gt6J20b",
   };
-  const subState = { size: "medium", cad: "weekly" };
+  const subState = { cad: "weekly" };
+  const subQty = { small: 0, medium: 1, large: 0 };
   const CAD_SUFFIX = {
     en: { weekly: "/ week", biweekly: "/ 2 weeks", monthly: "/ month" },
     pt: { weekly: "/ semana", biweekly: "/ 2 semanas", monthly: "/ mês" },
   };
   function updateSubGo() {
     const label = document.getElementById("subGoLabel");
-    if (!label) return;
-    const eur = CATALOG[subState.size].eur;
-    label.textContent = `${lang === "pt" ? "assinar" : "subscribe"} — €${eur} ${CAD_SUFFIX[lang][subState.cad]}`;
+    const go = document.getElementById("subGo");
+    if (!label || !go) return;
+    Object.keys(subQty).forEach((k) => {
+      const el = document.getElementById("subq-" + k);
+      if (el) el.textContent = subQty[k];
+    });
+    const total = Object.keys(subQty).reduce((n, k) => n + CATALOG[k].eur * subQty[k], 0);
+    if (total > 0) {
+      go.disabled = false;
+      label.textContent = `${lang === "pt" ? "assinar" : "subscribe"} — €${total} ${CAD_SUFFIX[lang][subState.cad]}`;
+    } else {
+      go.disabled = true;
+      label.textContent = lang === "pt" ? "escolhe os teus packs" : "pick your packs";
+    }
   }
-  function bindPick(groupId, key) {
-    const group = document.getElementById(groupId);
+  document.querySelectorAll("[data-sub-inc]").forEach((b) => {
+    b.addEventListener("click", () => {
+      const k = b.dataset.subInc;
+      subQty[k] = Math.min(subQty[k] + 1, 5);
+      updateSubGo();
+    });
+  });
+  document.querySelectorAll("[data-sub-dec]").forEach((b) => {
+    b.addEventListener("click", () => {
+      const k = b.dataset.subDec;
+      subQty[k] = Math.max(subQty[k] - 1, 0);
+      updateSubGo();
+    });
+  });
+  (function bindCad() {
+    const group = document.getElementById("subCad");
     if (!group) return;
     group.querySelectorAll(".subpick__opt").forEach((b) => {
       b.addEventListener("click", () => {
         group.querySelectorAll(".subpick__opt").forEach((x) => x.classList.remove("is-on"));
         b.classList.add("is-on");
-        subState[key] = b.dataset[key === "size" ? "size" : "cad"];
+        subState.cad = b.dataset.cad;
         updateSubGo();
       });
     });
-  }
-  bindPick("subSize", "size");
-  bindPick("subCad", "cad");
+  })();
   window.__subPickReady = true;
   updateSubGo();
   const subGo = document.getElementById("subGo");
   if (subGo) {
     subGo.addEventListener("click", () => {
-      const combo = `${subState.size}:${subState.cad}`;
+      const sizes = Object.keys(subQty).filter((k) => subQty[k] > 0);
+      if (!sizes.length) return;
       if (document.body.classList.contains("cart-mode")) {
-        startCheckout([{ price: SUB_PRICES[combo], quantity: 1 }]);
+        startCheckout(sizes.map((k) => ({ price: SUB_PRICES[`${k}:${subState.cad}`], quantity: subQty[k] })));
       } else {
-        window.location.href = SUB_LINKS[combo];
+        window.location.href = SUB_LINKS[`${sizes[0]}:${subState.cad}`];
       }
     });
   }

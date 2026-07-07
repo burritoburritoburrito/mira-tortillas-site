@@ -547,6 +547,26 @@ a { color: inherit; text-decoration: none; }
 .subpick__opt.is-on { background: var(--ink); color: var(--cream); }
 .subpick__opt.is-on em { opacity: .8; }
 .subpick__go { margin-top: .6rem; font-size: 1rem; padding: 1rem 2rem; }
+.subpick__go[disabled] { opacity: .4; pointer-events: none; }
+.subpick__row--top { align-items: flex-start; }
+.subpick__row--top .subpick__label { padding-top: .6rem; }
+.subpick__sizes { display: flex; flex-direction: column; gap: .5rem; min-width: min(420px, 100%); }
+.subq {
+  display: flex; justify-content: space-between; align-items: center; gap: 1.4rem;
+  border: 2px solid var(--ink); border-radius: 999px;
+  padding: .5rem 1.1rem;
+}
+.subq__name b { font-weight: 700; font-size: 1rem; }
+.subq__name em { font-style: normal; font-size: .7rem; opacity: .65; margin-left: .35rem; }
+.subq__ctl { display: inline-flex; align-items: center; gap: .6rem; }
+.subq__ctl b { min-width: 1.2em; text-align: center; font-weight: 500; }
+.subq__ctl button {
+  width: 1.65rem; height: 1.65rem; border-radius: 999px;
+  border: 2px solid var(--ink); background: none; color: var(--ink);
+  font-family: var(--font-mono); font-size: .95rem; line-height: 1; cursor: pointer;
+  transition: background .2s, color .2s;
+}
+.subq__ctl button:hover { background: var(--ink); color: var(--cream); }
 
 /* ───────── cart drawer + embedded checkout ───────── */
 .nav__badge[hidden] { display: none; }

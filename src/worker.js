@@ -7,16 +7,16 @@ const PRICES = {
   "price_1Tp6jR2KMRu6Fi6htz56SDPI": { mode: "payment", amount: 800 },   // small ×12 €8
   "price_1Tp6jS2KMRu6Fi6hI68OSLWD": { mode: "payment", amount: 1000 },  // medium ×12 €10
   "price_1Tp6jU2KMRu6Fi6hj58ozoRh": { mode: "payment", amount: 900 },   // large ×6 €9
-  // subscriptions
-  "price_1Tp6je2KMRu6Fi6hri2mQkM8": { mode: "subscription" }, // small weekly
-  "price_1Tp6jf2KMRu6Fi6hnOZhEOkg": { mode: "subscription" }, // small 2-weekly
-  "price_1Tp6jg2KMRu6Fi6h26hVNFiV": { mode: "subscription" }, // small monthly
-  "price_1Tp6jh2KMRu6Fi6hvlaea75S": { mode: "subscription" }, // medium weekly
-  "price_1Tp6jj2KMRu6Fi6hCJSEMrlK": { mode: "subscription" }, // medium 2-weekly
-  "price_1Tp6jk2KMRu6Fi6h7svhoyec": { mode: "subscription" }, // medium monthly
-  "price_1Tp6jm2KMRu6Fi6hJ0jJ2qVn": { mode: "subscription" }, // large weekly
-  "price_1Tp6jn2KMRu6Fi6h47lAOYZs": { mode: "subscription" }, // large 2-weekly
-  "price_1Tp6jo2KMRu6Fi6hOAHj9Uo4": { mode: "subscription" }, // large monthly
+  // subscriptions (cad = billing rhythm; a multi-item subscription must share one cad)
+  "price_1Tp6je2KMRu6Fi6hri2mQkM8": { mode: "subscription", cad: "weekly" },   // small
+  "price_1Tp6jf2KMRu6Fi6hnOZhEOkg": { mode: "subscription", cad: "biweekly" }, // small
+  "price_1Tp6jg2KMRu6Fi6h26hVNFiV": { mode: "subscription", cad: "monthly" },  // small
+  "price_1Tp6jh2KMRu6Fi6hvlaea75S": { mode: "subscription", cad: "weekly" },   // medium
+  "price_1Tp6jj2KMRu6Fi6hCJSEMrlK": { mode: "subscription", cad: "biweekly" }, // medium
+  "price_1Tp6jk2KMRu6Fi6h7svhoyec": { mode: "subscription", cad: "monthly" },  // medium
+  "price_1Tp6jm2KMRu6Fi6hJ0jJ2qVn": { mode: "subscription", cad: "weekly" },   // large
+  "price_1Tp6jn2KMRu6Fi6h47lAOYZs": { mode: "subscription", cad: "biweekly" }, // large
+  "price_1Tp6jo2KMRu6Fi6hOAHj9Uo4": { mode: "subscription", cad: "monthly" },  // large
 };
 
 const json = (data, status = 200, extraHeaders = {}) =>
@@ -162,17 +162,22 @@ export default {
       let mode = "payment";
       let subtotal = 0;
       let packs = 0;
+      const cads = new Set();
       for (const it of items) {
         const known = PRICES[it.price];
         const qty = Number(it.quantity);
         if (!known || !Number.isInteger(qty) || qty < 1 || qty > 20)
           return json({ error: "bad item" }, 400);
-        if (known.mode === "subscription") mode = "subscription";
+        if (known.mode === "subscription") { mode = "subscription"; cads.add(known.cad); }
         else { subtotal += known.amount * qty; packs += qty; }
       }
-      // Stripe: one subscription per checkout — keep subs single-item
-      if (mode === "subscription" && items.length > 1)
-        return json({ error: "subscriptions check out one at a time" }, 400);
+      if (mode === "subscription") {
+        // no mixing one-off packs into a subscription, and one rhythm per subscription
+        if (items.some((it) => PRICES[it.price].mode !== "subscription"))
+          return json({ error: "subscriptions and one-off packs check out separately" }, 400);
+        if (cads.size > 1)
+          return json({ error: "one rhythm per subscription" }, 400);
+      }
 
       /* points redemption: 100 pts = €8 off, one-off orders of €8+, signed-in only */
       let redeemer = null;

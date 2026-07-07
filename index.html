@@ -15,7 +15,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=31">
+  <link rel="stylesheet" href="styles.css?v=32">
 </head>
 <body>
 
@@ -149,12 +149,21 @@
         <p class="subs__sub" data-reveal data-i18n="sub_sub">Pick a size, pick a rhythm — tortillas on repeat. Pause or cancel anytime.</p>
       </div>
       <div class="subpick" data-reveal>
-        <div class="subpick__row">
-          <span class="subpick__label mono" data-i18n="sub_size">size</span>
-          <div class="subpick__opts" id="subSize">
-            <button class="subpick__opt" data-size="small"><b data-i18n="s_name">small</b><em class="mono">×12 · €8</em></button>
-            <button class="subpick__opt is-on" data-size="medium"><b data-i18n="m_name">medium</b><em class="mono">×12 · €10</em></button>
-            <button class="subpick__opt" data-size="large"><b data-i18n="l_name">large</b><em class="mono">×6 · €9</em></button>
+        <div class="subpick__row subpick__row--top">
+          <span class="subpick__label mono" data-i18n="sub_size">your box</span>
+          <div class="subpick__sizes">
+            <div class="subq">
+              <span class="subq__name"><b data-i18n="s_name">small</b> <em class="mono">×12 · €8</em></span>
+              <span class="subq__ctl mono"><button data-sub-dec="small" aria-label="less small">−</button><b id="subq-small">0</b><button data-sub-inc="small" aria-label="more small">+</button></span>
+            </div>
+            <div class="subq">
+              <span class="subq__name"><b data-i18n="m_name">medium</b> <em class="mono">×12 · €10</em></span>
+              <span class="subq__ctl mono"><button data-sub-dec="medium" aria-label="less medium">−</button><b id="subq-medium">1</b><button data-sub-inc="medium" aria-label="more medium">+</button></span>
+            </div>
+            <div class="subq">
+              <span class="subq__name"><b data-i18n="l_name">large</b> <em class="mono">×6 · €9</em></span>
+              <span class="subq__ctl mono"><button data-sub-dec="large" aria-label="less large">−</button><b id="subq-large">0</b><button data-sub-inc="large" aria-label="more large">+</button></span>
+            </div>
           </div>
         </div>
         <div class="subpick__row">
@@ -369,6 +378,6 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.7/gsap.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.7/ScrollTrigger.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/lenis@1.1.20/dist/lenis.min.js"></script>
-  <script src="main.js?v=31"></script>
+  <script src="main.js?v=32"></script>
 </body>
 </html>
