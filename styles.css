@@ -807,6 +807,35 @@ body { background: var(--sky); }
 }
 .card--sky .card__eur { text-shadow: 3px 3px 0 var(--masa); }
 
+/* F-native buttons: chunky, tactile, they physically press */
+.btn {
+  font-family: "Archivo Black", var(--font-display);
+  font-weight: 400; text-transform: uppercase; letter-spacing: .02em;
+  font-size: .92rem;
+  border-width: 3px;
+  box-shadow: 4px 4px 0 var(--ink);
+  transition: transform .12s ease, box-shadow .12s ease;
+}
+.btn:hover { transform: translate(2px, 2px); box-shadow: 1px 1px 0 var(--ink); }
+.btn .btn__dot { display: none; }
+
+/* price becomes a sticker on the card corner */
+.card { overflow: visible; }
+.card__price {
+  position: absolute; top: -18px; right: -14px; z-index: 2;
+  width: clamp(72px, 6.4vw, 92px); aspect-ratio: 1; border-radius: 50%;
+  background: var(--oxblood); color: var(--cream);
+  border: 3px solid var(--ink);
+  display: grid; place-items: center;
+  transform: rotate(10deg);
+  box-shadow: 4px 5px 0 rgba(20, 20, 18, .3);
+}
+.card--oxblood .card__price { background: var(--green); color: var(--ink); }
+.card__eur { font-size: clamp(1.3rem, 1.8vw, 1.7rem); text-shadow: none; color: inherit; }
+.card--sky .card__eur { text-shadow: none; }
+.card__foot { margin-top: auto; }
+.card__btn { width: 100%; justify-content: center; }
+
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
     animation-duration: .01ms !important;
