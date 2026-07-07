@@ -3,81 +3,147 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>design lab — mira</title>
+<title>design lab — 10 directions — mira</title>
 <meta name="robots" content="noindex">
 <link rel="icon" type="image/png" href="/assets/favicon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500&family=DM+Serif+Display:ital@0;1&family=Archivo+Black&display=swap" rel="stylesheet">
 <style>
-  :root { --ink:#141412; --cream:#f4eee1; --green:#2fa63a; --ox:#5a2628; --masa:#ecd9af; --sky:#b9cfe4; }
+  :root { --ink:#141412; --cream:#f4eee1; --green:#2fa63a; --ox:#5a2628; --masa:#ecd9af; --sky:#b9cfe4; --toast:#b98a4e; }
   * { margin:0; padding:0; box-sizing:border-box; }
-  body { font-family:"Space Grotesk",sans-serif; color:var(--ink); background:#888; }
+  body { font-family:"Space Grotesk",sans-serif; color:var(--ink); background:#777; }
   .mono { font-family:"IBM Plex Mono",monospace; }
-  .tag {
-    position:sticky; top:0; z-index:10; background:var(--ink); color:var(--cream);
-    font-family:"IBM Plex Mono",monospace; font-size:.8rem; letter-spacing:.12em; text-transform:uppercase;
-    padding:.7rem 1.4rem;
-  }
-  .concept { min-height:92vh; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:4rem 1.5rem; position:relative; overflow:hidden; }
-  .wm { width:min(420px,70vw); }
-  .big { font-weight:700; letter-spacing:-.04em; line-height:.95; }
-  .btn { display:inline-block; border:3px solid var(--ink); border-radius:999px; padding:.9rem 2rem; font-family:"IBM Plex Mono",monospace; font-size:.9rem; text-decoration:none; }
+  .tag { position:sticky; top:0; z-index:10; background:var(--ink); color:var(--cream); font-family:"IBM Plex Mono",monospace; font-size:.78rem; letter-spacing:.12em; text-transform:uppercase; padding:.7rem 1.4rem; }
+  .cpt { min-height:94vh; position:relative; overflow:hidden; }
+  .center { display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:4rem 1.5rem; }
+  .pill { display:inline-block; border-radius:999px; padding:.85rem 1.9rem; font-family:"IBM Plex Mono",monospace; font-size:.88rem; text-decoration:none; }
+  .intro { background:var(--cream); padding:3rem 1.5rem; text-align:center; }
+  .intro h1 { font-size:2rem; letter-spacing:-.02em; }
+  .intro p { font-family:"IBM Plex Mono",monospace; font-size:.78rem; opacity:.7; margin-top:.6rem; }
 
-  /* ── concept B: night market ── */
+  /* B — night market */
   .b { background:var(--ink); color:var(--cream); }
-  .b .big { font-size:clamp(3.4rem,10vw,8rem); color:var(--cream); }
-  .b .kick { font-family:"IBM Plex Mono",monospace; font-size:.8rem; letter-spacing:.2em; text-transform:uppercase; color:var(--masa); margin-bottom:1.6rem; }
-  .b .btn { background:var(--green); color:var(--ink); border-color:var(--green); margin-top:2.2rem; }
-  .b .strip {
-    position:absolute; left:-5%; right:-5%; padding:.55rem 0; background:var(--masa); color:var(--ink);
-    font-family:"IBM Plex Mono",monospace; font-size:.85rem; letter-spacing:.15em; white-space:nowrap; overflow:hidden;
-  }
-  .b .strip.top { top:9%; transform:rotate(-3deg); }
-  .b .strip.bot { bottom:9%; transform:rotate(2.5deg); background:var(--ox); color:var(--cream); }
-  .b .price { font-family:"IBM Plex Mono",monospace; font-size:.9rem; color:var(--masa); margin-top:1.2rem; }
+  .b .kick { font-family:"IBM Plex Mono",monospace; font-size:.78rem; letter-spacing:.2em; text-transform:uppercase; color:var(--masa); margin-bottom:1.4rem; }
+  .b .big { font-weight:700; font-size:clamp(3rem,9vw,7rem); letter-spacing:-.04em; }
+  .b .pill { background:var(--green); color:var(--ink); margin-top:2rem; }
+  .b .strip { position:absolute; left:-5%; right:-5%; padding:.5rem 0; background:var(--masa); font-family:"IBM Plex Mono",monospace; font-size:.8rem; letter-spacing:.15em; white-space:nowrap; overflow:hidden; color:var(--ink); }
+  .b .strip.top { top:8%; transform:rotate(-3deg); }
+  .b .strip.bot { bottom:8%; transform:rotate(2.5deg); background:var(--ox); color:var(--cream); }
 
-  /* ── concept C: the label ── */
+  /* C — the label */
   .c { background:var(--ox); }
-  .c .card {
-    background:var(--cream); border-radius:18px; max-width:760px; width:100%;
-    padding:clamp(1.6rem,4vw,3rem); text-align:left;
-    box-shadow:0 24px 60px rgba(0,0,0,.35);
-  }
-  .c .rule { border-bottom:3px solid var(--ink); padding-bottom:.7rem; margin-bottom:1.6rem; display:flex; justify-content:space-between; font-family:"IBM Plex Mono",monospace; font-size:.72rem; letter-spacing:.14em; text-transform:uppercase; }
-  .c .kick { font-family:"IBM Plex Mono",monospace; font-size:.72rem; letter-spacing:.2em; text-transform:uppercase; color:var(--ox); margin-bottom:1rem; }
-  .c .wm2 { width:min(300px,60%); display:block; margin-bottom:.6rem; }
-  .c .sub { font-weight:700; font-size:1.3rem; }
-  .c .sub em { display:block; font-weight:400; font-style:italic; font-size:1rem; opacity:.75; }
-  .c .rows { margin-top:1.8rem; border-top:3px solid var(--ink); }
-  .c .row { display:flex; justify-content:space-between; align-items:baseline; padding:.8rem 0; border-bottom:2px solid #e3dbc8; }
-  .c .row b { font-size:1.15rem; }
-  .c .row span { font-family:"IBM Plex Mono",monospace; font-size:.8rem; opacity:.75; }
-  .c .row a { font-family:"IBM Plex Mono",monospace; font-size:.8rem; background:var(--ox); color:var(--cream); border-radius:999px; padding:.35rem 1rem; text-decoration:none; }
-  .note { background:var(--cream); padding:2.2rem 1.5rem 4rem; text-align:center; font-family:"IBM Plex Mono",monospace; font-size:.8rem; opacity:.8; }
+  .c .card { background:var(--cream); border-radius:18px; max-width:740px; width:100%; padding:clamp(1.6rem,4vw,3rem); text-align:left; box-shadow:0 24px 60px rgba(0,0,0,.35); }
+  .c .rule { border-bottom:3px solid var(--ink); padding-bottom:.7rem; margin-bottom:1.4rem; display:flex; justify-content:space-between; font-family:"IBM Plex Mono",monospace; font-size:.7rem; letter-spacing:.14em; text-transform:uppercase; }
+  .c .kick { font-family:"IBM Plex Mono",monospace; font-size:.7rem; letter-spacing:.2em; text-transform:uppercase; color:var(--ox); margin-bottom:.9rem; }
+  .c .row { display:flex; justify-content:space-between; align-items:baseline; padding:.75rem 0; border-bottom:2px solid #e3dbc8; }
+  .c .row b { font-size:1.1rem; }
+  .c .row span { font-family:"IBM Plex Mono",monospace; font-size:.78rem; opacity:.75; }
+  .c .row a { font-family:"IBM Plex Mono",monospace; font-size:.78rem; background:var(--ox); color:var(--cream); border-radius:999px; padding:.3rem .95rem; text-decoration:none; }
+
+  /* D — swiss catalog */
+  .d { background:#fff; padding:3.5rem 2rem; display:flex; flex-direction:column; justify-content:center; }
+  .d h2 { font-family:"Archivo Black",sans-serif; font-size:clamp(2.4rem,7.5vw,6rem); line-height:.95; text-transform:uppercase; letter-spacing:-.02em; }
+  .d h2 span { color:var(--green); }
+  .d .meta { font-family:"IBM Plex Mono",monospace; font-size:.72rem; letter-spacing:.14em; text-transform:uppercase; margin:1rem 0 2.2rem; opacity:.6; }
+  .d table { width:100%; border-collapse:collapse; }
+  .d td { border:3px solid var(--ink); padding:1.1rem 1.2rem; font-size:1rem; }
+  .d td.n { font-family:"Archivo Black",sans-serif; font-size:1.4rem; text-transform:uppercase; }
+  .d td.p { font-family:"IBM Plex Mono",monospace; }
+  .d td.buy { width:1%; white-space:nowrap; background:var(--ink); color:#fff; font-family:"IBM Plex Mono",monospace; }
+
+  /* E — masa monochrome */
+  .e { background:var(--masa); }
+  .e .tort { width:min(58vw,460px); aspect-ratio:1; border-radius:50%; background:radial-gradient(circle at 36% 32%, #f3e4c2 0%, #e6cfa0 55%, #d9bd88 100%); border:3px solid var(--ink); box-shadow:inset -14px -18px 0 rgba(185,138,78,.35); display:grid; place-items:center; }
+  .e img { width:60%; }
+  .e .around { font-family:"IBM Plex Mono",monospace; font-size:.8rem; letter-spacing:.16em; text-transform:uppercase; margin-top:1.6rem; opacity:.75; }
+  .e .pill { background:var(--ink); color:var(--masa); margin-top:1.4rem; }
+
+  /* F — sky pop */
+  .f { background:var(--sky); }
+  .f .stick { position:absolute; font-family:"Archivo Black",sans-serif; color:var(--cream); background:var(--ox); padding:1.2rem; border-radius:50%; transform:rotate(-12deg); width:110px; height:110px; display:grid; place-items:center; font-size:1.3rem; box-shadow:4px 6px 0 var(--ink); }
+  .f .s1 { top:14%; left:12%; } .f .s2 { bottom:18%; right:10%; transform:rotate(9deg); background:var(--green); }
+  .f h2 { font-family:"Archivo Black",sans-serif; font-size:clamp(2.6rem,8vw,6.4rem); text-transform:uppercase; text-shadow:4px 4px 0 var(--cream); }
+  .f .pill { background:var(--ink); color:var(--cream); margin-top:1.8rem; border:3px solid var(--ink); }
+  .f img { width:min(300px,50vw); margin-bottom:.6rem; }
+
+  /* G — food magazine */
+  .g { background:var(--cream); display:grid; grid-template-columns:1.1fr .9fr; gap:0; align-items:stretch; }
+  .g .txt { padding:clamp(2rem,6vw,5rem); display:flex; flex-direction:column; justify-content:center; border-right:2px solid var(--ink); }
+  .g .cap { font-family:"IBM Plex Mono",monospace; font-size:.7rem; letter-spacing:.2em; text-transform:uppercase; opacity:.6; margin-bottom:1.4rem; }
+  .g h2 { font-family:"DM Serif Display",serif; font-weight:400; font-size:clamp(2.2rem,4.5vw,4rem); line-height:1.12; }
+  .g h2 em { font-style:italic; }
+  .g .pill { background:none; border:2px solid var(--ink); color:var(--ink); margin-top:2rem; width:fit-content; }
+  .g .photo { background:var(--toast); display:grid; place-items:center; min-height:50vh; }
+  .g .photo span { font-family:"IBM Plex Mono",monospace; font-size:.7rem; letter-spacing:.2em; color:var(--cream); text-transform:uppercase; }
+  @media (max-width:760px){ .g { grid-template-columns:1fr; } .g .txt { border-right:0; border-bottom:2px solid var(--ink); } }
+
+  /* H — receipt */
+  .h { background:#e9e4d6; }
+  .h .paper { background:#fff; width:min(420px,92vw); padding:2.2rem 1.8rem; font-family:"IBM Plex Mono",monospace; font-size:.85rem; box-shadow:0 18px 44px rgba(0,0,0,.18); }
+  .h .cN { text-align:center; }
+  .h img { width:130px; margin:0 auto .6rem; display:block; }
+  .h .dash { border-top:2px dashed var(--ink); margin:1rem 0; }
+  .h .li { display:flex; justify-content:space-between; padding:.3rem 0; }
+  .h .tot { font-weight:700; font-size:1rem; }
+  .h .pill { display:block; text-align:center; background:var(--ink); color:#fff; border-radius:6px; margin-top:1.4rem; }
+
+  /* I — green field */
+  .i { background:var(--green); color:var(--cream); }
+  .i h2 { font-family:"Archivo Black",sans-serif; text-transform:uppercase; font-size:clamp(3.4rem,12vw,9.5rem); line-height:.92; letter-spacing:-.02em; }
+  .i h2 .o { -webkit-text-stroke:3px var(--cream); color:transparent; }
+  .i .foot { font-family:"IBM Plex Mono",monospace; font-size:.8rem; letter-spacing:.2em; text-transform:uppercase; margin-top:2rem; }
+  .i .pill { background:var(--cream); color:var(--ink); margin-top:1.6rem; }
+
+  /* J — split shop */
+  .j { display:grid; grid-template-columns:.9fr 1.1fr; min-height:94vh; }
+  .j .brand { background:var(--ox); color:var(--cream); display:flex; flex-direction:column; justify-content:center; align-items:flex-start; padding:clamp(2rem,5vw,4rem); }
+  .j .brand img { width:min(280px,70%); margin-bottom:1rem; }
+  .j .brand p { font-family:"IBM Plex Mono",monospace; font-size:.8rem; letter-spacing:.14em; text-transform:uppercase; opacity:.8; }
+  .j .shop { background:var(--cream); display:flex; flex-direction:column; justify-content:center; padding:clamp(1.6rem,4vw,3.5rem); }
+  .j .it { display:flex; justify-content:space-between; align-items:center; border-bottom:3px solid var(--ink); padding:1.4rem 0; }
+  .j .it b { font-size:clamp(1.6rem,3.2vw,2.6rem); letter-spacing:-.02em; }
+  .j .it span { font-family:"IBM Plex Mono",monospace; font-size:.78rem; opacity:.7; }
+  .j .it a { background:var(--green); border:3px solid var(--ink); color:var(--ink); border-radius:999px; padding:.5rem 1.3rem; font-family:"IBM Plex Mono",monospace; font-size:.85rem; text-decoration:none; }
+  @media (max-width:760px){ .j { grid-template-columns:1fr; } }
+
+  /* K — hand-drawn */
+  .k { background:var(--cream); }
+  .k .blob { background:var(--sky); border:3px solid var(--ink); border-radius:58% 42% 55% 45% / 48% 60% 40% 52%; padding:3rem 3.4rem; transform:rotate(-2deg); max-width:620px; }
+  .k img { width:min(280px,60%); }
+  .k h2 { font-size:clamp(1.6rem,3.4vw,2.4rem); margin-top:.6rem; }
+  .k h2 u { text-decoration-style:wavy; text-decoration-color:var(--ox); text-underline-offset:6px; }
+  .k .pill { background:var(--masa); border:3px solid var(--ink); color:var(--ink); margin-top:1.6rem; transform:rotate(1.5deg); }
+  .k .doodle { position:absolute; font-family:"IBM Plex Mono",monospace; font-size:.85rem; transform:rotate(-8deg); border:2px dashed var(--ink); border-radius:999px; padding:.5rem 1rem; }
+  .k .d1 { top:16%; right:14%; } .k .d2 { bottom:14%; left:12%; transform:rotate(6deg); }
+
+  .note { background:var(--cream); padding:2.4rem 1.5rem 4.5rem; text-align:center; font-family:"IBM Plex Mono",monospace; font-size:.8rem; opacity:.85; line-height:2; }
 </style>
 </head>
 <body>
 
-<div class="tag">concept b — "night market" · dark, loud, pop-up energy (matches @burritos vibe)</div>
-<section class="concept b">
+<div class="intro">
+  <h1>mira — design lab · 10 directions</h1>
+  <p>the live site is untouched (and every past version lives in git) · scroll, compare, then tell claude:<br>"go full concept F" or "current site + D's price table" — anything mixes</p>
+</div>
+
+<div class="tag">concept B — night market · dark, loud, pop-up energy</div>
+<section class="cpt center b">
   <div class="strip top">mira&nbsp;&nbsp;mira&nbsp;&nbsp;mira&nbsp;&nbsp;mira&nbsp;&nbsp;mira&nbsp;&nbsp;mira&nbsp;&nbsp;mira&nbsp;&nbsp;mira&nbsp;&nbsp;mira&nbsp;&nbsp;mira&nbsp;&nbsp;mira&nbsp;&nbsp;mira&nbsp;&nbsp;mira&nbsp;&nbsp;mira</div>
   <p class="kick">meia-cozedura · par-cooked · lisboa</p>
-  <img class="wm" src="assets/mira-wordmark-cream.png" alt="mira">
-  <h1 class="big">tortillas</h1>
-  <p class="price">×12 small €8 · ×12 medium €10 · ×6 large €9</p>
-  <a class="btn" href="#">order now</a>
+  <img src="assets/mira-wordmark-cream.png" alt="mira" style="width:min(420px,70vw)">
+  <h2 class="big">tortillas</h2>
+  <a class="pill" href="#">order now</a>
   <div class="strip bot">flour · water · avocado oil · salt · flour · water · avocado oil · salt · flour · water · avocado oil · salt</div>
 </section>
 
-<div class="tag">concept c — "the label" · the printed label becomes the website (max packaging cohesion)</div>
-<section class="concept c">
+<div class="tag">concept C — the label · the printed package becomes the website</div>
+<section class="cpt center c">
   <div class="card">
     <div class="rule"><span>mira tortillas</span><span>miratortillas.pt · @miratortillas</span></div>
     <p class="kick">meia-cozedura · par-cooked</p>
-    <img class="wm2" src="assets/mira-wordmark.png" alt="mira">
-    <p class="sub">tortillas de trigo <em>flour tortillas</em></p>
-    <div class="rows">
+    <img src="assets/mira-wordmark.png" alt="mira" style="width:min(280px,60%)">
+    <div style="margin-top:1.4rem">
       <div class="row"><b>small</b><span>×12 · 15 cm</span><a href="#">€8</a></div>
       <div class="row"><b>medium</b><span>×12 · 21–23 cm</span><a href="#">€10</a></div>
       <div class="row"><b>large</b><span>×6 · 30 cm</span><a href="#">€9</a></div>
@@ -85,9 +151,102 @@
   </div>
 </section>
 
+<div class="tag">concept D — swiss catalog · brutalist grid, zero decoration, all business</div>
+<section class="cpt d">
+  <h2>mira<br>tortillas <span>—</span><br>catálogo n.01</h2>
+  <p class="meta">lisboa · par-cooked · four ingredients · 2026</p>
+  <table>
+    <tr><td class="n">small</td><td class="p">×12 · 15 cm</td><td class="p">€8</td><td class="buy">add +</td></tr>
+    <tr><td class="n">medium</td><td class="p">×12 · 21–23 cm</td><td class="p">€10</td><td class="buy">add +</td></tr>
+    <tr><td class="n">large</td><td class="p">×6 · 30 cm</td><td class="p">€9</td><td class="buy">add +</td></tr>
+  </table>
+</section>
+
+<div class="tag">concept E — masa monochrome · one giant tortilla, tone-on-tone calm</div>
+<section class="cpt center e">
+  <div class="tort"><img src="assets/mira-wordmark.png" alt="mira"></div>
+  <p class="around">flour · water · avocado oil · salt — lisboa</p>
+  <a class="pill" href="#">order a stack</a>
+</section>
+
+<div class="tag">concept F — sky pop · retro supermercado, stickers &amp; starbursts</div>
+<section class="cpt center f">
+  <div class="stick s1">€8!</div>
+  <div class="stick s2">×12</div>
+  <img src="assets/mira-wordmark.png" alt="mira">
+  <h2>fresh<br>tortillas</h2>
+  <a class="pill" href="#">grab a pack</a>
+</section>
+
+<div class="tag">concept G — food magazine · serif editorial, photography-first</div>
+<section class="cpt g">
+  <div class="txt">
+    <p class="cap">mira tortillas — lisboa</p>
+    <h2>The last <em>forty seconds</em> happen in your pan.</h2>
+    <a class="pill" href="#">order — €8 / €10 / €9</a>
+  </div>
+  <div class="photo"><span>[ real photo — pan, steam, hands ]</span></div>
+</section>
+
+<div class="tag">concept H — the receipt · everything is a till receipt, mono only</div>
+<section class="cpt center h">
+  <div class="paper">
+    <img src="assets/mira-wordmark.png" alt="mira">
+    <p class="cN">tortillas de trigo — lisboa<br>***</p>
+    <div class="dash"></div>
+    <div class="li"><span>small ×12 (15cm)</span><span>€8.00</span></div>
+    <div class="li"><span>medium ×12 (21–23cm)</span><span>€10.00</span></div>
+    <div class="li"><span>large ×6 (30cm)</span><span>€9.00</span></div>
+    <div class="dash"></div>
+    <div class="li tot"><span>TOTAL DELICIOUS</span><span>SIM</span></div>
+    <div class="dash"></div>
+    <p class="cN">obrigado · volte sempre</p>
+    <a class="pill" href="#">ORDER ▸</a>
+  </div>
+</section>
+
+<div class="tag">concept I — green field · mega type, festival poster energy</div>
+<section class="cpt center i">
+  <h2>mira<br><span class="o">tortillas</span><br>lisboa</h2>
+  <p class="foot">×12 €8 — ×12 €10 — ×6 €9</p>
+  <a class="pill" href="#">encomendar</a>
+</section>
+
+<div class="tag">concept J — split shop · brand left, buy right, zero scrolling to shop</div>
+<section class="cpt j">
+  <div class="brand">
+    <img src="assets/mira-wordmark-cream.png" alt="mira">
+    <p>par-cooked flour tortillas<br>lisboa · four ingredients</p>
+  </div>
+  <div class="shop">
+    <div class="it"><b>small</b><span>×12 · 15 cm</span><a href="#">€8 →</a></div>
+    <div class="it"><b>medium</b><span>×12 · 21–23 cm</span><a href="#">€10 →</a></div>
+    <div class="it"><b>large</b><span>×6 · 30 cm</span><a href="#">€9 →</a></div>
+  </div>
+</section>
+
+<div class="tag">concept K — hand-drawn · wobbly, sticker-book, human</div>
+<section class="cpt center k">
+  <div class="doodle d1">puff! 🫓</div>
+  <div class="doodle d2">4 ingredientes só</div>
+  <div class="blob">
+    <img src="assets/mira-wordmark.png" alt="mira">
+    <h2>tortillas <u>que estufam</u> na tua frigideira.</h2>
+    <a class="pill" href="#">quero uma dúzia</a>
+  </div>
+</section>
+
+<div class="tag">concept L — cream editorial · the current live site (for comparison)</div>
+<section class="cpt center" style="background:var(--cream)">
+  <p class="mono" style="font-size:.8rem;letter-spacing:.16em;text-transform:uppercase;opacity:.6;margin-bottom:1.2rem">this one is live right now</p>
+  <img src="assets/mira-wordmark.png" alt="mira" style="width:min(380px,64vw)">
+  <h2 style="font-weight:700;font-size:clamp(2.6rem,8vw,6rem);letter-spacing:-.04em">tortillas</h2>
+  <a class="pill" style="background:var(--green);border:3px solid var(--ink);color:var(--ink);margin-top:1.8rem" href="/">open the live site →</a>
+</section>
+
 <div class="note">
-  dev-only page (not linked, not indexed) · the live site keeps the current "cream editorial" direction —<br>
-  these are directions we could shift toward. tell claude "more like B" or "more like C" and it happens section by section. 🌮
+  10 directions · none of this touches the live site<br>
+  tell claude: "go full F" · "make it 70% current + 30% D" · "J's layout with C's colors" — all possible, section by section 🌮
 </div>
 
 </body>
