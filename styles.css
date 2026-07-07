@@ -780,6 +780,22 @@ body { background: var(--sky); }
 .stick--2 { bottom: 24%; right: 9%; background: var(--green); transform: rotate(9deg); }
 @media (max-width: 760px) { .stick { display: none; } }
 
+/* hero rebuilt as the F comp: script + stacked poster type */
+.hero { display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; }
+.hero__kick { font-size: .78rem; letter-spacing: .2em; text-transform: uppercase; opacity: .7; margin-bottom: 1.2rem; }
+.hero__title2 { display: flex; flex-direction: column; align-items: center; }
+.hero__script { width: min(320px, 55vw); margin-bottom: .4rem; }
+.hero__big {
+  font-family: "Archivo Black", var(--font-display);
+  font-weight: 400; text-transform: uppercase; letter-spacing: -.01em;
+  line-height: .95; font-size: clamp(3rem, 10vw, 7.2rem);
+  text-shadow: 6px 6px 0 var(--cream);
+}
+.hero__prices { font-size: .85rem; letter-spacing: .06em; margin: 1.3rem 0 .2rem; opacity: .85; }
+.hero__foot { display: flex; flex-direction: column; align-items: center; gap: 0; margin-top: 1.2rem; }
+.hero__foot .btn { font-size: 1rem; padding: 1rem 2.4rem; }
+.card__tortilla { display: none; }
+
 /* size cards: toasted sticker-tortillas + price-tag type */
 .card__tortilla span {
   background:

@@ -34,7 +34,7 @@
       nav_sizes: "sizes",
       nav_order: "order",
       hero_blurb: "Flour tortillas — four ingredients, pressed &amp; par-cooked in small batches in Lisboa.<br>You give them the final toast at home.",
-      hero_cta: 'choose your size<span class="btn__dot"></span>',
+      hero_cta: "grab a pack",
       nav_sub: "subscribe",
       sub_kicker: "02 — subscriptions",
       sub_title: "never run out.",
@@ -100,7 +100,7 @@
       nav_sizes: "tamanhos",
       nav_order: "encomendar",
       hero_blurb: "Tortillas de trigo — quatro ingredientes, prensadas e meio cozidas em pequenos lotes em Lisboa.<br>Tu dás-lhes a tostadela final em casa.",
-      hero_cta: 'escolhe o tamanho<span class="btn__dot"></span>',
+      hero_cta: "leva um pack",
       nav_sub: "assinar",
       sub_kicker: "02 — assinaturas",
       sub_title: "nunca fiques sem.",
@@ -675,23 +675,10 @@
     }, "+=0.15");
 
   /* ───────── hero intro ───────── */
-  const heroChars = splitChars(document.querySelector("[data-split]"));
-  document.querySelector(".hero__title").setAttribute("aria-label", "tortillas");
+  const splitTarget = document.querySelector("[data-split]");
+  const heroChars = splitTarget ? splitChars(splitTarget) : [];
 
   introTl
-    .from(heroChars, {
-      yPercent: 110,
-      duration: 0.9,
-      ease: "power4.out",
-      stagger: 0.045,
-    }, "-=0.35")
-    .from("[data-hero-mark]", {
-      scale: 0,
-      rotation: 6,
-      duration: 0.8,
-      ease: "back.out(1.8)",
-      transformOrigin: "50% 50%",
-    }, "-=0.5")
     .from("[data-hero-fade]", {
       y: 24,
       opacity: 0,
