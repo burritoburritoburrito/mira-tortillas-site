@@ -197,10 +197,27 @@ a { color: inherit; text-decoration: none; }
 }
 
 /* ───────── marquee ───────── */
+/* the physical reseal tape, as a design element */
+.hero__tape {
+  position: absolute; left: -4%; right: -4%;
+  top: clamp(88px, 13vh, 150px);
+  height: clamp(30px, 4.5vw, 46px);
+  background-color: var(--masa);
+  background-image: url("assets/mira-wordmark.png");
+  background-size: auto 58%;
+  background-repeat: space;
+  background-position: center;
+  transform: rotate(-2.4deg);
+  box-shadow: 0 2px 0 rgba(20, 20, 18, .12);
+  pointer-events: none;
+}
+
 .marquee {
-  background: var(--ink); color: var(--cream);
+  background: var(--oxblood); color: var(--cream);
   overflow: hidden; padding: 1.1rem 0;
-  border-block: 3px solid var(--ink);
+  transform: rotate(-1.1deg) scale(1.02);
+  margin-block: .9rem;
+  box-shadow: 0 2px 0 rgba(20, 20, 18, .15);
 }
 .marquee__track { display: flex; width: max-content; will-change: transform; }
 .marquee__chunk {
@@ -208,7 +225,7 @@ a { color: inherit; text-decoration: none; }
   font-size: clamp(1rem, 2.4vw, 1.5rem);
   white-space: nowrap; padding-right: .5rem;
 }
-.marquee__chunk i { color: var(--green); font-style: normal; }
+.marquee__chunk i { color: var(--masa); font-style: normal; }
 
 /* ───────── kicker ───────── */
 .kicker {
