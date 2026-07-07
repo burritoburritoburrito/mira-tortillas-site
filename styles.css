@@ -780,6 +780,33 @@ body { background: var(--sky); }
 .stick--2 { bottom: 24%; right: 9%; background: var(--green); transform: rotate(9deg); }
 @media (max-width: 760px) { .stick { display: none; } }
 
+/* size cards: toasted sticker-tortillas + price-tag type */
+.card__tortilla span {
+  background:
+    radial-gradient(circle at 30% 25%, rgba(185, 138, 78, .55) 0 8%, transparent 9%),
+    radial-gradient(circle at 68% 38%, rgba(185, 138, 78, .5) 0 6%, transparent 7%),
+    radial-gradient(circle at 45% 72%, rgba(185, 138, 78, .5) 0 7%, transparent 8%),
+    radial-gradient(circle at 76% 70%, rgba(185, 138, 78, .45) 0 5%, transparent 6%),
+    radial-gradient(circle at 22% 58%, rgba(185, 138, 78, .4) 0 4.5%, transparent 5.5%),
+    radial-gradient(circle at 36% 32%, #f3e4c2 0%, var(--masa) 55%, #e0c895 100%);
+  border: 3px solid var(--ink);
+  box-shadow: 6px 7px 0 rgba(20, 20, 18, .3);
+  transform: rotate(-7deg);
+}
+.card:hover .card__tortilla span { transform: rotate(12deg) scale(1.06); }
+.card__name {
+  font-family: "Archivo Black", var(--font-display);
+  font-weight: 400; text-transform: uppercase; letter-spacing: 0;
+  font-size: clamp(1.4rem, 2.3vw, 1.85rem);
+}
+.card__eur {
+  font-family: "Archivo Black", var(--font-display);
+  font-weight: 400; letter-spacing: 0;
+  font-size: clamp(2.3rem, 3.4vw, 3.1rem);
+  text-shadow: 3px 3px 0 rgba(20, 20, 18, .18);
+}
+.card--sky .card__eur { text-shadow: 3px 3px 0 var(--masa); }
+
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
     animation-duration: .01ms !important;
