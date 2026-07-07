@@ -494,13 +494,23 @@
       const el = document.getElementById("subq-" + k);
       if (el) el.textContent = subQty[k];
     });
+    const PACK_COUNT = { small: 12, medium: 12, large: 6 };
     const total = Object.keys(subQty).reduce((n, k) => n + CATALOG[k].eur * subQty[k], 0);
+    const tortillas = Object.keys(subQty).reduce((n, k) => n + PACK_COUNT[k] * subQty[k], 0);
+    const countEl = document.getElementById("subCount");
     if (total > 0) {
       go.disabled = false;
       label.textContent = `${lang === "pt" ? "assinar" : "subscribe"} — €${total} ${CAD_SUFFIX[lang][subState.cad]}`;
+      if (countEl) {
+        countEl.hidden = false;
+        countEl.textContent = lang === "pt"
+          ? `= ${tortillas} tortillas por entrega`
+          : `= ${tortillas} tortillas per delivery`;
+      }
     } else {
       go.disabled = true;
       label.textContent = lang === "pt" ? "escolhe os teus packs" : "pick your packs";
+      if (countEl) countEl.hidden = true;
     }
   }
   document.querySelectorAll("[data-sub-inc]").forEach((b) => {

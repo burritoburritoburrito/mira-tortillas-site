@@ -546,7 +546,9 @@ a { color: inherit; text-decoration: none; }
 .subpick__opt:hover { background: color-mix(in srgb, var(--ink) 10%, transparent); }
 .subpick__opt.is-on { background: var(--ink); color: var(--cream); }
 .subpick__opt.is-on em { opacity: .8; }
-.subpick__go { margin-top: .6rem; font-size: 1rem; padding: 1rem 2rem; }
+.subpick__count { font-size: .78rem; letter-spacing: .1em; text-transform: uppercase; opacity: .65; margin: .4rem 0 .6rem; }
+.subpick__count[hidden] { display: none; }
+.subpick__go { margin-top: .2rem; font-size: 1rem; padding: 1rem 2rem; }
 .subpick__go[disabled] { opacity: .4; pointer-events: none; }
 .subpick__row--top { align-items: flex-start; }
 .subpick__row--top .subpick__label { padding-top: .6rem; }
