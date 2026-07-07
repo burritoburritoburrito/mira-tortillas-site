@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>design lab — mira</title>
+<meta name="robots" content="noindex">
+<link rel="icon" type="image/png" href="/assets/favicon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root { --ink:#141412; --cream:#f4eee1; --green:#2fa63a; --ox:#5a2628; --masa:#ecd9af; --sky:#b9cfe4; }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { font-family:"Space Grotesk",sans-serif; color:var(--ink); background:#888; }
+  .mono { font-family:"IBM Plex Mono",monospace; }
+  .tag {
+    position:sticky; top:0; z-index:10; background:var(--ink); color:var(--cream);
+    font-family:"IBM Plex Mono",monospace; font-size:.8rem; letter-spacing:.12em; text-transform:uppercase;
+    padding:.7rem 1.4rem;
+  }
+  .concept { min-height:92vh; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:4rem 1.5rem; position:relative; overflow:hidden; }
+  .wm { width:min(420px,70vw); }
+  .big { font-weight:700; letter-spacing:-.04em; line-height:.95; }
+  .btn { display:inline-block; border:3px solid var(--ink); border-radius:999px; padding:.9rem 2rem; font-family:"IBM Plex Mono",monospace; font-size:.9rem; text-decoration:none; }
+
+  /* ── concept B: night market ── */
+  .b { background:var(--ink); color:var(--cream); }
+  .b .big { font-size:clamp(3.4rem,10vw,8rem); color:var(--cream); }
+  .b .kick { font-family:"IBM Plex Mono",monospace; font-size:.8rem; letter-spacing:.2em; text-transform:uppercase; color:var(--masa); margin-bottom:1.6rem; }
+  .b .btn { background:var(--green); color:var(--ink); border-color:var(--green); margin-top:2.2rem; }
+  .b .strip {
+    position:absolute; left:-5%; right:-5%; padding:.55rem 0; background:var(--masa); color:var(--ink);
+    font-family:"IBM Plex Mono",monospace; font-size:.85rem; letter-spacing:.15em; white-space:nowrap; overflow:hidden;
+  }
+  .b .strip.top { top:9%; transform:rotate(-3deg); }
+  .b .strip.bot { bottom:9%; transform:rotate(2.5deg); background:var(--ox); color:var(--cream); }
+  .b .price { font-family:"IBM Plex Mono",monospace; font-size:.9rem; color:var(--masa); margin-top:1.2rem; }
+
+  /* ── concept C: the label ── */
+  .c { background:var(--ox); }
+  .c .card {
+    background:var(--cream); border-radius:18px; max-width:760px; width:100%;
+    padding:clamp(1.6rem,4vw,3rem); text-align:left;
+    box-shadow:0 24px 60px rgba(0,0,0,.35);
+  }
+  .c .rule { border-bottom:3px solid var(--ink); padding-bottom:.7rem; margin-bottom:1.6rem; display:flex; justify-content:space-between; font-family:"IBM Plex Mono",monospace; font-size:.72rem; letter-spacing:.14em; text-transform:uppercase; }
+  .c .kick { font-family:"IBM Plex Mono",monospace; font-size:.72rem; letter-spacing:.2em; text-transform:uppercase; color:var(--ox); margin-bottom:1rem; }
+  .c .wm2 { width:min(300px,60%); display:block; margin-bottom:.6rem; }
+  .c .sub { font-weight:700; font-size:1.3rem; }
+  .c .sub em { display:block; font-weight:400; font-style:italic; font-size:1rem; opacity:.75; }
+  .c .rows { margin-top:1.8rem; border-top:3px solid var(--ink); }
+  .c .row { display:flex; justify-content:space-between; align-items:baseline; padding:.8rem 0; border-bottom:2px solid #e3dbc8; }
+  .c .row b { font-size:1.15rem; }
+  .c .row span { font-family:"IBM Plex Mono",monospace; font-size:.8rem; opacity:.75; }
+  .c .row a { font-family:"IBM Plex Mono",monospace; font-size:.8rem; background:var(--ox); color:var(--cream); border-radius:999px; padding:.35rem 1rem; text-decoration:none; }
+  .note { background:var(--cream); padding:2.2rem 1.5rem 4rem; text-align:center; font-family:"IBM Plex Mono",monospace; font-size:.8rem; opacity:.8; }
+</style>
+</head>
+<body>
+
+<div class="tag">concept b — "night market" · dark, loud, pop-up energy (matches @burritos vibe)</div>
+<section class="concept b">
+  <div class="strip top">mira&nbsp;&nbsp;mira&nbsp;&nbsp;mira&nbsp;&nbsp;mira&nbsp;&nbsp;mira&nbsp;&nbsp;mira&nbsp;&nbsp;mira&nbsp;&nbsp;mira&nbsp;&nbsp;mira&nbsp;&nbsp;mira&nbsp;&nbsp;mira&nbsp;&nbsp;mira&nbsp;&nbsp;mira&nbsp;&nbsp;mira</div>
+  <p class="kick">meia-cozedura · par-cooked · lisboa</p>
+  <img class="wm" src="assets/mira-wordmark-cream.png" alt="mira">
+  <h1 class="big">tortillas</h1>
+  <p class="price">×12 small €8 · ×12 medium €10 · ×6 large €9</p>
+  <a class="btn" href="#">order now</a>
+  <div class="strip bot">flour · water · avocado oil · salt · flour · water · avocado oil · salt · flour · water · avocado oil · salt</div>
+</section>
+
+<div class="tag">concept c — "the label" · the printed label becomes the website (max packaging cohesion)</div>
+<section class="concept c">
+  <div class="card">
+    <div class="rule"><span>mira tortillas</span><span>miratortillas.pt · @miratortillas</span></div>
+    <p class="kick">meia-cozedura · par-cooked</p>
+    <img class="wm2" src="assets/mira-wordmark.png" alt="mira">
+    <p class="sub">tortillas de trigo <em>flour tortillas</em></p>
+    <div class="rows">
+      <div class="row"><b>small</b><span>×12 · 15 cm</span><a href="#">€8</a></div>
+      <div class="row"><b>medium</b><span>×12 · 21–23 cm</span><a href="#">€10</a></div>
+      <div class="row"><b>large</b><span>×6 · 30 cm</span><a href="#">€9</a></div>
+    </div>
+  </div>
+</section>
+
+<div class="note">
+  dev-only page (not linked, not indexed) · the live site keeps the current "cream editorial" direction —<br>
+  these are directions we could shift toward. tell claude "more like B" or "more like C" and it happens section by section. 🌮
+</div>
+
+</body>
+</html>
