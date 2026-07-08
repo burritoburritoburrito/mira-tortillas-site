@@ -400,12 +400,16 @@
 
   function initCart() {
     document.body.classList.add("cart-mode");
-    /* buy buttons become add-to-cart */
+    /* buy buttons add to cart WITHOUT opening the drawer (so all sizes stay reachable) */
     document.querySelectorAll("[data-buy]").forEach((a) => {
       a.addEventListener("click", (e) => {
         e.preventDefault();
-        addToCart(a.dataset.buy, 1);
-        openCart();
+        const sku = a.dataset.buy;
+        addToCart(sku, 1);
+        const name = I18N[lang][CATALOG[sku].nameKey] || sku;
+        showToast(lang === "pt"
+          ? `+1 ${name} · toca "order" para finalizar`
+          : `+1 ${name} · tap "order" to check out`);
       });
     });
     /* subscription pills → embedded subscription checkout */
@@ -459,10 +463,14 @@
   document.querySelectorAll("[data-quick]").forEach((b) => {
     b.addEventListener("click", () => {
       if (document.body.classList.contains("cart-mode")) {
-        addToCart(b.dataset.quick, 1);
-        openCart();
+        const sku = b.dataset.quick;
+        addToCart(sku, 1);
+        const name = I18N[lang][CATALOG[sku].nameKey] || sku;
+        showToast(lang === "pt"
+          ? `+1 ${name} · toca "order" para finalizar`
+          : `+1 ${name} · tap "order" to check out`);
       } else {
-        const cta = document.querySelector('a[href="#escolher"].btn--green');
+        const cta = document.querySelector('a[href="#escolher"].btn--ink, a[href="#escolher"].btn--green');
         if (cta) cta.click();
       }
     });
