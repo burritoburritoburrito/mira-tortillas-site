@@ -205,14 +205,13 @@ export default {
       });
 
       /* shipping choices (one-off orders only):
-         Lisbon hand delivery always free · mainland CTT €7 from 3 packs · free over €40 */
+         Lisbon hand delivery is free (we drive it over); mainland CTT is a flat
+         €7 placeholder and needs a 3-pack minimum. No free-shipping tier — TBD. */
       if (mode === "payment") {
         const rates = [
           { name: "Lisboa · entrega local / local delivery", amount: 0 },
         ];
-        if (subtotal >= 4000) {
-          rates.push({ name: "Portugal continental · CTT expresso — grátis / free", amount: 0 });
-        } else if (packs >= 3) {
+        if (packs >= 3) {
           rates.push({ name: "Portugal continental · CTT expresso", amount: 700 });
         }
         rates.forEach((r, i) => {
@@ -380,6 +379,14 @@ export default {
       else return json({ error: "bad action" }, 400);
       const updated = await stripePost(env, `/v1/subscriptions/${id}`, p);
       if (!updated) return json({ error: "stripe error" }, 502);
+      return json({ ok: true });
+    }
+
+    /* newsletter opt-in — used by the post-checkout confirmation (signed-in only) */
+    if (url.pathname === "/api/newsletter-optin" && request.method === "POST") {
+      const c = await currentCustomer(env, request);
+      if (!c) return json({ error: "not signed in" }, 401);
+      await env.DB.prepare(`UPDATE customers SET marketing_ok = 1 WHERE id = ?1`).bind(c.id).run();
       return json({ ok: true });
     }
 

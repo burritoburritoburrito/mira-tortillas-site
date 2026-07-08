@@ -316,21 +316,6 @@
     badge.textContent = count;
     const clearBtn = document.getElementById("cartClear");
     if (clearBtn) clearBtn.hidden = !count;
-    /* free-shipping nudge: €40 unlocks free mainland shipping */
-    const ship = document.getElementById("cartShip");
-    if (ship) {
-      if (total > 0 && total < 40) {
-        ship.hidden = false;
-        ship.textContent = lang === "pt"
-          ? `faltam €${40 - total} para envio grátis (portugal continental)`
-          : `€${40 - total} away from free mainland shipping`;
-      } else if (total >= 40) {
-        ship.hidden = false;
-        ship.textContent = lang === "pt" ? "envio grátis desbloqueado ✓" : "free mainland shipping unlocked ✓";
-      } else {
-        ship.hidden = true;
-      }
-    }
   }
 
   function addToCart(sku, qty) {
@@ -358,11 +343,10 @@
 
   async function startCheckout(items, usePoints) {
     try {
-      const news = document.getElementById("newsOpt");
       const r = await fetch("/api/checkout", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ items, usePoints: !!usePoints, newsletter: !!(news && news.checked) }),
+        body: JSON.stringify({ items, usePoints: !!usePoints }),
       });
       const raw = await r.text();
       let d;
@@ -396,6 +380,40 @@
     t.hidden = false;
     clearTimeout(toastTimer);
     toastTimer = setTimeout(() => { t.hidden = true; }, 6000);
+  }
+
+  /* post-checkout confirmation — includes the newsletter opt-in (moved out of the cart) */
+  function showOrderSuccess(claimed) {
+    const pts = claimed && claimed.points != null ? claimed.points : 0;
+    const ptsLine = pts
+      ? (lang === "pt" ? ` · ${pts} pontos na tua conta` : ` · ${pts} points in your account`)
+      : "";
+    const box = document.createElement("div");
+    box.style.cssText = "position:fixed;left:50%;bottom:1.4rem;transform:translateX(-50%);z-index:120;background:var(--cream);color:var(--ink);border:3px solid var(--ink);border-radius:16px;padding:1.1rem 1.3rem;max-width:min(430px,92vw);box-shadow:6px 7px 0 rgba(20,20,18,.25);font-family:var(--font-mono);font-size:.82rem;line-height:1.5";
+    box.innerHTML =
+      '<button id="ordClose" style="position:absolute;top:.35rem;right:.6rem;background:none;border:0;font-size:1.2rem;line-height:1;cursor:pointer;color:var(--ink)">×</button>' +
+      '<div style="font-weight:500;margin:0 1rem .8rem 0">' +
+      (lang === "pt" ? "obrigado! encomenda confirmada 🌮" : "obrigado! order confirmed 🌮") + ptsLine + "</div>" +
+      '<button id="ordNews" style="display:flex;align-items:center;gap:.55rem;width:100%;background:none;border:2px solid var(--ink);border-radius:999px;padding:.5rem .95rem;font-family:inherit;font-size:.76rem;cursor:pointer;color:var(--ink);text-align:left">' +
+      '<span id="ordBox" style="width:1rem;height:1rem;border:2px solid var(--ink);border-radius:4px;flex:none;display:grid;place-items:center;font-size:.7rem"></span>' +
+      '<span id="ordTxt">' + (lang === "pt" ? "quero novidades &amp; drops por email" : "email me about drops &amp; news") + "</span></button>";
+    document.body.appendChild(box);
+    const close = () => box.remove();
+    box.querySelector("#ordClose").addEventListener("click", close);
+    box.querySelector("#ordNews").addEventListener("click", async () => {
+      try {
+        const r = await fetch("/api/newsletter-optin", { method: "POST" });
+        const d = await r.json();
+        if (d.ok) {
+          box.querySelector("#ordBox").textContent = "✓";
+          box.querySelector("#ordBox").style.background = "var(--green)";
+          box.querySelector("#ordTxt").textContent = lang === "pt" ? "estás na lista ✓" : "you're on the list ✓";
+          box.querySelector("#ordNews").disabled = true;
+          setTimeout(close, 2500);
+        }
+      } catch (e) {}
+    });
+    setTimeout(() => { if (document.body.contains(box)) close(); }, 14000);
   }
 
   function initCart() {
@@ -604,9 +622,7 @@
       if (claimed && claimed.ok) {
         const a = document.getElementById("navAccount");
         if (a) a.classList.add("is-in");
-        showToast(lang === "pt"
-          ? `obrigado! encomenda confirmada — tens ${claimed.points} pontos na tua conta. 🌮`
-          : `obrigado! order confirmed — you've got ${claimed.points} points in your account. 🌮`);
+        showOrderSuccess(claimed);
       } else {
         showToast(lang === "pt"
           ? "obrigado! encomenda confirmada — entraremos em contacto para combinar a entrega. 🌮"
