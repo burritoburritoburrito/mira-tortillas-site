@@ -859,3 +859,25 @@ body { background: var(--sky); }
     transition-duration: .01ms !important;
   }
 }
+
+/* ═════════ green demoted → label palette (black + cream + wine) on bright sky ═════════ */
+/* big green surfaces become the label's own colours; green survives only as small accents */
+.ingredients { background: var(--oxblood); color: var(--cream); }
+.ingredients__big { color: color-mix(in srgb, var(--cream) 16%, transparent); }
+.ingredients__list { border-top-color: var(--cream); }
+.ing { border-bottom-color: color-mix(in srgb, var(--cream) 45%, transparent); }
+.ing__pt { color: color-mix(in srgb, var(--cream) 72%, transparent); }
+.ingredients__note { color: color-mix(in srgb, var(--cream) 88%, transparent); }
+.ingredients__title { text-shadow: 4px 4px 0 var(--oxblood); }
+
+.heat { background: var(--ink); }
+.heat__title { text-shadow: 4px 4px 0 var(--oxblood); }
+
+.card--green { background: var(--oxblood); color: var(--cream); }
+.card--green .card__desc { color: color-mix(in srgb, var(--cream) 85%, transparent); }
+.card--green .card__price { background: var(--cream); color: var(--ink); }
+.card--oxblood { background: var(--ink); }
+
+.btn--ink:hover { background: var(--oxblood); border-color: var(--oxblood); color: var(--cream); }
+.footer__cta { text-shadow: 5px 5px 0 var(--oxblood); }
+.footer__cta:hover { color: var(--oxblood); }

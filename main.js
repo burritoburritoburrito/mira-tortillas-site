@@ -654,45 +654,7 @@
     return el.querySelectorAll(".char");
   }
 
-  /* ───────── loader ───────── */
-  const countEl = document.getElementById("loaderCount");
-  const counter = { v: 0 };
-  const introTl = gsap.timeline();
-
-  introTl
-    .from(".loader__mark", { y: 40, opacity: 0, duration: 0.6, ease: "power3.out" })
-    .to(counter, {
-      v: 100,
-      duration: 1.4,
-      ease: "power2.inOut",
-      onUpdate: () => { countEl.textContent = Math.round(counter.v) + "%"; },
-    }, "<")
-    .to(loader, {
-      yPercent: -100,
-      duration: 0.8,
-      ease: "power4.inOut",
-      onComplete: () => loader.remove(),
-    }, "+=0.15");
-
-  /* ───────── hero intro ───────── */
-  const splitTarget = document.querySelector("[data-split]");
-  const heroChars = splitTarget ? splitChars(splitTarget) : [];
-
-  introTl
-    .from("[data-hero-fade]", {
-      y: 24,
-      opacity: 0,
-      duration: 0.7,
-      ease: "power3.out",
-      stagger: 0.08,
-    }, "-=0.5");
-
-  /* hero gently parallaxes away */
-  gsap.to(".hero__stage", {
-    yPercent: 18,
-    ease: "none",
-    scrollTrigger: { trigger: ".hero", start: "top top", end: "bottom top", scrub: true },
-  });
+  /* intro/preloader animation removed — page content shows immediately */
 
   /* ───────── nav hide/show ───────── */
   const nav = document.getElementById("nav");
