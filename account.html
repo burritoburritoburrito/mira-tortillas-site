@@ -67,13 +67,12 @@
     if (!me.loggedIn) {
       box.innerHTML = `
         <div class="acct__login">
-          <h1 class="acct__hi">sign in<br>or create account.</h1>
-          <p>Same thing, one step: enter your email, we send a 6-digit code, and you're in — new accounts are created on the spot. No passwords, nothing to remember.<br><br>
-          Entrar e criar conta é o mesmo passo: escreve o teu email, enviamos um código de 6 dígitos e está feito — sem passwords.</p>
+          <h1 class="acct__hi">sign in.</h1>
+          <p class="acct__empty" style="margin-bottom:1.6rem">we email you a code — no passwords · enviamos um código — sem passwords</p>
           <div id="loginBox" style="max-width:340px;margin:0 auto;display:grid;gap:.7rem">
             <input id="loginEmail" type="email" placeholder="email" autocomplete="email"
               style="font-family:var(--font-mono);font-size:.95rem;padding:.85rem 1rem;border:3px solid var(--ink);border-radius:12px;background:#fff;width:100%">
-            <button class="btn btn--green" id="sendCode" style="justify-content:center;width:100%">send code · enviar código</button>
+            <button class="btn btn--green" id="sendCode" style="justify-content:center;width:100%">send code · enviar</button>
             <div id="codeRow" style="display:none;gap:.7rem">
               <input id="loginCode" inputmode="numeric" maxlength="6" placeholder="123456" autocomplete="one-time-code"
                 style="font-family:var(--font-mono);font-size:1.3rem;letter-spacing:.4em;text-align:center;padding:.85rem 1rem;border:3px solid var(--ink);border-radius:12px;background:#fff;width:100%">
@@ -81,10 +80,6 @@
             </div>
             <p id="loginMsg" class="acct__empty" style="min-height:1.2em"></p>
           </div>
-          <p style="margin-top:2rem;font-family:var(--font-mono);font-size:.75rem;opacity:.6">
-            first time? your account is also created automatically with any order.<br>
-            primeira vez? a tua conta também é criada automaticamente com qualquer encomenda.</p>
-          <p style="margin-top:1rem"><a class="btn btn--green" href="/#escolher">order a stack<span class="btn__dot"></span></a></p>
         </div>`;
 
       const msg = () => document.getElementById("loginMsg");
