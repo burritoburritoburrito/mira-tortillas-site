@@ -2,4 +2,4 @@ User-agent: *
 Allow: /
 Disallow: /api/
 Disallow: /account
-Sitemap: https://mira-shop.nicholas-77f.workers.dev/sitemap.xml
+Sitemap: https://miratortillas.pt/sitemap.xml
