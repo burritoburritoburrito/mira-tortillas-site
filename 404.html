@@ -8,29 +8,28 @@
   <link rel="icon" type="image/png" href="/assets/favicon.png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=41">
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500&family=Archivo+Black&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css?v=43">
   <style>
     body { cursor: auto; display: grid; place-items: center; min-height: 100dvh; text-align: center; padding: 2rem; }
     .nf img { height: 40px; margin-bottom: 1.6rem; }
     .nf h1 { font-size: clamp(2.4rem, 7vw, 4.5rem); font-weight: 700; letter-spacing: -.03em; line-height: 1.05; margin-bottom: .8rem; }
     .nf p { font-family: var(--font-mono); font-size: .85rem; opacity: .65; margin-bottom: 2rem; }
-    .tort {
-      width: 120px; height: 120px; border-radius: 50%; margin: 0 auto 2rem;
-      background: radial-gradient(circle at 36% 32%, #f3e4c2 0%, var(--masa) 55%, #e0c895 100%);
-      border: 3px solid var(--ink);
-      box-shadow: inset -8px -10px 0 rgba(185,138,78,.35);
-      transform: rotate(-8deg);
+    .nf .code {
+      font-family: "Archivo Black", var(--font-display);
+      font-size: clamp(5rem, 18vw, 9rem); line-height: 1;
+      text-shadow: 6px 6px 0 var(--cream);
+      margin-bottom: 1rem;
     }
   </style>
 </head>
 <body>
   <div class="nf">
     <img src="assets/mira-wordmark.png" alt="mira">
-    <div class="tort" aria-hidden="true"></div>
+    <div class="code" aria-hidden="true">404</div>
     <h1>this tortilla<br>doesn't exist.</h1>
-    <p>404 — esta página não existe</p>
-    <a class="btn btn--green" href="/">back to the stack<span class="btn__dot"></span></a>
+    <p>esta página não existe</p>
+    <a class="btn btn--ink" href="/">back to the stack</a>
   </div>
 </body>
 </html>

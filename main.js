@@ -418,16 +418,23 @@
 
   function initCart() {
     document.body.classList.add("cart-mode");
-    /* buy buttons add to cart WITHOUT opening the drawer (so all sizes stay reachable) */
+    /* buy buttons add to cart WITHOUT opening the drawer (so all sizes stay reachable).
+       The toast itself opens the cart on tap, and the nav un-hides so ORDER is visible. */
+    const addedToast = (sku) => {
+      const name = I18N[lang][CATALOG[sku].nameKey] || sku;
+      const nav = document.getElementById("nav");
+      if (nav) nav.classList.remove("nav--hidden");
+      showToast(lang === "pt" ? `+1 ${name} · ver carrinho →` : `+1 ${name} · view cart →`);
+      const t = document.getElementById("toast");
+      t.style.cursor = "pointer";
+      t.onclick = () => { t.hidden = true; t.onclick = null; openCart(); };
+    };
+    window.__miraAddedToast = addedToast;
     document.querySelectorAll("[data-buy]").forEach((a) => {
       a.addEventListener("click", (e) => {
         e.preventDefault();
-        const sku = a.dataset.buy;
-        addToCart(sku, 1);
-        const name = I18N[lang][CATALOG[sku].nameKey] || sku;
-        showToast(lang === "pt"
-          ? `+1 ${name} · toca "order" para finalizar`
-          : `+1 ${name} · tap "order" to check out`);
+        addToCart(a.dataset.buy, 1);
+        addedToast(a.dataset.buy);
       });
     });
     /* subscription pills → embedded subscription checkout */
@@ -481,12 +488,8 @@
   document.querySelectorAll("[data-quick]").forEach((b) => {
     b.addEventListener("click", () => {
       if (document.body.classList.contains("cart-mode")) {
-        const sku = b.dataset.quick;
-        addToCart(sku, 1);
-        const name = I18N[lang][CATALOG[sku].nameKey] || sku;
-        showToast(lang === "pt"
-          ? `+1 ${name} · toca "order" para finalizar`
-          : `+1 ${name} · tap "order" to check out`);
+        addToCart(b.dataset.quick, 1);
+        if (typeof window.__miraAddedToast === "function") window.__miraAddedToast(b.dataset.quick);
       } else {
         const cta = document.querySelector('a[href="#escolher"].btn--ink, a[href="#escolher"].btn--green');
         if (cta) cta.click();

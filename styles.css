@@ -895,3 +895,7 @@ body { background: var(--sky); }
   font-size: clamp(2.1rem, 3.4vw, 2.9rem); line-height: .85; letter-spacing: -.01em;
 }
 .card__desc { font-size: .78rem; opacity: .58; line-height: 1.4; margin-top: 0; }
+
+/* green buttons retired: primary action buttons go wine (label palette) */
+.btn--green { background: var(--oxblood); border-color: var(--ink); color: var(--cream); }
+.btn--green:hover { background: var(--ink); border-color: var(--ink); color: var(--cream); }
