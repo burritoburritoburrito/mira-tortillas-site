@@ -914,3 +914,29 @@ body { background: var(--sky); }
   padding: .55rem 1.1rem; box-shadow: 5px 6px 0 var(--ink);
   pointer-events: none; z-index: 2;
 }
+
+/* ── checkout dressing (2026-07-12): compact, sky, mira-fied shell ── */
+.sc { background: var(--sky); padding: 0 1rem 3rem; }
+.sc::before {
+  content: ""; display: block; height: 40px; margin: 0 -1rem 1.1rem;
+  background: var(--masa) url("assets/mira-wordmark.png") repeat-x center / auto 20px;
+  border-bottom: 3px solid var(--ink);
+}
+.sc__head { margin: 0 auto .9rem; gap: .3rem; }
+.sc__head img { height: 30px; }
+.sc__head .sc__fun {
+  font-family: var(--font-mono); font-size: .8rem; letter-spacing: .08em;
+  background: var(--masa); border: 2px solid var(--ink); border-radius: 999px;
+  padding: .25rem .9rem; text-transform: none; opacity: 1;
+}
+.sc__mount {
+  max-width: 500px;
+  border-radius: 18px;
+  box-shadow: 10px 10px 0 var(--oxblood);
+  margin-bottom: 2rem;
+}
+.sc__close { top: .75rem; left: .9rem; border: 3px solid var(--ink); }
+@media (max-width: 560px) {
+  .sc__mount { box-shadow: 6px 6px 0 var(--oxblood); }
+  .sc::before { height: 32px; background-size: auto 16px; }
+}
