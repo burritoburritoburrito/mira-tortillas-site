@@ -200,7 +200,7 @@ async function processSession(env, session) {
         const lis = (session.line_items && session.line_items.data) || [];
         const itemsTxt = lis.map((li) => `${li.quantity}× ${li.description || (li.price && li.price.id) || "item"}`).join("\n") || `(${session.mode})`;
         const total = ((session.amount_total || 0) / 100).toFixed(2);
-        await sendEmail(env, "ola@miratortillas.pt", `🌮 nova encomenda — €${total}`,
+        await sendEmail(env, "ola@miratortillas.pt", `🌯 nova encomenda — €${total}`,
           `nova encomenda / new order\n\n${itemsTxt}\n\ntotal: €${total} · ${session.mode}\n\n${cd.name || "?"} · ${email}\n${[addr.line1, addr.line2, [addr.postal_code, addr.city].filter(Boolean).join(" ")].filter(Boolean).join("\n")}\n\nstripe: https://dashboard.stripe.com/payments\ndashboard: https://miratortillas.pt/admin`);
         await sendSMS(env, `mira: nova encomenda €${total} — ${cd.name || email} (${lis.map((li) => li.quantity).reduce((a, b) => a + b, 0) || "?"} packs)`);
       } catch (e) { /* notification failure must never fail an order */ }
@@ -519,7 +519,7 @@ export default {
     if (url.pathname === "/api/admin/test-sms") {
       if (!(await isAdmin(env, request))) return json({ error: "not authorized — sign in at /account first" }, 401);
       if (!env.OWNER_PHONE) return json({ error: "OWNER_PHONE var not set in Cloudflare yet" }, 400);
-      const ok = await sendSMS(env, "mira: SMS test OK — order alerts armed 🌮");
+      const ok = await sendSMS(env, "mira: SMS test OK — order alerts armed 🌯");
       return json({ sent: ok, to: env.OWNER_PHONE, hint: ok ? "check your phone!" : "check Brevo SMS credits" });
     }
 
