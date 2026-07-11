@@ -118,18 +118,23 @@ async function sendEmail(env, to, subject, text) {
 }
 
 /* owner SMS via Brevo transactional SMS (same API key; needs SMS credits +
-   OWNER_PHONE env var in intl format e.g. +3519XXXXXXXX — silently skips if unset) */
+   OWNER_PHONE env var, intl format, comma-separated for several owners
+   e.g. +3519XXXXXXXX,+3519YYYYYYYY — silently skips if unset) */
 async function sendSMS(env, text) {
   if (!env.BREVO_API_KEY || !env.OWNER_PHONE) return false;
-  const res = await fetch("https://api.brevo.com/v3/transactionalSMS/sms", {
-    method: "POST",
-    headers: { "api-key": env.BREVO_API_KEY, "Content-Type": "application/json" },
-    body: JSON.stringify({
-      type: "transactional", unicodeEnabled: true, sender: "mira",
-      recipient: env.OWNER_PHONE, content: text.slice(0, 155),
-    }),
-  });
-  return res.ok;
+  let ok = false;
+  for (const to of String(env.OWNER_PHONE).split(",").map((s) => s.trim()).filter(Boolean)) {
+    const res = await fetch("https://api.brevo.com/v3/transactionalSMS/sms", {
+      method: "POST",
+      headers: { "api-key": env.BREVO_API_KEY, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        type: "transactional", unicodeEnabled: true, sender: "mira",
+        recipient: to, content: text.slice(0, 155),
+      }),
+    });
+    ok = ok || res.ok;
+  }
+  return ok;
 }
 
 const POINTS_COUPON = "MIRA-POINTS-800"; // 100 points → €8 off
