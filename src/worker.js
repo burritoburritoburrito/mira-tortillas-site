@@ -174,6 +174,14 @@ async function processSession(env, session) {
           ).bind(li.quantity || 1, "sold_" + sku).run();
         }
       }
+      /* owner heads-up: one email per new order via ola@ (best-effort, never blocks the order) */
+      try {
+        const lis = (session.line_items && session.line_items.data) || [];
+        const itemsTxt = lis.map((li) => `${li.quantity}× ${li.description || (li.price && li.price.id) || "item"}`).join("\n") || `(${session.mode})`;
+        const total = ((session.amount_total || 0) / 100).toFixed(2);
+        await sendEmail(env, "ola@miratortillas.pt", `🌮 nova encomenda — €${total}`,
+          `nova encomenda / new order\n\n${itemsTxt}\n\ntotal: €${total} · ${session.mode}\n\n${cd.name || "?"} · ${email}\n${[addr.line1, addr.line2, [addr.postal_code, addr.city].filter(Boolean).join(" ")].filter(Boolean).join("\n")}\n\nstripe: https://dashboard.stripe.com/payments\ndashboard: https://miratortillas.pt/admin`);
+      } catch (e) { /* notification failure must never fail an order */ }
     }
   }
   return customer;
@@ -253,6 +261,9 @@ export default {
         /* Stripe's native promo-code box in checkout (can't combine with discounts) */
         p.set("allow_promotion_codes", "true");
       }
+      /* 30-min session expiry: shrinks the window where a checkout opened
+         before a pause/sell-out could still complete (default is 24h) */
+      p.set("expires_at", String(Math.floor(Date.now() / 1000) + 1800));
       p.set("return_url", `${url.origin}/?checkout=success&session_id={CHECKOUT_SESSION_ID}`);
       p.set("shipping_address_collection[allowed_countries][0]", "PT");
       p.set("phone_number_collection[enabled]", "true");
