@@ -204,6 +204,36 @@ async function processSession(env, session) {
 }
 
 export default {
+  /* daily heartbeat (cron): self-check the live endpoints, email owner on failure;
+     Mondays also email a full customers+orders CSV backup — the data IS the business */
+  async scheduled(event, env, ctx) {
+    ctx.waitUntil((async () => {
+      let alert = "";
+      try {
+        const s = await fetch("https://miratortillas.pt/api/status");
+        const sd = await s.json().catch(() => ({}));
+        if (!s.ok || typeof sd.open !== "boolean") alert += `/api/status broken (${s.status})\n`;
+        const c = await fetch("https://miratortillas.pt/api/checkout", {
+          method: "POST", headers: { "Content-Type": "application/json" }, body: "{}",
+        });
+        const cd = await c.json().catch(() => ({}));
+        if (!cd.error) alert += `/api/checkout unexpected (${c.status})\n`;
+      } catch (e) { alert += "self-check fetch failed: " + e.message + "\n"; }
+      if (alert)
+        await sendEmail(env, "ola@miratortillas.pt", "⚠️ mira self-check FAILED", alert + "\ncheck: https://dash.cloudflare.com → mira-shop");
+      if (new Date().getUTCDay() === 1) {
+        const csv = (rows) => rows.length
+          ? Object.keys(rows[0]).join(",") + "\n" + rows.map((r) => Object.values(r).map((v) => JSON.stringify(v ?? "")).join(",")).join("\n")
+          : "(empty)";
+        const cust = (await env.DB.prepare(`SELECT * FROM customers`).all()).results || [];
+        const ord = (await env.DB.prepare(`SELECT * FROM orders`).all()).results || [];
+        await sendEmail(env, "ola@miratortillas.pt",
+          `📦 mira weekly backup — ${cust.length} customers · ${ord.length} orders`,
+          `automatic Monday backup (keep these emails!)\n\nCUSTOMERS\n${csv(cust)}\n\nORDERS\n${csv(ord)}`);
+      }
+    })());
+  },
+
   async fetch(request, env) {
     const url = new URL(request.url);
 
