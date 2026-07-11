@@ -85,6 +85,7 @@
       cart_news: "email me about drops & news",
       cart_clear: "clear",
       sub_size: "your box",
+      sub_starter: "starter box — 1 of each",
       sub_rhythm: "rhythm",
       sc_note: "secure checkout · stripe",
       sc_fun: "almost taco time 🌮 quase lá",
@@ -153,6 +154,7 @@
       cart_news: "quero receber novidades por email",
       cart_clear: "limpar",
       sub_size: "a tua caixa",
+      sub_starter: "caixa inicial — 1 de cada",
       sub_rhythm: "ritmo",
       sc_note: "pagamento seguro · stripe",
       sc_fun: "quase lá 🌮 almost taco time",
@@ -527,6 +529,16 @@
   }
 
   /* hero quick-order chips: add to cart when live, otherwise scroll to the cards */
+  (function bindQuickAll() {
+    const b = document.querySelector("[data-quick-all]");
+    if (!b) return;
+    b.addEventListener("click", () => {
+      if (!document.body.classList.contains("cart-mode")) return;
+      const blocked = window.__miraBlocked || new Set();
+      ["small", "medium", "large"].forEach((k) => { if (!blocked.has(k)) addToCart(k, 1); });
+      openCart();
+    });
+  })();
   document.querySelectorAll("[data-quick]").forEach((b) => {
     b.addEventListener("click", () => {
       if (document.body.classList.contains("cart-mode")) {
@@ -592,6 +604,14 @@
       updateSubGo();
     });
   });
+  (function bindSubStarter() {
+    const b = document.getElementById("subStarter");
+    if (!b) return;
+    b.addEventListener("click", () => {
+      subQty.small = 1; subQty.medium = 1; subQty.large = 1;
+      updateSubGo();
+    });
+  })();
   document.querySelectorAll("[data-sub-dec]").forEach((b) => {
     b.addEventListener("click", () => {
       const k = b.dataset.subDec;
