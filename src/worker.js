@@ -324,16 +324,14 @@ export default {
         p.set(`line_items[${i}][quantity]`, String(it.quantity));
       });
 
-      /* shipping choices (one-off orders only):
-         Lisbon hand delivery is free (we drive it over); mainland CTT is a flat
-         €7 placeholder and needs a 3-pack minimum. No free-shipping tier — TBD. */
+      /* shipping choices (one-off orders only): every delivery costs us money,
+         so every delivery is charged — Lisboa courier flat + mainland frozen box.
+         Amounts are owner-set (2026-07-12): Lisboa €5, continente €10. */
       if (mode === "payment") {
         const rates = [
-          { name: "Lisboa · entrega local / local delivery", amount: 0 },
+          { name: "Lisboa · entrega em casa / home delivery", amount: 500 },
+          { name: "Portugal continental · envio refrigerado, seg–qua / ships Mon–Wed", amount: 1000 },
         ];
-        if (packs >= 3) {
-          rates.push({ name: "Portugal continental · CTT expresso", amount: 700 });
-        }
         rates.forEach((r, i) => {
           p.set(`shipping_options[${i}][shipping_rate_data][display_name]`, r.name);
           p.set(`shipping_options[${i}][shipping_rate_data][type]`, "fixed_amount");
