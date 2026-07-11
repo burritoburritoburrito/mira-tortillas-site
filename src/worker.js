@@ -116,6 +116,21 @@ async function sendEmail(env, to, subject, text) {
   return res.ok;
 }
 
+/* owner SMS via Brevo transactional SMS (same API key; needs SMS credits +
+   OWNER_PHONE env var in intl format e.g. +3519XXXXXXXX — silently skips if unset) */
+async function sendSMS(env, text) {
+  if (!env.BREVO_API_KEY || !env.OWNER_PHONE) return false;
+  const res = await fetch("https://api.brevo.com/v3/transactionalSMS/sms", {
+    method: "POST",
+    headers: { "api-key": env.BREVO_API_KEY, "Content-Type": "application/json" },
+    body: JSON.stringify({
+      type: "transactional", unicodeEnabled: true, sender: "mira",
+      recipient: env.OWNER_PHONE, content: text.slice(0, 155),
+    }),
+  });
+  return res.ok;
+}
+
 const POINTS_COUPON = "MIRA-POINTS-800"; // 100 points → €8 off
 
 /* upsert customer + (if paid) record order & settle points. Idempotent per session. */
@@ -181,6 +196,7 @@ async function processSession(env, session) {
         const total = ((session.amount_total || 0) / 100).toFixed(2);
         await sendEmail(env, "ola@miratortillas.pt", `🌮 nova encomenda — €${total}`,
           `nova encomenda / new order\n\n${itemsTxt}\n\ntotal: €${total} · ${session.mode}\n\n${cd.name || "?"} · ${email}\n${[addr.line1, addr.line2, [addr.postal_code, addr.city].filter(Boolean).join(" ")].filter(Boolean).join("\n")}\n\nstripe: https://dashboard.stripe.com/payments\ndashboard: https://miratortillas.pt/admin`);
+        await sendSMS(env, `mira: nova encomenda €${total} — ${cd.name || email} (${lis.map((li) => li.quantity).reduce((a, b) => a + b, 0) || "?"} packs)`);
       } catch (e) { /* notification failure must never fail an order */ }
     }
   }
