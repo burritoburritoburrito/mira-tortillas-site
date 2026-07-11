@@ -423,6 +423,35 @@
 
   function initCart() {
     document.body.classList.add("cart-mode");
+    /* owner controls: pause + per-size sold-out from /api/status */
+    window.__miraBlocked = new Set();
+    fetch("/api/status").then((r) => r.json()).then((st) => {
+      window.__miraStatus = st;
+      const closed = !st.open;
+      const deadLabel = closed
+        ? (lang === "pt" ? "brevemente" : "coming soon")
+        : (lang === "pt" ? "esgotado" : "sold out");
+      document.querySelectorAll("[data-buy]").forEach((a) => {
+        const sku = a.dataset.buy;
+        const out = ((st.remaining || {})[sku] || 0) <= 0;
+        if (closed || out) {
+          window.__miraBlocked.add(sku);
+          a.classList.add("btn--dead");
+          const span = a.querySelector("[data-i18n]") || a;
+          span.removeAttribute("data-i18n");
+          span.textContent = deadLabel;
+          if (out && !closed) a.closest(".card").classList.add("card--soldout");
+        }
+      });
+      document.querySelectorAll("[data-quick]").forEach((b) => {
+        if (closed || window.__miraBlocked.has(b.dataset.quick)) b.classList.add("btn--dead");
+      });
+      if (closed) {
+        window.__miraSubsClosed = true;
+        const go = document.getElementById("subGo");
+        if (go) go.classList.add("btn--dead");
+      }
+    }).catch(() => {});
     /* buy buttons add to cart WITHOUT opening the drawer (so all sizes stay reachable).
        The toast itself opens the cart on tap, and the nav un-hides so ORDER is visible. */
     const addedToast = (sku) => {
@@ -438,6 +467,10 @@
     document.querySelectorAll("[data-buy]").forEach((a) => {
       a.addEventListener("click", (e) => {
         e.preventDefault();
+        if (window.__miraBlocked.has(a.dataset.buy)) {
+          showToast(lang === "pt" ? "esgotado — voltamos em breve! 🌮" : "sold out — back soon! 🌮");
+          return;
+        }
         addToCart(a.dataset.buy, 1);
         addedToast(a.dataset.buy);
       });
@@ -493,6 +526,7 @@
   document.querySelectorAll("[data-quick]").forEach((b) => {
     b.addEventListener("click", () => {
       if (document.body.classList.contains("cart-mode")) {
+        if (window.__miraBlocked && window.__miraBlocked.has(b.dataset.quick)) return;
         addToCart(b.dataset.quick, 1);
         if (typeof window.__miraAddedToast === "function") window.__miraAddedToast(b.dataset.quick);
       } else {
@@ -578,6 +612,10 @@
   const subGo = document.getElementById("subGo");
   if (subGo) {
     subGo.addEventListener("click", () => {
+      if (window.__miraSubsClosed) {
+        showToast(lang === "pt" ? "assinaturas brevemente! 🌮" : "subscriptions coming soon! 🌮");
+        return;
+      }
       const sizes = Object.keys(subQty).filter((k) => subQty[k] > 0);
       if (!sizes.length) return;
       if (document.body.classList.contains("cart-mode")) {

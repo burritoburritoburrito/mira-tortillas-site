@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>mira — owner dashboard</title>
+  <meta name="robots" content="noindex">
+  <link rel="icon" type="image/png" href="/assets/favicon.png">
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css?v=45">
+  <style>
+    body { cursor: auto; background: var(--cream); }
+    .adm { max-width: 640px; margin: 0 auto; padding: 1.4rem var(--pad) 5rem; }
+    .adm__nav { display: flex; align-items: center; justify-content: space-between; padding: .4rem 0 2rem; }
+    .adm__nav img { height: 30px; }
+    .adm__nav a { font-family: var(--font-mono); font-size: .85rem; text-decoration: underline; text-underline-offset: .25em; }
+    h1 { font-size: clamp(2rem, 5vw, 2.8rem); font-weight: 700; letter-spacing: -.02em; margin-bottom: 1.6rem; }
+    .box { border: 3px solid var(--ink); border-radius: 16px; background: #fff; padding: 1.2rem 1.4rem; margin-bottom: 1rem; }
+    .box h2 { font-size: 1rem; font-weight: 700; margin-bottom: .8rem; }
+    .row { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: .5rem 0; font-size: .95rem; }
+    .mono { font-family: var(--font-mono); }
+    .bigbtn { width: 100%; font-family: var(--font-mono); font-size: 1rem; font-weight: 700; padding: 1rem; border-radius: 999px; border: 3px solid var(--ink); cursor: pointer; }
+    .bigbtn.open { background: var(--green); color: var(--ink); }
+    .bigbtn.paused { background: var(--oxblood); color: var(--cream); }
+    input[type="number"] { font-family: var(--font-mono); font-size: 1rem; width: 5.5rem; padding: .5rem; border: 2px solid var(--ink); border-radius: 10px; text-align: center; }
+    .small { font-family: var(--font-mono); font-size: .72rem; opacity: .65; line-height: 1.6; margin-top: .6rem; }
+    .save { font-family: var(--font-mono); font-size: .85rem; padding: .7rem 1.6rem; border-radius: 999px; border: 2px solid var(--ink); background: var(--ink); color: var(--cream); cursor: pointer; }
+    .ghost { background: none; color: var(--ink); }
+    .msg { font-family: var(--font-mono); font-size: .8rem; min-height: 1.4em; margin-top: .6rem; }
+    .links a { display: inline-block; font-family: var(--font-mono); font-size: .8rem; text-decoration: underline; text-underline-offset: .25em; margin-right: 1.2rem; }
+  </style>
+</head>
+<body>
+  <div class="adm">
+    <div class="adm__nav">
+      <a href="/"><img src="assets/mira-wordmark.png" alt="mira"></a>
+      <a href="/">← back to site</a>
+    </div>
+    <h1>owner dashboard.</h1>
+    <div id="content"><p class="mono" style="font-size:.85rem">loading…</p></div>
+  </div>
+
+  <script>
+  (async function () {
+    const box = document.getElementById("content");
+    let st;
+    try { st = await (await fetch("/api/admin/state")).json(); } catch (e) { st = { error: "network" }; }
+
+    if (st.error) {
+      box.innerHTML = `<div class="box"><h2>sign in first</h2>
+        <p style="font-size:.9rem;line-height:1.6">This page is owner-only. <a href="/account" style="text-decoration:underline">Sign in at /account</a> with the owner email (6-digit code), then come back here.</p></div>`;
+      return;
+    }
+
+    const render = (s) => {
+      box.innerHTML = `
+        <div class="box">
+          <h2>store status</h2>
+          <button class="bigbtn ${s.open ? "open" : "paused"}" id="toggle">
+            ${s.open ? "🟢 OPEN — customers can buy (tap to pause)" : "⏸ PAUSED — sales off (tap to open)"}
+          </button>
+          <p class="small">Paused = buy buttons show "coming soon", checkout API rejects everything. Site stays visible.</p>
+        </div>
+        <div class="box">
+          <h2>stock — packs available this round</h2>
+          ${["small","medium","large"].map(k => `
+            <div class="row"><span class="mono">${k}</span>
+              <span class="mono" style="opacity:.6">sold ${s.sold[k]}</span>
+              <span>cap <input type="number" min="0" max="9999" id="cap_${k}" value="${s.caps[k]}"></span>
+              <span class="mono" style="font-weight:700">${Math.max(s.caps[k]-s.sold[k],0)} left</span>
+            </div>`).join("")}
+          <div class="row" style="margin-top:.6rem">
+            <button class="save" id="save">save caps</button>
+            <button class="save ghost" id="reset">reset sold → 0</button>
+          </div>
+          <p class="small">When "left" hits 0 the card shows ESGOTADO and checkout blocks it. Reset sold counters when a new baking round starts.</p>
+          <p class="msg" id="msg"></p>
+        </div>
+        <div class="box">
+          <h2>promo codes</h2>
+          <p style="font-size:.9rem;line-height:1.6">Checkout has Stripe's promo-code box built in. Create codes at
+          <a href="https://dashboard.stripe.com/coupons" target="_blank" style="text-decoration:underline">Stripe → Coupons</a>:
+          make a coupon → "Add promotion code" → invent the code (e.g. <span class="mono">AMIGOS10</span>). Live instantly.</p>
+        </div>
+        <div class="box links">
+          <h2>quick links</h2>
+          <a href="https://dashboard.stripe.com/payments" target="_blank">stripe payments</a>
+          <a href="https://dashboard.stripe.com/coupons" target="_blank">coupons</a>
+          <a href="https://app.brevo.com" target="_blank">brevo</a>
+          <a href="https://dash.cloudflare.com" target="_blank">cloudflare</a>
+        </div>`;
+
+      const post = async (body) => {
+        document.getElementById("msg").textContent = "saving…";
+        const r = await fetch("/api/admin/update", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+        const d = await r.json();
+        if (d.error) { document.getElementById("msg").textContent = d.error; return; }
+        render(d);
+      };
+      document.getElementById("toggle").onclick = () => post({ open: !s.open });
+      document.getElementById("save").onclick = () => post({ caps: {
+        small: parseInt(document.getElementById("cap_small").value, 10),
+        medium: parseInt(document.getElementById("cap_medium").value, 10),
+        large: parseInt(document.getElementById("cap_large").value, 10),
+      }});
+      document.getElementById("reset").onclick = () => { if (confirm("Reset all sold counters to 0?")) post({ resetSold: true }); };
+    };
+    render(st);
+  })();
+  </script>
+</body>
+</html>

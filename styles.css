@@ -899,3 +899,18 @@ body { background: var(--sky); }
 /* green buttons retired: primary action buttons go wine (label palette) */
 .btn--green { background: var(--oxblood); border-color: var(--ink); color: var(--cream); }
 .btn--green:hover { background: var(--ink); border-color: var(--ink); color: var(--cream); }
+
+/* ═════════ owner controls: paused / sold-out states ═════════ */
+.btn--dead { opacity: .5; cursor: not-allowed; box-shadow: none !important; }
+.btn--dead:hover { transform: none !important; background: inherit; }
+.card--soldout .card__qty, .card--soldout .card__name, .card--soldout .card__desc { opacity: .45; }
+.card--soldout::after {
+  content: "esgotado · sold out";
+  position: absolute; top: 44%; left: 50%;
+  transform: translate(-50%, -50%) rotate(-9deg);
+  font-family: "Archivo Black", var(--font-display); font-size: 1.15rem; white-space: nowrap;
+  background: var(--oxblood); color: var(--cream);
+  border: 3px solid var(--ink); border-radius: 12px;
+  padding: .55rem 1.1rem; box-shadow: 5px 6px 0 var(--ink);
+  pointer-events: none; z-index: 2;
+}

@@ -19,6 +19,32 @@ const PRICES = {
   "price_1Tp6jo2KMRu6Fi6hOAHj9Uo4": { mode: "subscription", cad: "monthly" },  // large
 };
 
+/* sku per one-off price id — stock caps + sold-out accounting */
+const PRICE_SKU = {
+  "price_1Tp6jR2KMRu6Fi6htz56SDPI": "small",
+  "price_1Tp6jS2KMRu6Fi6hI68OSLWD": "medium",
+  "price_1Tp6jU2KMRu6Fi6hj58ozoRh": "large",
+};
+
+/* owner dashboard access (email-code login as one of these = admin) */
+const ADMIN_EMAILS = ["nicholascalkins@gmail.com"];
+
+async function getSettings(env) {
+  const rows = (await env.DB.prepare(`SELECT k, v FROM settings`).all()).results || [];
+  const s = {};
+  for (const r of rows) s[r.k] = r.v;
+  return {
+    open: s.store_open === "1",
+    caps: { small: +s.cap_small || 0, medium: +s.cap_medium || 0, large: +s.cap_large || 0 },
+    sold: { small: +s.sold_small || 0, medium: +s.sold_medium || 0, large: +s.sold_large || 0 },
+  };
+}
+
+async function isAdmin(env, request) {
+  const c = await currentCustomer(env, request);
+  return !!(c && ADMIN_EMAILS.includes((c.email || "").toLowerCase()));
+}
+
 const json = (data, status = 200, extraHeaders = {}) =>
   new Response(JSON.stringify(data), {
     status,
@@ -139,6 +165,15 @@ async function processSession(env, session) {
       const redeemed = parseInt((session.metadata && session.metadata.points_redeemed) || "0", 10);
       if (redeemed > 0)
         await env.DB.prepare(`UPDATE customers SET points = MAX(points - ?1, 0) WHERE id = ?2`).bind(redeemed, customer.id).run();
+      /* stock accounting: count packs sold per size (one-off orders, once per session) */
+      if (session.mode === "payment" && session.line_items && session.line_items.data) {
+        for (const li of session.line_items.data) {
+          const sku = PRICE_SKU[(li.price && li.price.id) || ""];
+          if (sku) await env.DB.prepare(
+            `UPDATE settings SET v = CAST(CAST(v AS INTEGER) + ?1 AS TEXT) WHERE k = ?2`
+          ).bind(li.quantity || 1, "sold_" + sku).run();
+        }
+      }
     }
   }
   return customer;
@@ -185,6 +220,19 @@ export default {
           return json({ error: "one rhythm per subscription" }, 400);
       }
 
+      /* owner controls: store pause + per-size stock caps (caps apply to one-off packs) */
+      const shop = await getSettings(env);
+      if (!shop.open) return json({ error: "loja em pausa — back soon" }, 503);
+      if (mode === "payment") {
+        for (const it of items) {
+          const sku = PRICE_SKU[it.price];
+          if (!sku) continue;
+          const left = Math.max(shop.caps[sku] - shop.sold[sku], 0);
+          if (Number(it.quantity) > left)
+            return json({ error: `${sku}: esgotado / sold out${left > 0 ? ` — only ${left} left` : ""}` }, 409);
+        }
+      }
+
       /* points redemption: 100 pts = €8 off, one-off orders of €8+, signed-in only */
       let redeemer = null;
       if (body.usePoints === true && mode === "payment" && subtotal >= 800) {
@@ -201,6 +249,9 @@ export default {
       if (redeemer) {
         p.set("discounts[0][coupon]", POINTS_COUPON);
         p.set("metadata[points_redeemed]", "100");
+      } else {
+        /* Stripe's native promo-code box in checkout (can't combine with discounts) */
+        p.set("allow_promotion_codes", "true");
       }
       p.set("return_url", `${url.origin}/?checkout=success&session_id={CHECKOUT_SESSION_ID}`);
       p.set("shipping_address_collection[allowed_countries][0]", "PT");
@@ -248,7 +299,7 @@ export default {
       const sid = String(body.session_id || "");
       if (!/^cs_(live|test)_[A-Za-z0-9]+$/.test(sid)) return json({ error: "bad session" }, 400);
 
-      const session = await stripeGet(env, `/v1/checkout/sessions/${sid}`);
+      const session = await stripeGet(env, `/v1/checkout/sessions/${sid}?expand[]=line_items`);
       if (!session || session.status !== "complete") return json({ error: "not a completed checkout" }, 400);
 
       const customer = await processSession(env, session);
@@ -271,7 +322,7 @@ export default {
         (type === "checkout.session.completed" || type === "checkout.session.async_payment_succeeded") &&
         /^cs_(live|test)_[A-Za-z0-9]+$/.test(objId || "")
       ) {
-        const session = await stripeGet(env, `/v1/checkout/sessions/${objId}`);
+        const session = await stripeGet(env, `/v1/checkout/sessions/${objId}?expand[]=line_items`);
         if (session && session.status === "complete") await processSession(env, session);
       }
       return json({ received: true });
@@ -386,6 +437,37 @@ export default {
       const updated = await stripePost(env, `/v1/subscriptions/${id}`, p);
       if (!updated) return json({ error: "stripe error" }, 502);
       return json({ ok: true });
+    }
+
+    /* public shop status: open/paused + remaining stock per size */
+    if (url.pathname === "/api/status") {
+      const s = await getSettings(env);
+      return json({
+        open: s.open,
+        remaining: {
+          small: Math.max(s.caps.small - s.sold.small, 0),
+          medium: Math.max(s.caps.medium - s.sold.medium, 0),
+          large: Math.max(s.caps.large - s.sold.large, 0),
+        },
+      });
+    }
+
+    /* owner dashboard API — requires email-code login as an ADMIN_EMAILS address */
+    if (url.pathname === "/api/admin/state") {
+      if (!(await isAdmin(env, request))) return json({ error: "not authorized" }, 401);
+      return json(await getSettings(env));
+    }
+    if (url.pathname === "/api/admin/update" && request.method === "POST") {
+      if (!(await isAdmin(env, request))) return json({ error: "not authorized" }, 401);
+      let b;
+      try { b = await request.json(); } catch { return json({ error: "bad json" }, 400); }
+      const up = (k, v) => env.DB.prepare(`INSERT OR REPLACE INTO settings (k, v) VALUES (?1, ?2)`).bind(k, String(v)).run();
+      if (typeof b.open === "boolean") await up("store_open", b.open ? "1" : "0");
+      for (const sku of ["small", "medium", "large"]) {
+        if (b.caps && Number.isInteger(b.caps[sku]) && b.caps[sku] >= 0 && b.caps[sku] <= 9999) await up("cap_" + sku, b.caps[sku]);
+        if (b.resetSold === true) await up("sold_" + sku, "0");
+      }
+      return json(await getSettings(env));
     }
 
     /* newsletter opt-in — used by the post-checkout confirmation (signed-in only) */
