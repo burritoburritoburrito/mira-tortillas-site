@@ -1,5 +1,6 @@
 /* mira tortillas — checkout API (Cloudflare Worker)
-   Static assets are served automatically; only /api/* reaches this code. */
+   run_worker_first: every request lands here (canonical-host 301s), then
+   non-/api/ paths fall through to env.ASSETS. */
 
 /* every price this API will sell — anything else is rejected */
 const PRICES = {
@@ -551,6 +552,9 @@ export default {
       });
     }
 
-    return json({ error: "not found" }, 404);
+    if (url.pathname.startsWith("/api/")) return json({ error: "not found" }, 404);
+
+    /* run_worker_first is on (for the canonical-host 301s) — everything else is a static asset */
+    return env.ASSETS.fetch(request);
   },
 };
