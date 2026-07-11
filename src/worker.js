@@ -509,6 +509,14 @@ export default {
       });
     }
 
+    /* owner: send yourself a test SMS (admin-only) — visit /api/admin/test-sms while logged in */
+    if (url.pathname === "/api/admin/test-sms") {
+      if (!(await isAdmin(env, request))) return json({ error: "not authorized — sign in at /account first" }, 401);
+      if (!env.OWNER_PHONE) return json({ error: "OWNER_PHONE var not set in Cloudflare yet" }, 400);
+      const ok = await sendSMS(env, "mira: SMS test OK — order alerts armed 🌮");
+      return json({ sent: ok, to: env.OWNER_PHONE, hint: ok ? "check your phone!" : "check Brevo SMS credits" });
+    }
+
     /* owner dashboard API — requires email-code login as an ADMIN_EMAILS address */
     if (url.pathname === "/api/admin/state") {
       if (!(await isAdmin(env, request))) return json({ error: "not authorized" }, 401);
