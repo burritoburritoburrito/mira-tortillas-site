@@ -48,6 +48,26 @@
     .subbtn--warn:hover { background: var(--oxblood); border-color: var(--oxblood); color: var(--cream); }
     .pf-grid { display: grid; gap: .8rem; grid-template-columns: 1fr 1fr; }
     @media (max-width: 560px) { .pf-grid { grid-template-columns: 1fr; } }
+    .acct__layout { display: grid; grid-template-columns: 190px 1fr; gap: 1.6rem; align-items: start; }
+    .acct__tabs { display: flex; flex-direction: column; gap: .45rem; position: sticky; top: 1rem; }
+    .acct__tabs [data-tab] {
+      font-family: var(--font-mono); font-size: .78rem; text-transform: uppercase; letter-spacing: .08em;
+      text-align: left; background: none; border: 3px solid var(--ink); border-radius: 999px;
+      padding: .55rem 1rem; cursor: pointer; color: var(--ink); transition: background .15s;
+      display: flex; flex-direction: column; gap: .05rem;
+    }
+    .acct__tabs [data-tab] small { font-size: .58rem; opacity: .55; letter-spacing: .12em; }
+    .acct__tabs [data-tab]:hover { background: var(--masa); }
+    .acct__tabs [data-tab].is-on { background: var(--ink); color: var(--cream); box-shadow: 4px 4px 0 var(--oxblood); }
+    .acct__tabs .acct__logout { margin-top: .8rem; text-align: left; }
+    .acct__panes { min-width: 0; }
+    @media (max-width: 700px) {
+      .acct__layout { grid-template-columns: 1fr; }
+      .acct__tabs { position: static; flex-direction: row; flex-wrap: nowrap; overflow-x: auto; padding-bottom: .4rem; }
+      .acct__tabs [data-tab] { flex: 0 0 auto; padding: .45rem .9rem; }
+      .acct__tabs [data-tab] small { display: none; }
+      .acct__tabs .acct__logout { margin: 0 0 0 auto; flex: 0 0 auto; white-space: nowrap; }
+    }
   </style>
 </head>
 <body>
@@ -143,53 +163,89 @@
           </div>`).join("")
       : `<p class="acct__empty">no orders yet / ainda sem encomendas</p>`;
 
+    const lastOrder = me.orders[0];
     box.innerHTML = `
       <h1 class="acct__hi">olá, ${firstName}.</h1>
-      <p class="acct__sub">${c.email}${c.phone ? " · " + c.phone : ""}</p>
-      <div class="acct__points"><b>${c.points}</b><span>points / pontos</span></div>
-      <p class="acct__empty" style="margin:-1.6rem 0 2rem">100 points = €8 off — tick "use points" in the cart / 100 pontos = €8 de desconto no carrinho</p>
-      <div class="acct__grid">
-        <div class="acct__card">
-          <h2>subscriptions <small>assinaturas</small></h2>
-          ${subsHtml}
+      <p class="acct__sub">${c.email}</p>
+      <div class="acct__layout">
+        <nav class="acct__tabs" id="acctTabs" aria-label="account sections">
+          <button data-tab="overview" class="is-on">overview <small>resumo</small></button>
+          <button data-tab="orders">orders <small>encomendas</small></button>
+          <button data-tab="subs">subscriptions <small>assinaturas</small></button>
+          <button data-tab="profile">profile <small>perfil</small></button>
+          <button data-tab="payments">payments <small>pagamentos</small></button>
+          <button class="acct__logout" id="logout">log out / sair</button>
+        </nav>
+        <div class="acct__panes">
+          <section data-pane="overview">
+            <div class="acct__points"><b>${c.points}</b><span>points / pontos</span></div>
+            <p class="acct__empty" style="margin:-1.4rem 0 1.6rem">100 points = €8 off — tick "use points" in the cart / 100 pontos = €8 de desconto no carrinho</p>
+            <div class="acct__card">
+              <h2>at a glance <small>num relance</small></h2>
+              <div class="acct__row"><span>orders / encomendas</span><span class="mono">${me.orders.length}</span></div>
+              <div class="acct__row"><span>subscriptions / assinaturas</span><span class="mono">${me.subscriptions.length || "—"}</span></div>
+              <div class="acct__row"><span>last order / última</span><span class="mono">${lastOrder ? lastOrder.created_at.slice(0, 10) + " · " + eur(lastOrder.amount_total) : "—"}</span></div>
+            </div>
+          </section>
+          <section data-pane="orders" hidden>
+            <div class="acct__card">
+              <h2>orders <small>encomendas</small></h2>
+              ${ordersHtml}
+            </div>
+          </section>
+          <section data-pane="subs" hidden>
+            <div class="acct__card">
+              <h2>subscriptions <small>assinaturas</small></h2>
+              ${subsHtml}
+              <p class="acct__empty" style="margin-top:.8rem">new box? build one on the <a href="/#assinar" style="text-decoration:underline">subscribe section</a> / cria uma nova na secção assinar</p>
+            </div>
+          </section>
+          <section data-pane="profile" hidden>
+            <div class="acct__card">
+              <h2>profile <small>perfil — share what you like, all optional</small></h2>
+              <div class="pf-grid">
+                ${field("name", "name / nome", c.name, 'autocomplete="name"')}
+                ${field("phone", "phone / telemóvel", c.phone, 'autocomplete="tel" inputmode="tel"')}
+                ${field("line1", "address / morada", c.address.line1, 'autocomplete="address-line1"')}
+                ${field("line2", "address 2 (optional)", c.address.line2, 'autocomplete="address-line2"')}
+                ${field("postal", "postal code / código postal", c.address.postal_code, 'autocomplete="postal-code" inputmode="numeric"')}
+                ${field("city", "city / cidade", c.address.city, 'autocomplete="address-level2"')}
+                ${field("birthday", "birthday / aniversário 🎁", c.birthday, 'type="date"')}
+              </div>
+              <p class="acct__empty" style="margin-top:.6rem">birthday = a little something from us / no teu aniversário há mimo</p>
+              <div style="display:flex;align-items:center;gap:1rem;margin-top:.9rem">
+                <button class="btn btn--ink" id="saveProfile" style="justify-content:center">save · guardar</button>
+                <span id="profileMsg" class="acct__empty"></span>
+              </div>
+            </div>
+          </section>
+          <section data-pane="payments" hidden>
+            <div class="acct__card">
+              <h2>payment methods <small>pagamentos</small></h2>
+              <p class="acct__empty" style="margin-bottom:.8rem">cards are stored safely by stripe — manage them there / os cartões ficam na stripe — gere-os lá</p>
+              <div style="display:flex;align-items:center;gap:1rem">
+                <button class="btn btn--ink" id="openPortal" style="justify-content:center">manage payments · gerir</button>
+                <span id="portalMsg" class="acct__empty"></span>
+              </div>
+            </div>
+          </section>
+          <p class="acct__note">
+            anything else — message us on instagram
+            <a href="https://instagram.com/miratortillas" target="_blank" rel="noopener" style="text-decoration:underline">@miratortillas</a>
+            or email <a href="mailto:ola@miratortillas.pt" style="text-decoration:underline">ola@miratortillas.pt</a>.<br>
+            outra coisa qualquer? manda mensagem ou escreve para ola@miratortillas.pt.
+          </p>
         </div>
-        <div class="acct__card">
-          <h2>orders <small>encomendas</small></h2>
-          ${ordersHtml}
-        </div>
-        <div class="acct__card">
-          <h2>profile <small>perfil — share what you like, all optional</small></h2>
-          <div class="pf-grid">
-            ${field("name", "name / nome", c.name, 'autocomplete="name"')}
-            ${field("phone", "phone / telemóvel", c.phone, 'autocomplete="tel" inputmode="tel"')}
-            ${field("line1", "address / morada", c.address.line1, 'autocomplete="address-line1"')}
-            ${field("line2", "address 2 (optional)", c.address.line2, 'autocomplete="address-line2"')}
-            ${field("postal", "postal code / código postal", c.address.postal_code, 'autocomplete="postal-code" inputmode="numeric"')}
-            ${field("city", "city / cidade", c.address.city, 'autocomplete="address-level2"')}
-            ${field("birthday", "birthday / aniversário 🎁", c.birthday, 'type="date"')}
-          </div>
-          <p class="acct__empty" style="margin-top:.6rem">birthday = a little something from us / no teu aniversário há mimo</p>
-          <div style="display:flex;align-items:center;gap:1rem;margin-top:.9rem">
-            <button class="btn btn--ink" id="saveProfile" style="justify-content:center">save · guardar</button>
-            <span id="profileMsg" class="acct__empty"></span>
-          </div>
-        </div>
-        <div class="acct__card">
-          <h2>payment methods <small>pagamentos</small></h2>
-          <p class="acct__empty" style="margin-bottom:.8rem">cards are stored safely by stripe — manage them there / os cartões ficam na stripe — gere-os lá</p>
-          <div style="display:flex;align-items:center;gap:1rem">
-            <button class="btn btn--ink" id="openPortal" style="justify-content:center">manage payments · gerir</button>
-            <span id="portalMsg" class="acct__empty"></span>
-          </div>
-        </div>
-      </div>
-      <p class="acct__note">
-        anything else — message us on instagram
-        <a href="https://instagram.com/miratortillas" target="_blank" rel="noopener" style="text-decoration:underline">@miratortillas</a>
-        or email <a href="mailto:ola@miratortillas.pt" style="text-decoration:underline">ola@miratortillas.pt</a>.<br>
-        outra coisa qualquer? manda mensagem ou escreve para ola@miratortillas.pt.
-      </p>
-      <button class="acct__logout" id="logout">log out / sair</button>`;
+      </div>`;
+
+    const tabs = document.querySelectorAll("#acctTabs [data-tab]");
+    const showTab = (name) => {
+      tabs.forEach((t) => t.classList.toggle("is-on", t.dataset.tab === name));
+      document.querySelectorAll("[data-pane]").forEach((p) => { p.hidden = p.dataset.pane !== name; });
+      history.replaceState(null, "", "#" + name);
+    };
+    tabs.forEach((t) => t.addEventListener("click", () => showTab(t.dataset.tab)));
+    if (location.hash && document.querySelector(`[data-pane="${location.hash.slice(1)}"]`)) showTab(location.hash.slice(1));
 
     document.getElementById("logout").addEventListener("click", async () => {
       await fetch("/api/logout", { method: "POST" });
