@@ -46,6 +46,8 @@
     }
     .subbtn:hover { background: var(--ink); color: var(--cream); }
     .subbtn--warn:hover { background: var(--oxblood); border-color: var(--oxblood); color: var(--cream); }
+    .pf-grid { display: grid; gap: .8rem; grid-template-columns: 1fr 1fr; }
+    @media (max-width: 560px) { .pf-grid { grid-template-columns: 1fr; } }
   </style>
 </head>
 <body>
@@ -110,8 +112,12 @@
 
     const c = me.customer;
     const firstName = (c.name || c.email).split(" ")[0];
-    const addr = [c.address.line1, c.address.line2, [c.address.postal_code, c.address.city].filter(Boolean).join(" ")]
-      .filter(Boolean).join("<br>");
+    const esc = (v) => String(v == null ? "" : v).replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;");
+    const field = (id, label, value, extra) => `
+      <label style="display:grid;gap:.25rem;font-family:var(--font-mono);font-size:.68rem;text-transform:uppercase;letter-spacing:.1em;opacity:.85">${label}
+        <input id="pf_${id}" value="${esc(value)}" ${extra || ""}
+          style="font-family:var(--font-mono);font-size:.9rem;padding:.6rem .8rem;border:3px solid var(--ink);border-radius:12px;background:#fff;width:100%;text-transform:none;letter-spacing:0">
+      </label>`;
 
     const subActions = (s) => {
       if (s.status !== "active" && s.status !== "past_due" && !s.paused) return "";
@@ -152,21 +158,66 @@
           ${ordersHtml}
         </div>
         <div class="acct__card">
-          <h2>delivery address <small>morada de entrega</small></h2>
-          ${addr ? `<p style="line-height:1.7">${addr}</p>` : `<p class="acct__empty">added automatically at checkout / adicionada no checkout</p>`}
+          <h2>profile <small>perfil — share what you like, all optional</small></h2>
+          <div class="pf-grid">
+            ${field("name", "name / nome", c.name, 'autocomplete="name"')}
+            ${field("phone", "phone / telemóvel", c.phone, 'autocomplete="tel" inputmode="tel"')}
+            ${field("line1", "address / morada", c.address.line1, 'autocomplete="address-line1"')}
+            ${field("line2", "address 2 (optional)", c.address.line2, 'autocomplete="address-line2"')}
+            ${field("postal", "postal code / código postal", c.address.postal_code, 'autocomplete="postal-code" inputmode="numeric"')}
+            ${field("city", "city / cidade", c.address.city, 'autocomplete="address-level2"')}
+            ${field("birthday", "birthday / aniversário 🎁", c.birthday, 'type="date"')}
+          </div>
+          <p class="acct__empty" style="margin-top:.6rem">birthday = a little something from us / no teu aniversário há mimo</p>
+          <div style="display:flex;align-items:center;gap:1rem;margin-top:.9rem">
+            <button class="btn btn--ink" id="saveProfile" style="justify-content:center">save · guardar</button>
+            <span id="profileMsg" class="acct__empty"></span>
+          </div>
+        </div>
+        <div class="acct__card">
+          <h2>payment methods <small>pagamentos</small></h2>
+          <p class="acct__empty" style="margin-bottom:.8rem">cards are stored safely by stripe — manage them there / os cartões ficam na stripe — gere-os lá</p>
+          <div style="display:flex;align-items:center;gap:1rem">
+            <button class="btn btn--ink" id="openPortal" style="justify-content:center">manage payments · gerir</button>
+            <span id="portalMsg" class="acct__empty"></span>
+          </div>
         </div>
       </div>
       <p class="acct__note">
-        to change a subscription, address or anything else — message us on instagram
+        anything else — message us on instagram
         <a href="https://instagram.com/miratortillas" target="_blank" rel="noopener" style="text-decoration:underline">@miratortillas</a>
-        and we'll sort it. self-service controls are coming here soon.<br>
-        para alterar a assinatura ou morada, manda-nos mensagem — em breve podes gerir tudo aqui.
+        or email <a href="mailto:ola@miratortillas.pt" style="text-decoration:underline">ola@miratortillas.pt</a>.<br>
+        outra coisa qualquer? manda mensagem ou escreve para ola@miratortillas.pt.
       </p>
       <button class="acct__logout" id="logout">log out / sair</button>`;
 
     document.getElementById("logout").addEventListener("click", async () => {
       await fetch("/api/logout", { method: "POST" });
       location.href = "/";
+    });
+
+    document.getElementById("saveProfile").addEventListener("click", async () => {
+      const v = (id) => document.getElementById("pf_" + id).value;
+      const msg = document.getElementById("profileMsg");
+      msg.textContent = "saving…";
+      try {
+        const r = await fetch("/api/profile", { method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ name: v("name"), phone: v("phone"), line1: v("line1"), line2: v("line2"),
+            postal_code: v("postal"), city: v("city"), birthday: v("birthday") }) });
+        const d = await r.json();
+        msg.textContent = d.ok ? "saved ✓ / guardado ✓" : (d.error || "something went wrong");
+      } catch (e) { msg.textContent = "network error — try again"; }
+    });
+
+    document.getElementById("openPortal").addEventListener("click", async () => {
+      const msg = document.getElementById("portalMsg");
+      msg.textContent = "opening…";
+      try {
+        const r = await fetch("/api/portal", { method: "POST" });
+        const d = await r.json();
+        if (d.url) location.href = d.url;
+        else msg.textContent = d.error || "something went wrong";
+      } catch (e) { msg.textContent = "network error — try again"; }
     });
 
     document.querySelectorAll(".subbtn").forEach((b) => {

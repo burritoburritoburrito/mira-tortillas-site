@@ -423,12 +423,46 @@ export default {
       return json({
         loggedIn: true,
         customer: {
-          email: c.email, name: c.name, phone: c.phone, points: c.points,
+          email: c.email, name: c.name, phone: c.phone, points: c.points, birthday: c.birthday,
           address: { line1: c.address_line1, line2: c.address_line2, postal_code: c.postal_code, city: c.city, country: c.country },
         },
         orders: orders.results || [],
         subscriptions: subs,
       });
+    }
+
+    /* profile self-service: whatever the customer wants to share (all fields optional) */
+    if (url.pathname === "/api/profile" && request.method === "POST") {
+      const c = await currentCustomer(env, request);
+      if (!c) return json({ error: "not signed in" }, 401);
+      let b;
+      try { b = await request.json(); } catch { return json({ error: "bad json" }, 400); }
+      const clean = (v, max) => (typeof v === "string" && v.trim() ? v.trim().slice(0, max) : null);
+      const birthday = clean(b.birthday, 10);
+      if (birthday && !/^\d{4}-\d{2}-\d{2}$/.test(birthday)) return json({ error: "birthday must be YYYY-MM-DD" }, 400);
+      await env.DB.prepare(
+        `UPDATE customers SET
+           name = ?1, phone = ?2, address_line1 = ?3, address_line2 = ?4,
+           postal_code = ?5, city = ?6, birthday = ?7, updated_at = datetime('now')
+         WHERE id = ?8`
+      ).bind(
+        clean(b.name, 80), clean(b.phone, 24), clean(b.line1, 120), clean(b.line2, 120),
+        clean(b.postal_code, 12), clean(b.city, 60), birthday, c.id
+      ).run();
+      return json({ ok: true });
+    }
+
+    /* Stripe billing portal — saved cards + subscription management, Stripe-hosted */
+    if (url.pathname === "/api/portal" && request.method === "POST") {
+      const c = await currentCustomer(env, request);
+      if (!c) return json({ error: "not signed in" }, 401);
+      if (!c.stripe_customer_id) return json({ error: "no payment profile yet — appears after your first order" }, 400);
+      const p = new URLSearchParams();
+      p.set("customer", c.stripe_customer_id);
+      p.set("return_url", `${url.origin}/account`);
+      const sess = await stripePost(env, "/v1/billing_portal/sessions", p);
+      if (!sess) return json({ error: "portal unavailable" }, 502);
+      return json({ url: sess.url });
     }
 
     /* email login — step 1: send a 6-digit code */
