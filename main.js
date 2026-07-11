@@ -163,7 +163,12 @@
   };
 
   let lang = (function () {
-    try { return localStorage.getItem("mira-lang") === "pt" ? "pt" : "en"; }
+    /* saved choice wins; first-time visitors get their browser's language (PT for Portugal) */
+    try {
+      const saved = localStorage.getItem("mira-lang");
+      if (saved === "pt" || saved === "en") return saved;
+      return (navigator.language || "").toLowerCase().startsWith("pt") ? "pt" : "en";
+    }
     catch (e) { return "en"; }
   })();
 

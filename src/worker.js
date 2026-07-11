@@ -148,6 +148,12 @@ export default {
   async fetch(request, env) {
     const url = new URL(request.url);
 
+    /* canonical host: www + .com variants 301 to the apex (workers.dev stays live for testing) */
+    const host = url.hostname;
+    if (host === "www.miratortillas.pt" || host === "miratortillas.com" || host === "www.miratortillas.com") {
+      return Response.redirect("https://miratortillas.pt" + url.pathname + url.search, 301);
+    }
+
     if (url.pathname === "/api/config") {
       return json({ publishableKey: env.STRIPE_PUBLISHABLE_KEY || null });
     }
