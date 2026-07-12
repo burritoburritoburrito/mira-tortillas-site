@@ -10,10 +10,11 @@
   <link rel="stylesheet" href="styles.css?v=45">
   <style>
     body { cursor: auto; background: var(--cream); }
-    .adm { max-width: 1120px; margin: 0 auto; padding: 1.4rem var(--pad) 5rem; }
-    .adm__grid { display: grid; grid-template-columns: minmax(0, 7fr) minmax(0, 4fr); gap: 1.1rem; align-items: start; }
-    .adm__col { display: grid; gap: 1.1rem; min-width: 0; }
+    .adm { max-width: 1760px; margin: 0 auto; padding: 1.4rem clamp(1.2rem, 3vw, 3.5rem) 5rem; }
+    .adm__grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 1.2rem; align-items: start; }
+    .adm__col { display: grid; gap: 1.2rem; min-width: 0; }
     .adm__col .box { margin-bottom: 0; }
+    @media (min-width: 1400px) { .adm__grid { grid-template-columns: minmax(0, 7fr) minmax(0, 4.2fr) minmax(0, 3.6fr); } }
     @media (max-width: 900px) { .adm__grid { grid-template-columns: 1fr; } }
     .adm__nav { display: flex; align-items: center; justify-content: space-between; padding: .4rem 0 2rem; }
     .adm__nav img { height: 30px; }
@@ -85,6 +86,8 @@
             <h2>sales</h2>
             <p class="mono" style="font-size:.8rem;opacity:.6">loading…</p>
           </div>
+        </div>
+        <div class="adm__col">
           <div class="box" id="custBox">
             <h2>customers <small style="font-family:var(--font-mono);font-weight:400;font-size:.68rem;text-transform:uppercase;letter-spacing:.1em;opacity:.55">the book</small></h2>
             <div id="custRows"><p class="mono" style="font-size:.8rem;opacity:.6">loading…</p></div>
