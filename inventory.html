@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>mira — inventory</title>
+  <meta name="robots" content="noindex">
+  <link rel="icon" type="image/png" href="/assets/favicon.png">
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css?v=48">
+  <style>
+    body { cursor: auto; background: var(--cream); }
+    .inv { max-width: 1120px; margin: 0 auto; padding: 1.4rem var(--pad) 5rem; }
+    .inv__nav { display: flex; align-items: center; justify-content: space-between; padding: .4rem 0 2rem; }
+    .inv__nav img { height: 30px; }
+    .inv__nav a { font-family: var(--font-mono); font-size: .85rem; text-decoration: underline; text-underline-offset: .25em; }
+    h1 { font-size: clamp(2rem, 5vw, 2.8rem); font-weight: 700; letter-spacing: -.02em; margin-bottom: 1.6rem; }
+    .box { border: 3px solid var(--ink); border-radius: 16px; background: #fff; padding: 1.4rem 1.6rem; margin-bottom: 1.1rem; }
+    .mono { font-family: var(--font-mono); }
+    .small { font-family: var(--font-mono); font-size: .72rem; opacity: .65; line-height: 1.6; margin-top: .6rem; }
+    .save { font-family: var(--font-mono); font-size: .85rem; padding: .7rem 1.6rem; border-radius: 999px; border: 2px solid var(--ink); background: var(--ink); color: var(--cream); cursor: pointer; }
+    .ghost { background: none; color: var(--ink); }
+    .msg { font-family: var(--font-mono); font-size: .8rem; min-height: 1.4em; margin-top: .6rem; }
+    .kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: .8rem; margin-bottom: 1.2rem; }
+    .kpi { border: 2px solid var(--cream-dim); border-radius: 12px; padding: .8rem 1rem; display: grid; gap: .3rem; align-content: start; }
+    .kpi__label { font-family: var(--font-mono); font-size: .62rem; text-transform: uppercase; letter-spacing: .12em; opacity: .55; }
+    .kpi__value { font-family: var(--font-mono); font-size: 1.7rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+    .kpi__sub { font-family: var(--font-mono); font-size: .62rem; opacity: .5; }
+    .chip { font-family: var(--font-mono); font-size: .62rem; font-weight: 700; padding: .12rem .5rem; border-radius: 999px; }
+    .chip--low { background: #f7e6e6; color: var(--oxblood); }
+    .chip--ok { background: #e3f2e5; color: #20842c; }
+    .tbl { width: 100%; border-collapse: collapse; }
+    .tbl th { font-family: var(--font-mono); font-size: .62rem; text-transform: uppercase; letter-spacing: .1em; opacity: .5; text-align: left; padding: .4rem .5rem; border-bottom: 2px solid var(--cream-dim); }
+    .tbl td { padding: .45rem .5rem; border-bottom: 1px solid var(--cream-dim); vertical-align: middle; }
+    .tbl input { font-family: var(--font-mono); font-size: .85rem; padding: .45rem .55rem; border: 2px solid var(--cream-dim); border-radius: 8px; width: 100%; min-width: 0; background: #fff; }
+    .tbl input:focus { border-color: var(--ink); outline: none; }
+    .num { text-align: center; }
+    .val { font-family: var(--font-mono); font-weight: 700; text-align: right; white-space: nowrap; }
+    .del { background: none; border: 0; font-size: 1.05rem; cursor: pointer; color: var(--oxblood); opacity: .55; }
+    .del:hover { opacity: 1; }
+    .w-qty { width: 6rem; } .w-unit { width: 4.5rem; } .w-cost { width: 6rem; } .w-low { width: 5rem; }
+    @media (max-width: 760px) {
+      .tblwrap { overflow-x: auto; }
+      .tbl { min-width: 700px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="inv">
+    <div class="inv__nav">
+      <a href="/admin"><img src="assets/mira-wordmark.png" alt="mira"></a>
+      <a href="/admin">← back to dashboard</a>
+    </div>
+    <h1>inventory.</h1>
+    <div id="content"><p class="mono" style="font-size:.85rem">loading…</p></div>
+  </div>
+
+  <script>
+  (async function () {
+    const box = document.getElementById("content");
+    /* what one MEDIUM pack (12×55g) consumes — for the "packs you can make" math */
+    const PER_PACK = [
+      { match: /farinha|flour/i, use: 0.379, label: "flour" },
+      { match: /óleo|oil/i, use: 0.062, label: "oil" },
+      { match: /sal[ /]|salt/i, use: 0.0076, label: "salt" },
+      { match: /rótulo|label/i, use: 1, label: "labels" },
+      { match: /saco|bag/i, use: 1, label: "bags" },
+    ];
+    let ITEMS = [];
+
+    async function load() {
+      let d;
+      try { d = await (await fetch("/api/admin/inventory")).json(); } catch (e) { d = { error: "network" }; }
+      if (d.error) {
+        box.innerHTML = `<div class="box"><h2 style="font-weight:700;margin-bottom:.6rem">sign in first</h2>
+          <p style="font-size:.9rem">This page is owner-only. <a href="/account" style="text-decoration:underline">Sign in at /account</a>, then come back.</p></div>`;
+        return;
+      }
+      ITEMS = d.items;
+      render();
+    }
+
+    function packsPossible() {
+      let min = Infinity, limiting = "";
+      for (const rule of PER_PACK) {
+        const it = ITEMS.find((x) => rule.match.test(x.name || ""));
+        if (!it) continue;
+        const can = Math.floor((Number(it.qty) || 0) / rule.use);
+        if (can < min) { min = can; limiting = rule.label; }
+      }
+      return { packs: min === Infinity ? 0 : min, limiting };
+    }
+
+    function render() {
+      const eur = (v) => "€" + v.toFixed(2);
+      const totalValue = ITEMS.reduce((n, it) => n + (Number(it.qty) || 0) * (Number(it.cost) || 0), 0);
+      const lowCount = ITEMS.filter((it) => Number(it.qty) <= Number(it.low_at)).length;
+      const pp = packsPossible();
+      const rows = ITEMS.map((it, i) => {
+        const value = (Number(it.qty) || 0) * (Number(it.cost) || 0);
+        const low = Number(it.qty) <= Number(it.low_at);
+        return `<tr data-i="${i}" data-id="${it.id || ""}">
+          <td><input class="f-name" value="${String(it.name || "").replace(/"/g, "&quot;")}"></td>
+          <td class="w-qty"><input class="f-qty num" type="number" step="any" value="${it.qty ?? 0}"></td>
+          <td class="w-unit"><input class="f-unit num" value="${String(it.unit || "").replace(/"/g, "&quot;")}"></td>
+          <td class="w-cost"><input class="f-cost num" type="number" step="any" value="${it.cost ?? 0}" title="€ per ${it.unit || "unit"}"></td>
+          <td class="w-low"><input class="f-low num" type="number" step="any" value="${it.low_at ?? 0}"></td>
+          <td><input class="f-sup" value="${String(it.supplier || "").replace(/"/g, "&quot;")}"></td>
+          <td class="val">${eur(value)}</td>
+          <td>${low ? '<span class="chip chip--low">low</span>' : '<span class="chip chip--ok">ok</span>'}</td>
+          <td><button class="del" title="remove">×</button></td>
+        </tr>`;
+      }).join("");
+      box.innerHTML = `
+        <div class="kpi-grid">
+          <div class="kpi"><span class="kpi__label">stock value</span><span class="kpi__value">${eur(totalValue)}</span><span class="kpi__sub">qty × unit cost</span></div>
+          <div class="kpi"><span class="kpi__label">≈ medium packs possible</span><span class="kpi__value">${pp.packs}</span><span class="kpi__sub">${pp.packs ? "limited by " + pp.limiting : "add your counts below"}</span></div>
+          <div class="kpi"><span class="kpi__label">items low</span><span class="kpi__value">${lowCount}</span><span class="kpi__sub">at or below threshold</span></div>
+        </div>
+        <div class="box">
+          <div class="tblwrap">
+          <table class="tbl">
+            <thead><tr><th>item</th><th>qty</th><th>unit</th><th>€/unit</th><th>low at</th><th>supplier</th><th style="text-align:right">value</th><th></th><th></th></tr></thead>
+            <tbody id="tbody">${rows}</tbody>
+          </table>
+          </div>
+          <div style="display:flex;gap:.8rem;align-items:center;margin-top:1rem">
+            <button class="save ghost" id="add">+ add item</button>
+            <button class="save" id="saveAll">save inventory</button>
+            <span class="msg" id="msg" style="margin:0"></span>
+          </div>
+          <p class="small">unit costs come from your invoices (flour €0.98/kg · avocado oil €13.33/L · salt €0.86/kg · labels €0.178 · pouches ~€0.139). "packs possible" uses the medium recipe: ~379g flour, ~62ml oil, ~7.6g salt, 1 label, 1 pouch per pack. count stock after each baking round and hit save.</p>
+        </div>`;
+      document.getElementById("add").onclick = () => { ITEMS.push({ name: "", qty: 0, unit: "", cost: 0, low_at: 0, supplier: "" }); syncFromDom(false); render(); };
+      document.getElementById("saveAll").onclick = save;
+      document.querySelectorAll(".del").forEach((b) => { b.onclick = async () => {
+        const tr = b.closest("tr"); const id = tr.dataset.id;
+        if (id && !confirm("Remove this item?")) return;
+        if (id) await fetch("/api/admin/inventory-delete", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: Number(id) }) });
+        syncFromDom(false); ITEMS.splice(Number(tr.dataset.i), 1); render();
+      }; });
+    }
+
+    function syncFromDom(strict) {
+      document.querySelectorAll("#tbody tr").forEach((tr) => {
+        const i = Number(tr.dataset.i);
+        if (!ITEMS[i]) return;
+        ITEMS[i] = { ...ITEMS[i],
+          name: tr.querySelector(".f-name").value, qty: tr.querySelector(".f-qty").value,
+          unit: tr.querySelector(".f-unit").value, cost: tr.querySelector(".f-cost").value,
+          low_at: tr.querySelector(".f-low").value, supplier: tr.querySelector(".f-sup").value };
+      });
+    }
+
+    async function save() {
+      syncFromDom(true);
+      const msg = document.getElementById("msg");
+      msg.textContent = "saving…";
+      try {
+        const r = await fetch("/api/admin/inventory-save", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ items: ITEMS }) });
+        const d = await r.json();
+        if (d.ok) { msg.textContent = "saved ✓"; await load(); }
+        else msg.textContent = d.error || "something went wrong";
+      } catch (e) { msg.textContent = "network error — try again"; }
+    }
+
+    load();
+  })();
+  </script>
+</body>
+</html>

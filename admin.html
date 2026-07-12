@@ -137,13 +137,8 @@
           </div>
           <div class="box" id="invBox">
             <h2>inventory <small style="font-family:var(--font-mono);font-weight:400;font-size:.68rem;text-transform:uppercase;letter-spacing:.1em;opacity:.55">ingredients &amp; packaging</small></h2>
-            <div id="invRows"><p class="mono" style="font-size:.8rem;opacity:.6">loading…</p></div>
-            <div class="row" style="margin-top:.6rem">
-              <button class="save ghost" id="invAdd">+ add item</button>
-              <button class="save" id="invSave">save inventory</button>
-            </div>
-            <p class="small">qty at or below "low" shows a warning — count after each baking round.</p>
-            <p class="msg" id="invMsg"></p>
+            <div id="invSummary"><p class="mono" style="font-size:.8rem;opacity:.6">loading…</p></div>
+            <a href="/inventory" class="save" style="display:inline-block;text-decoration:none;margin-top:.6rem">open inventory →</a>
           </div>
           <div class="box links">
             <h2>quick links</h2>
@@ -174,69 +169,22 @@
       loadInventory();
       loadCustomers();
       document.getElementById("pc_create").onclick = createPromo;
-      document.getElementById("invAdd").onclick = () => addInvRow({});
-      document.getElementById("invSave").onclick = saveInventory;
     };
 
-    function invRowHtml(it) {
-      const low = it.id && Number(it.qty) <= Number(it.low_at);
-      return `
-        <div class="inv-row" data-inv-id="${it.id || ""}">
-          <input class="inv-name" value="${(it.name || "").replace(/"/g, "&quot;")}" placeholder="item">
-          <input class="inv-qty" type="number" step="any" value="${it.qty ?? 0}" title="quantity">
-          <input class="inv-unit" value="${(it.unit || "").replace(/"/g, "&quot;")}" placeholder="un" title="unit">
-          <input class="inv-low" type="number" step="any" value="${it.low_at ?? 0}" title="warn at / low threshold">
-          <input class="inv-sup" value="${(it.supplier || "").replace(/"/g, "&quot;")}" placeholder="supplier / fornecedor">
-          <span class="inv-flag">${low ? '<span class="kpi__chip kpi__chip--down">low</span>' : ""}</span>
-          <button class="inv-del" title="remove">×</button>
-        </div>`;
-    }
-
-    function addInvRow(it) {
-      const holder = document.getElementById("invRows");
-      holder.insertAdjacentHTML("beforeend", invRowHtml(it));
-      holder.querySelectorAll(".inv-del").forEach((b) => { b.onclick = () => delInvRow(b); });
-    }
-
-    async function delInvRow(btn) {
-      const row = btn.closest(".inv-row");
-      const id = row.dataset.invId;
-      if (id && !confirm("Remove this item from inventory?")) return;
-      if (id) await fetch("/api/admin/inventory-delete", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: Number(id) }) });
-      row.remove();
-    }
-
     async function loadInventory() {
-      const holder = document.getElementById("invRows");
+      const holder = document.getElementById("invSummary");
       if (!holder) return;
       try {
         const d = await (await fetch("/api/admin/inventory")).json();
         if (d.error) { holder.innerHTML = `<p class="small">${d.error}</p>`; return; }
+        const value = d.items.reduce((n, it) => n + (Number(it.qty) || 0) * (Number(it.cost) || 0), 0);
+        const low = d.items.filter((it) => Number(it.qty) <= Number(it.low_at));
         holder.innerHTML = `
-          <div class="inv-row inv-head mono">
-            <span>item</span><span>qty</span><span>unit</span><span>low</span><span>supplier</span><span></span><span></span>
-          </div>`;
-        d.items.forEach((it) => addInvRow(it));
+          <div class="row"><span class="mono">items tracked</span><span class="mono" style="font-weight:700">${d.items.length}</span></div>
+          <div class="row"><span class="mono">stock value</span><span class="mono" style="font-weight:700">€${value.toFixed(2)}</span></div>
+          <div class="row"><span class="mono">running low</span><span class="mono" style="font-weight:700">${low.length ? low.length + " ⚠️" : "0 ✓"}</span></div>
+          ${low.length ? `<p class="small">${low.map((x) => (x.name || "").split("/")[0].trim()).join(" · ")}</p>` : ""}`;
       } catch (e) { holder.innerHTML = `<p class="small">inventory failed to load</p>`; }
-    }
-
-    async function saveInventory() {
-      const msg = document.getElementById("invMsg");
-      const items = [...document.querySelectorAll(".inv-row:not(.inv-head)")].map((r) => ({
-        id: r.dataset.invId ? Number(r.dataset.invId) : null,
-        name: r.querySelector(".inv-name").value,
-        qty: r.querySelector(".inv-qty").value,
-        unit: r.querySelector(".inv-unit").value,
-        low_at: r.querySelector(".inv-low").value,
-        supplier: r.querySelector(".inv-sup").value,
-      }));
-      msg.textContent = "saving…";
-      try {
-        const r = await fetch("/api/admin/inventory-save", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ items }) });
-        const d = await r.json();
-        msg.textContent = d.ok ? "saved ✓" : (d.error || "something went wrong");
-        if (d.ok) loadInventory();
-      } catch (e) { msg.textContent = "network error — try again"; }
     }
 
     let CUSTOMERS = [];

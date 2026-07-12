@@ -797,16 +797,16 @@ export default {
       for (const it of items) {
         const name = String(it.name || "").trim().slice(0, 60);
         if (!name) continue;
-        const qty = Number(it.qty) || 0, low = Number(it.low_at) || 0;
+        const qty = Number(it.qty) || 0, low = Number(it.low_at) || 0, cost = Number(it.cost) || 0;
         const unit = String(it.unit || "").slice(0, 12), sup = String(it.supplier || "").slice(0, 80);
         if (it.id) {
           await env.DB.prepare(
-            `UPDATE inventory SET name=?1, unit=?2, qty=?3, low_at=?4, supplier=?5, updated_at=datetime('now') WHERE id=?6`
-          ).bind(name, unit, qty, low, sup, it.id).run();
+            `UPDATE inventory SET name=?1, unit=?2, qty=?3, low_at=?4, supplier=?5, cost=?6, updated_at=datetime('now') WHERE id=?7`
+          ).bind(name, unit, qty, low, sup, cost, it.id).run();
         } else {
           await env.DB.prepare(
-            `INSERT OR IGNORE INTO inventory (name, unit, qty, low_at, supplier) VALUES (?1, ?2, ?3, ?4, ?5)`
-          ).bind(name, unit, qty, low, sup).run();
+            `INSERT OR IGNORE INTO inventory (name, unit, qty, low_at, supplier, cost) VALUES (?1, ?2, ?3, ?4, ?5, ?6)`
+          ).bind(name, unit, qty, low, sup, cost).run();
         }
       }
       return json({ ok: true });
