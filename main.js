@@ -75,6 +75,8 @@
       foot_kicker: "hungry? / fome?",
       foot_cta: "order<br>a stack",
       foot_made: "made in lisboa 🇵🇹",
+      hero_prices: "×12 small €8 &nbsp;·&nbsp; ×12 medium €10 &nbsp;·&nbsp; ×6 large €9",
+      quick_all: "1 of each · €27", hero_scroll: "scroll",
       foot_contact: "questions? cafés &amp; restaurants? say olá —",
       cart_title: "your stack",
       cart_empty: "nothing here yet.",
@@ -117,7 +119,7 @@
       ing_note: "O rótulo inteiro, do início ao fim. Misturadas, tendidas e prensadas em pequenos lotes em Lisboa.",
       heat_kicker: "04 — ao lume",
       heat_title: "meio cozidas por nós.<br>acabadas por ti.",
-      heat_sub: "Cada tortilha mira sai da nossa cozinha 90% pronta. Os últimos 40 segundos acontecem na tua frigideira — é essa tostadela final que lhes dá o sabor de acabadas de fazer.",
+      heat_sub: "Cada tortilla mira sai da nossa cozinha 90% pronta. Os últimos 40 segundos acontecem na tua frigideira — é essa tostadela final que lhes dá o sabor de acabadas de fazer.",
       step1_h: "frigideira seca, lume forte",
       step1_p: "Frigideira, chapa ou grelha — sem óleo. Deixa aquecer bem, cerca de 15–20 segundos por lado.",
       step2_h: "vês bolhas? vira",
@@ -144,6 +146,8 @@
       foot_kicker: "fome? / hungry?",
       foot_cta: "encomenda<br>uma pilha",
       foot_made: "feito em lisboa 🇵🇹",
+      hero_prices: "×12 pequenas €8 &nbsp;·&nbsp; ×12 médias €10 &nbsp;·&nbsp; ×6 grandes €9",
+      quick_all: "1 de cada · €27", hero_scroll: "desliza",
       foot_contact: "dúvidas? cafés &amp; restaurantes? diz olá —",
       cart_title: "a tua pilha",
       cart_empty: "ainda nada aqui.",
@@ -163,7 +167,7 @@
       scene_side1: "lado 1 · 15–20s",
       scene_flip: "bolhas? vira!",
       scene_side2: "lado 2 · 15–20s",
-      scene_done: "estufada — pronta a comer!",
+      scene_done: "inchada — pronta a comer!",
       doc_title: "mira tortillas — tortillas de trigo, Lisboa",
     },
   };
@@ -250,11 +254,10 @@
     return el.querySelectorAll(".line-inner");
   }
 
-  /* buy buttons → Stripe Payment Links (mailto fallback until links are set) */
-  document.querySelectorAll("[data-buy]").forEach((a) => {
-    const link = STRIPE_LINKS[a.dataset.buy];
-    if (link) { a.href = link; a.removeAttribute("target"); }
-  });
+  /* NOTE: buy buttons are NOT rewritten to raw buy.stripe.com Payment Links —
+     those bypass store-pause, stock caps and the delivery-fee logic (a middle/right-
+     click would transact outside all guards). initCart binds worker-routed click
+     handlers; the mailto href stays only as a pre-JS/no-worker degradation. */
 
   /* ─────────────────────────────────────────────
      CART + EMBEDDED CHECKOUT
@@ -295,13 +298,22 @@
     if (!list) return;
     const cart = readCart();
     const skus = Object.keys(cart).filter((s) => CATALOG[s] && cart[s] > 0);
-    let total = 0;
+    const st = window.__miraStatus || {};
+    const closed = st.open === false;
+    const remainingOf = (sku) => (st.remaining && typeof st.remaining[sku] === "number") ? st.remaining[sku] : null;
+    let total = 0, blocked = closed;
     list.innerHTML = skus.map((sku) => {
       const it = CATALOG[sku];
+      const rem = remainingOf(sku);
       const qty = cart[sku];
+      const out = rem !== null && rem <= 0;
+      const over = rem !== null && qty > rem;
+      if (out || over) blocked = true;
       total += it.eur * qty;
-      return `<li class="citem">
-        <span class="citem__name">${I18N[lang][it.nameKey]} <span class="citem__pack mono">${it.pack}</span></span>
+      const note = out ? `<span class="citem__soldout mono">${lang === "pt" ? "esgotado" : "sold out"}</span>`
+        : over ? `<span class="citem__soldout mono">${lang === "pt" ? "só " + rem : "only " + rem}</span>` : "";
+      return `<li class="citem${out || over ? " citem--out" : ""}">
+        <span class="citem__name">${I18N[lang][it.nameKey]} <span class="citem__pack mono">${it.pack}</span> ${note}</span>
         <span class="citem__qty mono">
           <button data-dec="${sku}" data-hover aria-label="less">−</button><b>${qty}</b><button data-inc="${sku}" data-hover aria-label="more">+</button>
         </span>
@@ -309,7 +321,9 @@
       </li>`;
     }).join("");
     document.getElementById("cartEmpty").style.display = skus.length ? "none" : "";
-    document.getElementById("cartCheckout").style.display = skus.length ? "" : "none";
+    const co = document.getElementById("cartCheckout");
+    co.style.display = skus.length ? "" : "none";
+    co.classList.toggle("btn--dead", !!(skus.length && blocked));
     document.getElementById("cartTotal").textContent = "€" + total;
     const pointsRow = document.getElementById("cartPoints");
     if (pointsRow) {
@@ -331,7 +345,9 @@
 
   function addToCart(sku, qty) {
     const cart = readCart();
-    cart[sku] = Math.min((cart[sku] || 0) + qty, 20);
+    const st = window.__miraStatus || {};
+    const rem = (st.remaining && typeof st.remaining[sku] === "number") ? st.remaining[sku] : 20;
+    cart[sku] = Math.min((cart[sku] || 0) + qty, Math.min(20, rem));
     if (cart[sku] <= 0) delete cart[sku];
     writeCart(cart);
     renderCart();
@@ -352,7 +368,10 @@
     });
   }
 
+  let checkoutBusy = false;
   async function startCheckout(items, usePoints) {
+    if (checkoutBusy) return; /* ignore double-taps: two initEmbeddedCheckout calls wedge the overlay */
+    checkoutBusy = true;
     try {
       const r = await fetch("/api/checkout", {
         method: "POST",
@@ -362,7 +381,18 @@
       const raw = await r.text();
       let d;
       try { d = JSON.parse(raw); } catch (e) { d = {}; }
-      if (!d.clientSecret) throw new Error(d.error || "");
+      if (!d.clientSecret) {
+        /* worker rejects with a clear reason (503 paused / 409 sold-out) — show it verbatim,
+           don't tell the customer to "try again" against a paused store; refresh status */
+        const server = d.error || "";
+        if (r.status === 503 || r.status === 409) {
+          showToast(server || (lang === "pt" ? "indisponível de momento" : "unavailable right now"));
+          if (typeof refreshStatus === "function") refreshStatus();
+        } else {
+          showToast((lang === "pt" ? "erro no checkout — tenta de novo. " : "checkout error — try again. ") + server);
+        }
+        return;
+      }
       await loadStripeJs();
       const stripe = Stripe(publishableKey);
       if (embedded) { embedded.destroy(); embedded = null; }
@@ -375,6 +405,8 @@
       embedded.mount("#scMount");
     } catch (e) {
       showToast((lang === "pt" ? "erro no checkout — tenta de novo. " : "checkout error — try again. ") + (e.message || ""));
+    } finally {
+      checkoutBusy = false;
     }
   }
 
@@ -387,6 +419,7 @@
   let toastTimer = null;
   function showToast(msg) {
     const t = document.getElementById("toast");
+    t.onclick = null; t.style.cursor = ""; /* clear the add-to-cart toast's open-cart affordance */
     t.textContent = msg;
     t.hidden = false;
     clearTimeout(toastTimer);
@@ -395,16 +428,19 @@
 
   /* post-checkout confirmation — includes the newsletter opt-in (moved out of the cart) */
   function showOrderSuccess(claimed) {
-    const pts = claimed && claimed.points != null ? claimed.points : 0;
+    const pending = claimed && claimed.paid === false; /* Multibanco/async: voucher not yet paid */
+    const pts = !pending && claimed && claimed.points != null ? claimed.points : 0;
     const ptsLine = pts
       ? (lang === "pt" ? ` · ${pts} pontos na tua conta` : ` · ${pts} points in your account`)
       : "";
+    const headline = pending
+      ? (lang === "pt" ? "pagamento Multibanco pendente — confirmamos por email assim que for pago 🌯" : "Multibanco payment pending — we'll email you once it's paid 🌯")
+      : (lang === "pt" ? "obrigado! encomenda confirmada 🌯" : "obrigado! order confirmed 🌯");
     const box = document.createElement("div");
     box.style.cssText = "position:fixed;left:50%;bottom:1.4rem;transform:translateX(-50%);z-index:120;background:var(--cream);color:var(--ink);border:3px solid var(--ink);border-radius:16px;padding:1.1rem 1.3rem;max-width:min(430px,92vw);box-shadow:6px 7px 0 rgba(20,20,18,.25);font-family:var(--font-mono);font-size:.82rem;line-height:1.5";
     box.innerHTML =
       '<button id="ordClose" style="position:absolute;top:.35rem;right:.6rem;background:none;border:0;font-size:1.2rem;line-height:1;cursor:pointer;color:var(--ink)">×</button>' +
-      '<div style="font-weight:500;margin:0 1rem .8rem 0">' +
-      (lang === "pt" ? "obrigado! encomenda confirmada 🌮" : "obrigado! order confirmed 🌮") + ptsLine + "</div>" +
+      '<div style="font-weight:500;margin:0 1rem .8rem 0">' + headline + ptsLine + "</div>" +
       '<button id="ordNews" style="display:flex;align-items:center;gap:.55rem;width:100%;background:none;border:2px solid var(--ink);border-radius:999px;padding:.5rem .95rem;font-family:inherit;font-size:.76rem;cursor:pointer;color:var(--ink);text-align:left">' +
       '<span id="ordBox" style="width:1rem;height:1rem;border:2px solid var(--ink);border-radius:4px;flex:none;display:grid;place-items:center;font-size:.7rem"></span>' +
       '<span id="ordTxt">' + (lang === "pt" ? "quero novidades &amp; drops por email" : "email me about drops &amp; news") + "</span></button>";
@@ -425,6 +461,14 @@
       } catch (e) {}
     });
     setTimeout(() => { if (document.body.contains(box)) close(); }, 14000);
+  }
+
+  function refreshStatus() {
+    return fetch("/api/status").then((r) => r.json()).then((st) => {
+      window.__miraStatus = st;
+      if (typeof renderCart === "function") renderCart(); /* re-clamp steppers to new caps */
+      return st;
+    }).catch(() => {});
   }
 
   function initCart() {
@@ -528,7 +572,8 @@
       if (inc) addToCart(inc.dataset.inc, 1);
       if (dec) addToCart(dec.dataset.dec, -1);
     });
-    document.getElementById("cartCheckout").addEventListener("click", () => {
+    document.getElementById("cartCheckout").addEventListener("click", (e) => {
+      if (e.currentTarget.classList.contains("btn--dead")) return; /* paused/sold-out */
       const cart = readCart();
       const items = Object.keys(cart)
         .filter((s) => CATALOG[s] && cart[s] > 0)
@@ -694,7 +739,6 @@
   const qs = new URLSearchParams(location.search);
   if (qs.get("checkout") === "success") {
     const sid = qs.get("session_id");
-    writeCart({});
     history.replaceState(null, "", location.pathname);
     (async () => {
       let claimed = null;
@@ -709,14 +753,17 @@
         } catch (e) {}
       }
       if (claimed && claimed.ok) {
+        writeCart({}); /* only clear the cart once a real order is confirmed */
         const a = document.getElementById("navAccount");
         if (a) a.classList.add("is-in");
         showOrderSuccess(claimed);
-      } else {
+      } else if (sid) {
+        /* had a session id but claim failed — leave the cart intact, neutral message */
         showToast(lang === "pt"
-          ? "obrigado! encomenda confirmada — entraremos em contacto para combinar a entrega. 🌮"
-          : "obrigado! order confirmed — we'll be in touch to arrange delivery. 🌮");
+          ? "se acabaste de pagar, confirmamos por email 🌯"
+          : "if you just paid, we'll confirm by email 🌯");
       }
+      /* no session id (stale/shared ?checkout=success link): do nothing, keep the cart */
     })();
   }
 

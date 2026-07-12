@@ -91,53 +91,70 @@
         <div class="acct__login">
           <h1 class="acct__hi">sign in.</h1>
           <p class="acct__empty" style="margin-bottom:1.6rem">we email you a code — no passwords · enviamos um código — sem passwords</p>
-          <div id="loginBox" style="max-width:340px;margin:0 auto;display:grid;gap:.7rem">
-            <input id="loginEmail" type="email" placeholder="email" autocomplete="email"
+          <form id="loginForm" style="max-width:340px;margin:0 auto;display:grid;gap:.7rem">
+            <input id="loginEmail" type="email" placeholder="email" autocomplete="email" required
               style="font-family:var(--font-mono);font-size:.95rem;padding:.85rem 1rem;border:3px solid var(--ink);border-radius:12px;background:#fff;width:100%">
             <label style="display:flex;align-items:flex-start;gap:.5rem;font-family:var(--font-mono);font-size:.72rem;line-height:1.5;text-align:left;cursor:pointer">
               <input type="checkbox" id="loginNews" style="margin-top:.15rem;accent-color:var(--oxblood)">
               <span>email me about drops &amp; news · quero receber novidades</span>
             </label>
-            <button class="btn btn--green" id="sendCode" style="justify-content:center;width:100%">send code · enviar</button>
+            <button class="btn btn--green" id="sendCode" type="submit" style="justify-content:center;width:100%">send code · enviar</button>
             <div id="codeRow" style="display:none;gap:.7rem">
               <input id="loginCode" inputmode="numeric" maxlength="6" placeholder="123456" autocomplete="one-time-code"
                 style="font-family:var(--font-mono);font-size:1.3rem;letter-spacing:.4em;text-align:center;padding:.85rem 1rem;border:3px solid var(--ink);border-radius:12px;background:#fff;width:100%">
-              <button class="btn btn--ink" id="verifyCode" style="justify-content:center;width:100%">sign in · entrar</button>
+              <button class="btn btn--ink" id="verifyCode" type="submit" style="justify-content:center;width:100%">sign in · entrar</button>
             </div>
             <p id="loginMsg" class="acct__empty" style="min-height:1.2em"></p>
-          </div>
+          </form>
         </div>`;
 
       const msg = () => document.getElementById("loginMsg");
-      document.getElementById("sendCode").addEventListener("click", async () => {
+      let codeStep = false, busy = false;
+      const setBusy = (b) => {
+        busy = b;
+        document.getElementById("sendCode").disabled = b;
+        const vc = document.getElementById("verifyCode"); if (vc) vc.disabled = b;
+      };
+      const sendCode = async () => {
         const email = document.getElementById("loginEmail").value.trim();
         if (!email) { msg().textContent = "enter your email first"; return; }
-        msg().textContent = "sending…";
+        setBusy(true); msg().textContent = "sending…";
         try {
           const r = await fetch("/api/login-request", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email }) });
           const d = await r.json();
-          if (d.ok) { document.getElementById("codeRow").style.display = "grid"; msg().textContent = "code sent — check your inbox (and spam)"; }
-          else msg().textContent = d.error || "something went wrong";
+          if (d.ok) {
+            codeStep = true;
+            document.getElementById("codeRow").style.display = "grid";
+            document.getElementById("loginCode").focus();
+            msg().textContent = "code sent — check your inbox (and spam)";
+          } else msg().textContent = d.error || "something went wrong";
         } catch (e) { msg().textContent = "network error — try again"; }
-      });
-      document.getElementById("verifyCode").addEventListener("click", async () => {
+        finally { setBusy(false); }
+      };
+      const verifyCode = async () => {
         const email = document.getElementById("loginEmail").value.trim();
         const code = document.getElementById("loginCode").value.trim();
-        msg().textContent = "checking…";
+        setBusy(true); msg().textContent = "checking…";
         try {
           const newsletter = !!document.getElementById("loginNews")?.checked;
           const r = await fetch("/api/login-verify", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email, code, newsletter }) });
           const d = await r.json();
           if (d.ok) location.reload();
-          else msg().textContent = d.error || "wrong code";
-        } catch (e) { msg().textContent = "network error — try again"; }
+          else { msg().textContent = d.error || "wrong code"; setBusy(false); }
+        } catch (e) { msg().textContent = "network error — try again"; setBusy(false); }
+      };
+      document.getElementById("loginForm").addEventListener("submit", (ev) => {
+        ev.preventDefault();
+        if (busy) return;
+        if (codeStep && document.getElementById("loginCode").value.trim()) verifyCode();
+        else sendCode();
       });
       return;
     }
 
     const c = me.customer;
-    const firstName = (c.name || c.email).split(" ")[0];
-    const esc = (v) => String(v == null ? "" : v).replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;");
+    const esc = (v) => String(v == null ? "" : v).replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+    const firstName = esc((c.name || c.email).split(" ")[0]);
     const field = (id, label, value, extra) => `
       <label style="display:grid;gap:.25rem;font-family:var(--font-mono);font-size:.68rem;text-transform:uppercase;letter-spacing:.1em;opacity:.85">${label}
         <input id="pf_${id}" value="${esc(value)}" ${extra || ""}
@@ -213,7 +230,7 @@
                 ${field("phone", "phone / telemóvel", c.phone, 'autocomplete="tel" inputmode="tel"')}
                 ${field("line1", "address / morada", c.address.line1, 'autocomplete="address-line1"')}
                 ${field("line2", "address 2 (optional)", c.address.line2, 'autocomplete="address-line2"')}
-                ${field("postal", "postal code / código postal", c.address.postal_code, 'autocomplete="postal-code" inputmode="numeric"')}
+                ${field("postal", "postal code / código postal", c.address.postal_code, 'autocomplete="postal-code"')}
                 ${field("city", "city / cidade", c.address.city, 'autocomplete="address-level2"')}
                 ${field("birthday", "birthday / aniversário 🎁", c.birthday, 'type="date"')}
               </div>

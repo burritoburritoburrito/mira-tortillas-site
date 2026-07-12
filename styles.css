@@ -956,3 +956,7 @@ html { overflow-x: clip; }
   padding: .3rem .8rem; border: 2px solid var(--ink); border-radius: 999px;
   transform: rotate(-3deg); box-shadow: 3px 3px 0 var(--ink);
 }
+
+/* cart line: sold-out / over-stock marker */
+.citem__soldout { color: var(--oxblood); font-size: .62rem; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; }
+.citem--out { opacity: .75; }

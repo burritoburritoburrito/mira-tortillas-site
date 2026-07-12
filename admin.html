@@ -69,6 +69,10 @@
   <script>
   (async function () {
     const box = document.getElementById("content");
+    /* escape customer-controlled strings before they meet innerHTML (stored-XSS defense) */
+    const h = (v) => String(v == null ? "" : v).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+    /* order timestamps are stored UTC; show them in Lisbon local time */
+    const localTime = (ts) => { try { return new Date(String(ts).replace(" ", "T") + "Z").toLocaleString("en-GB", { timeZone: "Europe/Lisbon", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" }); } catch (e) { return String(ts).slice(5, 16); } };
     let st;
     try { st = await (await fetch("/api/admin/state")).json(); } catch (e) { st = { error: "network" }; }
 
@@ -85,6 +89,10 @@
           <div class="box" id="salesBox">
             <h2>sales</h2>
             <p class="mono" style="font-size:.8rem;opacity:.6">loading…</p>
+          </div>
+          <div class="box" id="ordersBox">
+            <h2>orders to pack <small style="font-family:var(--font-mono);font-weight:400;font-size:.68rem;text-transform:uppercase;letter-spacing:.1em;opacity:.55">fulfilment</small></h2>
+            <div id="ordersList"><p class="mono" style="font-size:.8rem;opacity:.6">loading…</p></div>
           </div>
         </div>
         <div class="adm__col">
@@ -138,6 +146,10 @@
             <p class="small">"left" at 0 = ESGOTADO sticker + checkout blocks it. Reset sold when a new baking round starts.</p>
             <p class="msg" id="msg"></p>
           </div>
+          <div class="box" id="subsBox">
+            <h2>this week's bake <small style="font-family:var(--font-mono);font-weight:400;font-size:.68rem;text-transform:uppercase;letter-spacing:.1em;opacity:.55">standing subscriptions</small></h2>
+            <div id="subsList"><p class="mono" style="font-size:.8rem;opacity:.6">loading…</p></div>
+          </div>
           <div class="box" id="invBox">
             <h2>inventory <small style="font-family:var(--font-mono);font-weight:400;font-size:.68rem;text-transform:uppercase;letter-spacing:.1em;opacity:.55">ingredients &amp; packaging</small></h2>
             <div id="invSummary"><p class="mono" style="font-size:.8rem;opacity:.6">loading…</p></div>
@@ -171,6 +183,8 @@
       loadPromos();
       loadInventory();
       loadCustomers();
+      loadOrders();
+      loadSubs();
       document.getElementById("pc_create").onclick = createPromo;
     };
 
@@ -190,6 +204,52 @@
       } catch (e) { holder.innerHTML = `<p class="small">inventory failed to load</p>`; }
     }
 
+    const eur = (c) => "€" + (c / 100).toFixed(2).replace(".00", "");
+
+    async function loadOrders() {
+      const el = document.getElementById("ordersList");
+      if (!el) return;
+      const STAGES = { new: "packed", packed: "delivered" };
+      const LABEL = { new: "mark packed", packed: "mark delivered" };
+      try {
+        const d = await (await fetch("/api/admin/orders")).json();
+        if (d.error) { el.innerHTML = `<p class="small">${d.error}</p>`; return; }
+        if (!d.orders.length) { el.innerHTML = `<p class="small">nothing to pack — new paid orders appear here with address, phone &amp; items.</p>`; return; }
+        el.innerHTML = d.orders.map((o) => {
+          let items = "";
+          try { items = JSON.parse(o.items || "[]").filter((it) => it.sku !== "delivery").map((it) => `${it.q}×${(it.sku || it.d || "?")[0].toUpperCase()}`).join(" "); } catch (e) {}
+          const addr = [o.ship_line1, o.ship_line2, [o.ship_postal, o.ship_city].filter(Boolean).join(" ")].filter(Boolean).map(h).join(", ");
+          const stg = o.status || "new";
+          return `<div style="border:2px solid var(--cream-dim);border-radius:10px;padding:.6rem .75rem;margin-bottom:.55rem">
+            <div class="row" style="padding:.1rem 0"><span class="mono" style="font-size:.8rem;font-weight:700">${h(o.ship_name || o.cust_name || o.email)} ${items ? `<span style="opacity:.55;font-weight:400">${items}</span>` : ""}${o.mode === "subscription" ? " ↻" : ""}</span><span class="mono" style="font-weight:700">${eur(o.amount_total)}</span></div>
+            <div class="small" style="margin:.15rem 0 0">${addr || "<span style='opacity:.5'>Lisboa local (see Stripe)</span>"}${o.ship_phone ? " · ☎ " + h(o.ship_phone) : ""}${o.ship_method ? "<br>" + h(o.ship_method) : ""}</div>
+            <div class="row" style="padding:.4rem 0 0"><span class="mono" style="font-size:.68rem;opacity:.55;text-transform:uppercase;letter-spacing:.08em">${stg}</span>${STAGES[stg] ? `<button class="save ghost" style="padding:.3rem .8rem;font-size:.7rem" data-oid="${o.id}" data-next="${STAGES[stg]}">${LABEL[stg]}</button>` : `<span class="kpi__chip kpi__chip--up">done ✓</span>`}</div>
+          </div>`;
+        }).join("");
+        el.querySelectorAll("[data-oid]").forEach((b) => { b.onclick = async () => {
+          b.disabled = true;
+          await fetch("/api/admin/order-status", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: Number(b.dataset.oid), status: b.dataset.next }) });
+          loadOrders();
+        }; });
+      } catch (e) { el.innerHTML = `<p class="small">orders failed to load</p>`; }
+    }
+
+    async function loadSubs() {
+      const el = document.getElementById("subsList");
+      if (!el) return;
+      try {
+        const d = await (await fetch("/api/admin/subs")).json();
+        if (d.error) { el.innerHTML = `<p class="small">${d.error}</p>`; return; }
+        if (!d.count) { el.innerHTML = `<p class="small">no active subscriptions yet — standing weekly orders show here so you know how many boxes to bake before you even open sales.</p>`; return; }
+        const t = d.tally;
+        el.innerHTML = `
+          <div class="row"><span class="mono">to bake for subs</span><span class="mono" style="font-weight:700">${t.small}S · ${t.medium}M · ${t.large}L</span></div>
+          <div class="row"><span class="mono">active subscriptions</span><span class="mono" style="font-weight:700">${d.count}</span></div>
+          ${d.subs.slice(0, 12).map((s) => `<div class="row" style="font-size:.82rem"><span class="mono">${s.sizes || "—"} <span style="opacity:.5">/${s.interval}</span>${s.paused ? " ⏸" : ""}${s.cancelAtEnd ? " ⚠ending" : ""}</span><span class="mono" style="opacity:.6">${s.renews ? "next " + s.renews.slice(5) : ""}</span></div>`).join("")}
+          <p class="small">these packs are committed BEFORE anyone buys one-off — bake them on top of the "packs this round" caps.</p>`;
+      } catch (e) { el.innerHTML = `<p class="small">subscriptions failed to load</p>`; }
+    }
+
     let CUSTOMERS = [];
     async function loadCustomers() {
       const holder = document.getElementById("custRows");
@@ -201,7 +261,7 @@
         const eur = (c) => "€" + (c / 100).toFixed(2).replace(".00", "");
         holder.innerHTML = d.customers.length ? d.customers.slice(0, 40).map((c) => `
           <div class="row" style="font-size:.82rem;gap:.6rem">
-            <span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${c.name || c.email}${c.company ? " · " + c.company : ""}${c.city ? ` <span class="mono" style="opacity:.5;font-size:.72rem">${c.city}</span>` : ""}</span>
+            <span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${h(c.name || c.email)}${c.company ? " · " + h(c.company) : ""}${c.city ? ` <span class="mono" style="opacity:.5;font-size:.72rem">${h(c.city)}</span>` : ""}</span>
             ${c.wholesale ? '<span class="kpi__chip kpi__chip--flat">B2B</span>' : ""}
             ${c.marketing_ok ? '<span class="kpi__chip kpi__chip--up">📧</span>' : ""}
             <span class="mono" style="opacity:.6;font-size:.75rem">${c.orders}×</span>
@@ -213,7 +273,7 @@
     }
     document.addEventListener("click", (ev) => {
       if (ev.target && ev.target.id === "custCsv") {
-        const esc = (v) => `"${String(v == null ? "" : v).replace(/"/g, '""')}"`;
+        const esc = (v) => { let s = String(v == null ? "" : v); if (/^[=+\-@\t\r]/.test(s)) s = "'" + s; /* neutralize spreadsheet formula injection */ return `"${s.replace(/"/g, '""')}"`; };
         const csv = ["email,name,city,company,wholesale,newsletter,points,orders,total_eur,joined",
           ...CUSTOMERS.map((c) => [c.email, c.name, c.city, c.company, c.wholesale ? 1 : 0, c.marketing_ok ? 1 : 0, c.points, c.orders, (c.cents / 100).toFixed(2), (c.created_at || "").slice(0, 10)].map(esc).join(","))].join("\n");
         const a = document.createElement("a");
@@ -352,8 +412,8 @@
         };
         const rows = s.recent.length ? s.recent.map((o) => `
           <div class="row" style="font-size:.85rem">
-            <span class="mono" style="opacity:.6">${o.created_at.slice(5, 16)}</span>
-            <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${o.name || o.email}${o.city ? " · " + o.city : ""}</span>
+            <span class="mono" style="opacity:.6">${localTime(o.created_at)}</span>
+            <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${h(o.name || o.email)}${o.city ? " · " + h(o.city) : ""}</span>
             ${itemsTag(o)}
             <span class="mono" style="font-weight:700">${eur(o.amount_total)}${o.mode === "subscription" ? " ↻" : ""}</span>
           </div>`).join("") : "";
@@ -399,7 +459,7 @@
         for (let i = 7; i < 14; i++) vPrev += find(key(i)).visits;
         const delta = !vPrev && !v7 ? '<span class="kpi__chip kpi__chip--flat">—</span>'
           : !vPrev ? '<span class="kpi__chip kpi__chip--up">new</span>'
-          : (() => { const pc = Math.round(((v7 - vPrev) / vPrev) * 100); return `<span class="kpi__chip ${pc >= 0 ? "kpi__chip--up" : "kpi__chip--down"}">${pc >= 0 ? "▲" : "▼"} ${Math.abs(pc)}%</span>`; })();
+          : (() => { const pc = Math.round(((v7 - vPrev) / vPrev) * 100); if (pc === 0) return '<span class="kpi__chip kpi__chip--flat">±0%</span>'; return `<span class="kpi__chip ${pc > 0 ? "kpi__chip--up" : "kpi__chip--down"}">${pc > 0 ? "▲" : "▼"} ${Math.abs(pc)}%</span>`; })();
         const conv = v7 ? ((stats.week.n / v7) * 100).toFixed(1) + "%" : "—";
         const days = []; for (let i = 13; i >= 0; i--) days.push({ k: key(i), v: find(key(i)).visits });
         const max = Math.max(...days.map((x) => x.v), 1);
