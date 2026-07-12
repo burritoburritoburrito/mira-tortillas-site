@@ -85,6 +85,14 @@
             <h2>sales</h2>
             <p class="mono" style="font-size:.8rem;opacity:.6">loading…</p>
           </div>
+          <div class="box" id="custBox">
+            <h2>customers <small style="font-family:var(--font-mono);font-weight:400;font-size:.68rem;text-transform:uppercase;letter-spacing:.1em;opacity:.55">the book</small></h2>
+            <div id="custRows"><p class="mono" style="font-size:.8rem;opacity:.6">loading…</p></div>
+            <div class="row" style="margin-top:.6rem">
+              <span class="small" id="custSummary" style="margin:0"></span>
+              <button class="save ghost" id="custCsv">export CSV</button>
+            </div>
+          </div>
           <div class="box" id="promoBox">
             <h2>promo codes</h2>
             <div id="promoList"><p class="mono" style="font-size:.8rem;opacity:.6">loading…</p></div>
@@ -164,6 +172,7 @@
       loadStats();
       loadPromos();
       loadInventory();
+      loadCustomers();
       document.getElementById("pc_create").onclick = createPromo;
       document.getElementById("invAdd").onclick = () => addInvRow({});
       document.getElementById("invSave").onclick = saveInventory;
@@ -229,6 +238,39 @@
         if (d.ok) loadInventory();
       } catch (e) { msg.textContent = "network error — try again"; }
     }
+
+    let CUSTOMERS = [];
+    async function loadCustomers() {
+      const holder = document.getElementById("custRows");
+      if (!holder) return;
+      try {
+        const d = await (await fetch("/api/admin/customers")).json();
+        if (d.error) { holder.innerHTML = `<p class="small">${d.error}</p>`; return; }
+        CUSTOMERS = d.customers;
+        const eur = (c) => "€" + (c / 100).toFixed(2).replace(".00", "");
+        holder.innerHTML = d.customers.length ? d.customers.slice(0, 40).map((c) => `
+          <div class="row" style="font-size:.82rem;gap:.6rem">
+            <span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${c.name || c.email}${c.company ? " · " + c.company : ""}${c.city ? ` <span class="mono" style="opacity:.5;font-size:.72rem">${c.city}</span>` : ""}</span>
+            ${c.wholesale ? '<span class="kpi__chip kpi__chip--flat">B2B</span>' : ""}
+            ${c.marketing_ok ? '<span class="kpi__chip kpi__chip--up">📧</span>' : ""}
+            <span class="mono" style="opacity:.6;font-size:.75rem">${c.orders}×</span>
+            <span class="mono" style="font-weight:700;min-width:3.4rem;text-align:right">${eur(c.cents)}</span>
+          </div>`).join("") : `<p class="small">no customers yet — every signup and order lands here.</p>`;
+        const news = d.customers.filter((c) => c.marketing_ok).length;
+        document.getElementById("custSummary").textContent = `${d.customers.length} customers · ${news} on the mailing list${d.customers.length > 40 ? " · showing latest 40 (CSV has all)" : ""}`;
+      } catch (e) { holder.innerHTML = `<p class="small">customers failed to load</p>`; }
+    }
+    document.addEventListener("click", (ev) => {
+      if (ev.target && ev.target.id === "custCsv") {
+        const esc = (v) => `"${String(v == null ? "" : v).replace(/"/g, '""')}"`;
+        const csv = ["email,name,city,company,wholesale,newsletter,points,orders,total_eur,joined",
+          ...CUSTOMERS.map((c) => [c.email, c.name, c.city, c.company, c.wholesale ? 1 : 0, c.marketing_ok ? 1 : 0, c.points, c.orders, (c.cents / 100).toFixed(2), (c.created_at || "").slice(0, 10)].map(esc).join(","))].join("\n");
+        const a = document.createElement("a");
+        a.href = URL.createObjectURL(new Blob([csv], { type: "text/csv" }));
+        a.download = "mira-customers.csv";
+        a.click();
+      }
+    });
 
     async function loadPromos() {
       const el = document.getElementById("promoList");

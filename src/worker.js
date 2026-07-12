@@ -648,6 +648,17 @@ export default {
       return json({ allTime, week, prevWeek, today, daily, customers, newCustomers, bySize, recent });
     }
 
+    /* owner: the customer book — who they are, what they've spent, who's on the list */
+    if (url.pathname === "/api/admin/customers") {
+      if (!(await isAdmin(env, request))) return json({ error: "not authorized" }, 401);
+      const rows = (await env.DB.prepare(
+        `SELECT c.id, c.email, c.name, c.city, c.points, c.marketing_ok, c.wholesale, c.company, c.created_at,
+                COUNT(o.id) orders, COALESCE(SUM(o.amount_total), 0) cents
+         FROM customers c LEFT JOIN orders o ON o.customer_id = c.id
+         GROUP BY c.id ORDER BY c.id DESC LIMIT 300`).all()).results || [];
+      return json({ customers: rows });
+    }
+
     /* owner: promo codes managed from /admin (Stripe coupons + promotion codes under the hood) */
     if (url.pathname === "/api/admin/promos") {
       if (!(await isAdmin(env, request))) return json({ error: "not authorized" }, 401);
