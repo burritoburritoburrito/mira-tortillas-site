@@ -577,6 +577,61 @@ export default {
       return json({ allTime, week, today, customers, recent });
     }
 
+    /* owner: promo codes managed from /admin (Stripe coupons + promotion codes under the hood) */
+    if (url.pathname === "/api/admin/promos") {
+      if (!(await isAdmin(env, request))) return json({ error: "not authorized" }, 401);
+      const list = await stripeGet(env, "/v1/promotion_codes?limit=20&expand[]=data.coupon");
+      if (!list) return json({ error: "stripe error" }, 502);
+      return json({ promos: list.data.map((p) => ({
+        id: p.id, code: p.code, active: p.active,
+        off: p.coupon.percent_off ? p.coupon.percent_off + "%" : "€" + (p.coupon.amount_off / 100),
+        used: p.times_redeemed, max: p.max_redemptions || null,
+        expires: p.expires_at ? new Date(p.expires_at * 1000).toISOString().slice(0, 10) : null,
+      })) });
+    }
+
+    if (url.pathname === "/api/admin/promo-create" && request.method === "POST") {
+      if (!(await isAdmin(env, request))) return json({ error: "not authorized" }, 401);
+      let b; try { b = await request.json(); } catch { return json({ error: "bad json" }, 400); }
+      const code = String(b.code || "").toUpperCase().replace(/[^A-Z0-9_-]/g, "").slice(0, 20);
+      if (code.length < 3) return json({ error: "code needs 3+ letters/numbers" }, 400);
+      const cp = new URLSearchParams();
+      cp.set("duration", "once"); /* subscriptions: discount applies to first delivery only */
+      cp.set("name", code);
+      if (b.percentOff) {
+        const p = Number(b.percentOff);
+        if (!(p > 0 && p <= 100)) return json({ error: "percent must be 1-100" }, 400);
+        cp.set("percent_off", String(p));
+      } else if (b.amountOff) {
+        const a = Math.round(Number(b.amountOff) * 100);
+        if (!(a > 0 && a <= 50000)) return json({ error: "€ amount looks wrong" }, 400);
+        cp.set("amount_off", String(a));
+        cp.set("currency", "eur");
+      } else return json({ error: "set a % or € discount" }, 400);
+      const coupon = await stripePost(env, "/v1/coupons", cp);
+      if (!coupon) return json({ error: "stripe rejected the coupon" }, 502);
+      const pc = new URLSearchParams();
+      pc.set("coupon", coupon.id);
+      pc.set("code", code);
+      const maxUses = parseInt(b.maxUses, 10);
+      if (maxUses > 0) pc.set("max_redemptions", String(maxUses));
+      const expDays = parseInt(b.expiresDays, 10);
+      if (expDays > 0) pc.set("expires_at", String(Math.floor(Date.now() / 1000) + expDays * 86400));
+      const promo = await stripePost(env, "/v1/promotion_codes", pc);
+      if (!promo) return json({ error: "couldn't create — code already exists?" }, 502);
+      return json({ ok: true, code: promo.code });
+    }
+
+    if (url.pathname === "/api/admin/promo-toggle" && request.method === "POST") {
+      if (!(await isAdmin(env, request))) return json({ error: "not authorized" }, 401);
+      let b; try { b = await request.json(); } catch { return json({ error: "bad json" }, 400); }
+      const p = new URLSearchParams();
+      p.set("active", b.active ? "true" : "false");
+      const r = await stripePost(env, `/v1/promotion_codes/${encodeURIComponent(String(b.id || ""))}`, p);
+      if (!r) return json({ error: "stripe error" }, 502);
+      return json({ ok: true, active: r.active });
+    }
+
     if (url.pathname === "/api/admin/update" && request.method === "POST") {
       if (!(await isAdmin(env, request))) return json({ error: "not authorized" }, 401);
       let b;

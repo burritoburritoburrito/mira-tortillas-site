@@ -80,11 +80,23 @@
           <h2>sales</h2>
           <p class="mono" style="font-size:.8rem;opacity:.6">loading…</p>
         </div>
-        <div class="box">
+        <div class="box" id="promoBox">
           <h2>promo codes</h2>
-          <p style="font-size:.9rem;line-height:1.6">Checkout has Stripe's promo-code box built in. Create codes at
-          <a href="https://dashboard.stripe.com/coupons" target="_blank" style="text-decoration:underline">Stripe → Coupons</a>:
-          make a coupon → "Add promotion code" → invent the code (e.g. <span class="mono">AMIGOS10</span>). Live instantly.</p>
+          <div id="promoList"><p class="mono" style="font-size:.8rem;opacity:.6">loading…</p></div>
+          <div class="row" style="flex-wrap:wrap;gap:.5rem;margin-top:.8rem;border-top:2px solid var(--cream-dim);padding-top:.9rem">
+            <input id="pc_code" placeholder="CODE (e.g. AMIGOS10)" maxlength="20"
+              style="font-family:var(--font-mono);text-transform:uppercase;font-size:.85rem;padding:.5rem .7rem;border:2px solid var(--ink);border-radius:10px;flex:1;min-width:150px">
+            <input id="pc_value" type="number" min="1" placeholder="10" style="width:4.5rem">
+            <select id="pc_type" style="font-family:var(--font-mono);font-size:.85rem;padding:.5rem;border:2px solid var(--ink);border-radius:10px">
+              <option value="percent">% off</option>
+              <option value="amount">€ off</option>
+            </select>
+            <input id="pc_max" type="number" min="1" placeholder="uses" title="max uses (optional)" style="width:4.5rem">
+            <input id="pc_days" type="number" min="1" placeholder="days" title="expires in N days (optional)" style="width:4.5rem">
+            <button class="save" id="pc_create">create</button>
+          </div>
+          <p class="small">Customers type the code in checkout ("Add code"). "uses" + "days" optional. Discount hits products, not shipping; on subscriptions it applies to the first delivery.</p>
+          <p class="msg" id="pc_msg"></p>
         </div>
         <div class="box links">
           <h2>quick links</h2>
@@ -109,7 +121,51 @@
       }});
       document.getElementById("reset").onclick = () => { if (confirm("Reset all sold counters to 0?")) post({ resetSold: true }); };
       loadStats();
+      loadPromos();
+      document.getElementById("pc_create").onclick = createPromo;
     };
+
+    async function loadPromos() {
+      const el = document.getElementById("promoList");
+      if (!el) return;
+      try {
+        const d = await (await fetch("/api/admin/promos")).json();
+        if (d.error) { el.innerHTML = `<p class="small">${d.error}</p>`; return; }
+        el.innerHTML = d.promos.length ? d.promos.map((p) => `
+          <div class="row" style="font-size:.88rem">
+            <span class="mono" style="font-weight:700;${p.active ? "" : "text-decoration:line-through;opacity:.45"}">${p.code}</span>
+            <span class="mono" style="opacity:.7">${p.off} off · used ${p.used}${p.max ? "/" + p.max : ""}${p.expires ? " · until " + p.expires : ""}</span>
+            <button class="save ghost" style="padding:.3rem .9rem;font-size:.72rem" data-promo="${p.id}" data-active="${p.active ? 1 : 0}">${p.active ? "disable" : "re-enable"}</button>
+          </div>`).join("") : `<p class="small">no codes yet — make one below, it's live in checkout instantly.</p>`;
+        el.querySelectorAll("[data-promo]").forEach((b) => {
+          b.onclick = async () => {
+            b.disabled = true;
+            await fetch("/api/admin/promo-toggle", { method: "POST", headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ id: b.dataset.promo, active: b.dataset.active !== "1" }) });
+            loadPromos();
+          };
+        });
+      } catch (e) { el.innerHTML = `<p class="small">promos failed to load</p>`; }
+    }
+
+    async function createPromo() {
+      const msg = document.getElementById("pc_msg");
+      const type = document.getElementById("pc_type").value;
+      const val = document.getElementById("pc_value").value;
+      const body = {
+        code: document.getElementById("pc_code").value,
+        maxUses: document.getElementById("pc_max").value || null,
+        expiresDays: document.getElementById("pc_days").value || null,
+      };
+      if (type === "percent") body.percentOff = val; else body.amountOff = val;
+      msg.textContent = "creating…";
+      try {
+        const r = await fetch("/api/admin/promo-create", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+        const d = await r.json();
+        if (d.ok) { msg.textContent = `✓ ${d.code} is live`; document.getElementById("pc_code").value = ""; document.getElementById("pc_value").value = ""; loadPromos(); }
+        else msg.textContent = d.error || "something went wrong";
+      } catch (e) { msg.textContent = "network error — try again"; }
+    }
 
     async function loadStats() {
       const el = document.getElementById("salesBox");
