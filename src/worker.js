@@ -648,6 +648,41 @@ export default {
       return json({ allTime, week, prevWeek, today, daily, customers, newCustomers, bySize, recent });
     }
 
+    /* owner: visitor analytics pulled from Cloudflare Web Analytics (GraphQL) */
+    if (url.pathname === "/api/admin/visitors") {
+      if (!(await isAdmin(env, request))) return json({ error: "not authorized" }, 401);
+      if (!env.CF_ANALYTICS_TOKEN || !env.CF_SITE_TAG) return json({ error: "analytics not configured" }, 500);
+      const now = new Date();
+      const iso = (d) => d.toISOString().slice(0, 19) + "Z";
+      const ago = (days) => new Date(now.getTime() - days * 86400000);
+      const q = `query {
+        viewer { accounts(filter: {accountTag: "77f21a888cac91e9fdbbf4d84bd068b1"}) {
+          daily: rumPageloadEventsAdaptiveGroups(filter: {siteTag: "${env.CF_SITE_TAG}", datetime_geq: "${iso(ago(14))}", datetime_leq: "${iso(now)}"}, limit: 20, orderBy: [date_ASC]) {
+            count sum { visits } dimensions { date }
+          }
+          countries: rumPageloadEventsAdaptiveGroups(filter: {siteTag: "${env.CF_SITE_TAG}", datetime_geq: "${iso(ago(7))}", datetime_leq: "${iso(now)}"}, limit: 6, orderBy: [sum_visits_DESC]) {
+            sum { visits } dimensions { countryName }
+          }
+          devices: rumPageloadEventsAdaptiveGroups(filter: {siteTag: "${env.CF_SITE_TAG}", datetime_geq: "${iso(ago(7))}", datetime_leq: "${iso(now)}"}, limit: 5) {
+            sum { visits } dimensions { deviceType }
+          }
+        } }
+      }`;
+      const res = await fetch("https://api.cloudflare.com/client/v4/graphql", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${env.CF_ANALYTICS_TOKEN}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ query: q }),
+      });
+      const data = await res.json();
+      const acct = data && data.data && data.data.viewer.accounts[0];
+      if (!acct) return json({ error: "analytics query failed" }, 502);
+      return json({
+        daily: (acct.daily || []).map((r) => ({ date: r.dimensions.date, visits: r.sum.visits, views: r.count })),
+        countries: (acct.countries || []).map((r) => ({ country: r.dimensions.countryName, visits: r.sum.visits })),
+        devices: (acct.devices || []).map((r) => ({ device: r.dimensions.deviceType, visits: r.sum.visits })),
+      });
+    }
+
     /* owner: the customer book — who they are, what they've spent, who's on the list */
     if (url.pathname === "/api/admin/customers") {
       if (!(await isAdmin(env, request))) return json({ error: "not authorized" }, 401);

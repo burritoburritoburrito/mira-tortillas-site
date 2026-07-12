@@ -426,6 +426,7 @@
           ${tiles}
           ${chart}
           ${szBars}
+          <div id="visitorsBlock"></div>
           ${rows ? `<h2 style="margin-top:1.4rem">recent orders</h2>${rows}` : ""}
           <div class="row" style="margin-top:.8rem"><span class="mono" style="opacity:.6">all time</span><span class="mono" style="font-weight:700">${eur(s.allTime.cents)} · ${s.allTime.n} order${s.allTime.n === 1 ? "" : "s"}</span></div>
           <p class="small">money-truth (refunds, payouts) lives in <a href="https://dashboard.stripe.com/payments" target="_blank" style="text-decoration:underline">Stripe</a> · visitors in <a href="https://dash.cloudflare.com/77f21a888cac91e9fdbbf4d84bd068b1/web-analytics" target="_blank" style="text-decoration:underline">web analytics</a>.</p>`;
