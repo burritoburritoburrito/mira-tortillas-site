@@ -448,6 +448,17 @@
           span.textContent = deadLabel;
           if (out && !closed) a.closest(".card").classList.add("card--soldout");
         }
+        /* honest scarcity: this week's batch is running out (only when open + in stock) */
+        const left = (st.remaining || {})[sku] || 0;
+        if (!closed && left > 0 && left <= 5) {
+          const card = a.closest(".card");
+          if (card && !card.querySelector(".card__low")) {
+            const s = document.createElement("span");
+            s.className = "card__low mono";
+            s.textContent = lang === "pt" ? `só ${left} esta semana` : `only ${left} left this week`;
+            card.appendChild(s);
+          }
+        }
       });
       document.querySelectorAll("[data-quick]").forEach((b) => {
         if (closed || window.__miraBlocked.has(b.dataset.quick)) b.classList.add("btn--dead");

@@ -947,3 +947,12 @@ html { overflow-x: clip; }
 @media (max-width: 560px) {
   .subpick__go { max-width: 100%; white-space: normal; text-align: center; justify-content: center; line-height: 1.35; }
 }
+
+/* low-stock sticker — honest weekly-batch scarcity */
+.card__low {
+  position: absolute; top: -12px; left: 18px; z-index: 3;
+  background: var(--oxblood); color: var(--cream);
+  font-size: .68rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase;
+  padding: .3rem .8rem; border: 2px solid var(--ink); border-radius: 999px;
+  transform: rotate(-3deg); box-shadow: 3px 3px 0 var(--ink);
+}
