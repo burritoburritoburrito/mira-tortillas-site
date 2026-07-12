@@ -943,3 +943,7 @@ body { background: var(--sky); }
 
 /* the tape/marquee overflow must never scroll the page (body clip alone doesn't stop html) */
 html { overflow-x: clip; }
+/* subscribe button: long label ("· delivery included") must wrap on phones, not overflow */
+@media (max-width: 560px) {
+  .subpick__go { max-width: 100%; white-space: normal; text-align: center; justify-content: center; line-height: 1.35; }
+}
