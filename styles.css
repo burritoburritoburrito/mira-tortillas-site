@@ -940,3 +940,6 @@ body { background: var(--sky); }
   .sc__mount { box-shadow: 6px 6px 0 var(--oxblood); }
   .sc::before { height: 32px; background-size: auto 16px; }
 }
+
+/* the tape/marquee overflow must never scroll the page (body clip alone doesn't stop html) */
+html { overflow-x: clip; }

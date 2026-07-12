@@ -452,6 +452,8 @@
       document.querySelectorAll("[data-quick]").forEach((b) => {
         if (closed || window.__miraBlocked.has(b.dataset.quick)) b.classList.add("btn--dead");
       });
+      const qa = document.querySelector("[data-quick-all]");
+      if (qa && (closed || ["small", "medium", "large"].every((k) => window.__miraBlocked.has(k)))) qa.classList.add("btn--dead");
       if (closed) {
         window.__miraSubsClosed = true;
         const go = document.getElementById("subGo");
@@ -533,7 +535,7 @@
     const b = document.querySelector("[data-quick-all]");
     if (!b) return;
     b.addEventListener("click", () => {
-      if (!document.body.classList.contains("cart-mode")) return;
+      if (!document.body.classList.contains("cart-mode") || b.classList.contains("btn--dead")) return;
       const blocked = window.__miraBlocked || new Set();
       ["small", "medium", "large"].forEach((k) => { if (!blocked.has(k)) addToCart(k, 1); });
       openCart();
