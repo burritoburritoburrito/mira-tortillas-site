@@ -560,6 +560,23 @@ export default {
       if (!(await isAdmin(env, request))) return json({ error: "not authorized" }, 401);
       return json(await getSettings(env));
     }
+    /* owner: sales + customer stats for the dashboard */
+    if (url.pathname === "/api/admin/stats") {
+      if (!(await isAdmin(env, request))) return json({ error: "not authorized" }, 401);
+      const allTime = await env.DB.prepare(
+        `SELECT COUNT(*) n, COALESCE(SUM(amount_total),0) cents FROM orders`).first();
+      const week = await env.DB.prepare(
+        `SELECT COUNT(*) n, COALESCE(SUM(amount_total),0) cents FROM orders WHERE created_at >= datetime('now','-7 days')`).first();
+      const today = await env.DB.prepare(
+        `SELECT COUNT(*) n, COALESCE(SUM(amount_total),0) cents FROM orders WHERE date(created_at) = date('now')`).first();
+      const customers = await env.DB.prepare(
+        `SELECT COUNT(*) n, COALESCE(SUM(marketing_ok),0) newsletter FROM customers`).first();
+      const recent = (await env.DB.prepare(
+        `SELECT o.created_at, o.amount_total, o.mode, o.points_earned, c.email, c.name, c.city
+         FROM orders o JOIN customers c ON c.id = o.customer_id ORDER BY o.id DESC LIMIT 15`).all()).results || [];
+      return json({ allTime, week, today, customers, recent });
+    }
+
     if (url.pathname === "/api/admin/update" && request.method === "POST") {
       if (!(await isAdmin(env, request))) return json({ error: "not authorized" }, 401);
       let b;
