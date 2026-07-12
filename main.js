@@ -48,17 +48,17 @@
       ing_note: "The whole label, start to finish. Mixed, rolled and pressed in small batches in Lisboa.",
       heat_kicker: "04 — fire it up",
       heat_title: "par-cooked by us.<br>finished by you.",
-      heat_sub: "Every mira tortilla leaves our kitchen 90% done. The last 40 seconds happen in your pan — that final toast is what makes them taste fresh-made.",
+      heat_sub: "Every mira tortilla leaves our kitchen 90% done. The last 40 seconds happen in your pan.",
       step1_h: "dry pan, high heat",
-      step1_p: "Pan, griddle or grill — no oil. Get it properly hot, about 15–20 seconds per side.",
+      step1_p: "Pan, griddle or grill, no oil. Get it properly hot and lay a tortilla down",
       step2_h: "see bubbles? flip it",
-      step2_p: "When tiny bubbles start forming, flip to the other side.",
-      step3_h: "15–20 more — it puffs up",
-      step3_p: "Ready to eat! Stack them in a clean cloth so they stay warm and soft.",
+      step2_p: "When tiny bubbles start forming, flip it to the other side",
+      step3_h: "puffs up? it's ready",
+      step3_p: "Stack them in a clean cloth so they stay warm and soft",
       heat_store: "keep refrigerated · 7 days&nbsp;&nbsp;/&nbsp;&nbsp;or freeze · 3 months",
-      sub_meta_s: "12 tortillas · €8 per delivery",
-      sub_meta_m: "12 tortillas · €10 per delivery",
-      sub_meta_l: "6 tortillas · €9 per delivery",
+      sub_meta_s: "12 tortillas · €8 per box",
+      sub_meta_m: "12 tortillas · €10 per box",
+      sub_meta_l: "6 tortillas · €9 per box",
       nav_events: "find us",
       nav_account: "account",
       ev_kicker: "05 — find us",
@@ -75,7 +75,7 @@
       foot_kicker: "hungry? / fome?",
       foot_cta: "order<br>a stack",
       foot_made: "made in lisboa 🇵🇹",
-      hero_prices: "×12 small €8 &nbsp;·&nbsp; ×12 medium €10 &nbsp;·&nbsp; ×6 large €9",
+      hero_prices: "<span style='white-space:nowrap'>×12 small €8</span> &nbsp;·&nbsp; <span style='white-space:nowrap'>×12 medium €10</span> &nbsp;·&nbsp; <span style='white-space:nowrap'>×6 large €9</span>",
       quick_all: "1 of each · €27", hero_scroll: "scroll",
       foot_contact: "questions? cafés &amp; restaurants? say olá —",
       cart_title: "your stack",
@@ -87,11 +87,10 @@
       cart_news: "email me about drops & news",
       cart_clear: "clear",
       sub_size: "your box",
-      sub_zone: "delivery", sub_zone_lx: "lisboa — €5", sub_zone_ct: "continente — €10", sub_incl: "delivery included",
       sub_rhythm: "rhythm",
       sc_note: "secure checkout · stripe",
       sc_fun: "almost taco time 🌮 quase lá",
-      ship_note: "delivery options &amp; cost shown at checkout &nbsp;·&nbsp; mainland orders ship refrigerated mon–wed",
+      ship_note: "we'll message you after the order to sort delivery or pickup together",
       scene_start: "dry pan · no oil",
       scene_side1: "side 1 · 15–20s",
       scene_flip: "tiny bubbles? flip!",
@@ -119,17 +118,17 @@
       ing_note: "O rótulo inteiro, do início ao fim. Misturadas, tendidas e prensadas em pequenos lotes em Lisboa.",
       heat_kicker: "04 — ao lume",
       heat_title: "meio cozidas por nós.<br>acabadas por ti.",
-      heat_sub: "Cada tortilla mira sai da nossa cozinha 90% pronta. Os últimos 40 segundos acontecem na tua frigideira — é essa tostadela final que lhes dá o sabor de acabadas de fazer.",
+      heat_sub: "Cada tortilla mira sai da nossa cozinha 90% pronta. Os últimos 40 segundos acontecem na tua frigideira.",
       step1_h: "frigideira seca, lume forte",
-      step1_p: "Frigideira, chapa ou grelha — sem óleo. Deixa aquecer bem, cerca de 15–20 segundos por lado.",
+      step1_p: "Frigideira, chapa ou grelha, sem óleo. Deixa aquecer bem e pousa a tortilla",
       step2_h: "vês bolhas? vira",
-      step2_p: "Quando se formarem pequenas bolhas, vira para o outro lado.",
-      step3_h: "mais 15–20 — e incha",
-      step3_p: "Prontas a comer! Empilha-as num pano limpo para ficarem quentes e macias.",
+      step2_p: "Quando se formarem pequenas bolhas, vira para o outro lado",
+      step3_h: "inchou? está pronta",
+      step3_p: "Empilha-as num pano limpo para ficarem quentes e macias",
       heat_store: "conservar no frigorífico · 7 dias&nbsp;&nbsp;/&nbsp;&nbsp;ou congelar · 3 meses",
-      sub_meta_s: "12 tortillas · €8 por entrega",
-      sub_meta_m: "12 tortillas · €10 por entrega",
-      sub_meta_l: "6 tortillas · €9 por entrega",
+      sub_meta_s: "12 tortillas · €8 por caixa",
+      sub_meta_m: "12 tortillas · €10 por caixa",
+      sub_meta_l: "6 tortillas · €9 por caixa",
       nav_events: "onde estamos",
       nav_account: "conta",
       ev_kicker: "05 — onde estamos",
@@ -146,7 +145,7 @@
       foot_kicker: "fome? / hungry?",
       foot_cta: "encomenda<br>uma pilha",
       foot_made: "feito em lisboa 🇵🇹",
-      hero_prices: "×12 pequenas €8 &nbsp;·&nbsp; ×12 médias €10 &nbsp;·&nbsp; ×6 grandes €9",
+      hero_prices: "<span style='white-space:nowrap'>×12 pequenas €8</span> &nbsp;·&nbsp; <span style='white-space:nowrap'>×12 médias €10</span> &nbsp;·&nbsp; <span style='white-space:nowrap'>×6 grandes €9</span>",
       quick_all: "1 de cada · €27", hero_scroll: "desliza",
       foot_contact: "dúvidas? cafés &amp; restaurantes? diz olá —",
       cart_title: "a tua pilha",
@@ -158,11 +157,10 @@
       cart_news: "quero receber novidades por email",
       cart_clear: "limpar",
       sub_size: "a tua caixa",
-      sub_zone: "entrega", sub_zone_lx: "lisboa — €5", sub_zone_ct: "continente — €10", sub_incl: "entrega incluída",
       sub_rhythm: "ritmo",
       sc_note: "pagamento seguro · stripe",
       sc_fun: "quase lá 🌮 almost taco time",
-      ship_note: "opções e custo de entrega no checkout &nbsp;·&nbsp; envios para o continente seguem refrigerados seg–qua",
+      ship_note: "depois da encomenda falamos contigo para combinar entrega ou recolha",
       scene_start: "frigideira seca · sem óleo",
       scene_side1: "lado 1 · 15–20s",
       scene_flip: "bolhas? vira!",
@@ -377,7 +375,7 @@
       const r = await fetch("/api/checkout", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ items, usePoints: !!usePoints, zone: subState.zone }),
+        body: JSON.stringify({ items, usePoints: !!usePoints }),
       });
       const raw = await r.text();
       let d;
@@ -479,23 +477,36 @@
     fetch("/api/status").then((r) => r.json()).then((st) => {
       window.__miraStatus = st;
       const closed = !st.open;
-      const deadLabel = closed
-        ? (lang === "pt" ? "brevemente" : "coming soon")
-        : (lang === "pt" ? "esgotado" : "sold out");
+      /* store off (logistics not ready): the site is a browse-and-order-by-email
+         shop. Buy buttons keep their native mailto — people email us to order. */
+      window.__miraEmailOrder = closed;
+      if (closed) {
+        const emailLabel = lang === "pt" ? "encomendar por email" : "email to order";
+        document.querySelectorAll("[data-buy]").forEach((a) => {
+          const span = a.querySelector("[data-i18n]") || a;
+          span.removeAttribute("data-i18n");
+          span.textContent = emailLabel;
+        });
+        /* subscriptions need the store + delivery — not ready yet */
+        window.__miraSubsClosed = true;
+        const go = document.getElementById("subGo");
+        if (go) go.classList.add("btn--dead");
+        return;
+      }
       document.querySelectorAll("[data-buy]").forEach((a) => {
         const sku = a.dataset.buy;
         const out = ((st.remaining || {})[sku] || 0) <= 0;
-        if (closed || out) {
+        if (out) {
           window.__miraBlocked.add(sku);
           a.classList.add("btn--dead");
           const span = a.querySelector("[data-i18n]") || a;
           span.removeAttribute("data-i18n");
-          span.textContent = deadLabel;
-          if (out && !closed) a.closest(".card").classList.add("card--soldout");
+          span.textContent = lang === "pt" ? "esgotado" : "sold out";
+          a.closest(".card").classList.add("card--soldout");
         }
         /* honest scarcity: this week's batch is running out (only when open + in stock) */
         const left = (st.remaining || {})[sku] || 0;
-        if (!closed && left > 0 && left <= 5) {
+        if (left > 0 && left <= 5) {
           const card = a.closest(".card");
           if (card && !card.querySelector(".card__low")) {
             const s = document.createElement("span");
@@ -506,15 +517,10 @@
         }
       });
       document.querySelectorAll("[data-quick]").forEach((b) => {
-        if (closed || window.__miraBlocked.has(b.dataset.quick)) b.classList.add("btn--dead");
+        if (window.__miraBlocked.has(b.dataset.quick)) b.classList.add("btn--dead");
       });
       const qa = document.querySelector("[data-quick-all]");
-      if (qa && (closed || ["small", "medium", "large"].every((k) => window.__miraBlocked.has(k)))) qa.classList.add("btn--dead");
-      if (closed) {
-        window.__miraSubsClosed = true;
-        const go = document.getElementById("subGo");
-        if (go) go.classList.add("btn--dead");
-      }
+      if (qa && ["small", "medium", "large"].every((k) => window.__miraBlocked.has(k))) qa.classList.add("btn--dead");
     }).catch(() => {});
     /* buy buttons add to cart WITHOUT opening the drawer (so all sizes stay reachable).
        The toast itself opens the cart on tap, and the nav un-hides so ORDER is visible. */
@@ -530,6 +536,7 @@
     window.__miraAddedToast = addedToast;
     document.querySelectorAll("[data-buy]").forEach((a) => {
       a.addEventListener("click", (e) => {
+        if (window.__miraEmailOrder) return; /* store off: let the mailto open */
         e.preventDefault();
         if (window.__miraBlocked.has(a.dataset.buy)) {
           showToast(lang === "pt" ? "esgotado — voltamos em breve! 🌮" : "sold out — back soon! 🌮");
@@ -546,9 +553,16 @@
         startCheckout([{ price: SUB_PRICES[a.dataset.sub], quantity: 1 }]);
       });
     });
-    /* nav order button opens the cart */
+    /* nav order button: opens the cart when the store is live, otherwise sends
+       people to the size cards where the email-to-order buttons live */
     document.getElementById("navOrder").addEventListener("click", (e) => {
-      e.preventDefault(); openCart();
+      e.preventDefault();
+      if (window.__miraEmailOrder) {
+        const grid = document.getElementById("escolher");
+        if (grid) grid.scrollIntoView({ behavior: "smooth", block: "start" });
+        return;
+      }
+      openCart();
     });
     /* footer CTA: shop instead of the mailto (no inbox until the domain email exists) */
     const footCta = document.querySelector(".footer__cta");
@@ -594,14 +608,20 @@
     const b = document.querySelector("[data-quick-all]");
     if (!b) return;
     b.addEventListener("click", () => {
+      if (window.__miraEmailOrder) { scrollToCards(); return; } /* store off → the cards */
       if (!document.body.classList.contains("cart-mode") || b.classList.contains("btn--dead")) return;
       const blocked = window.__miraBlocked || new Set();
       ["small", "medium", "large"].forEach((k) => { if (!blocked.has(k)) addToCart(k, 1); });
       openCart();
     });
   })();
+  function scrollToCards() {
+    const grid = document.getElementById("escolher");
+    if (grid) grid.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
   document.querySelectorAll("[data-quick]").forEach((b) => {
     b.addEventListener("click", () => {
+      if (window.__miraEmailOrder) { scrollToCards(); return; } /* store off → the cards */
       if (document.body.classList.contains("cart-mode")) {
         if (window.__miraBlocked && window.__miraBlocked.has(b.dataset.quick)) return;
         addToCart(b.dataset.quick, 1);
@@ -625,7 +645,7 @@
     "large:biweekly": "https://buy.stripe.com/4gMaEQf5Ob0t4L3bV76J20a",
     "large:monthly": "https://buy.stripe.com/9B64gsg9Sb0t0uN1gt6J20b",
   };
-  const subState = { cad: "weekly", zone: "lisboa" };
+  const subState = { cad: "weekly" };
   const subQty = { small: 0, medium: 1, large: 0 };
   const CAD_SUFFIX = {
     en: { weekly: "/ week", biweekly: "/ 2 weeks", monthly: "/ month" },
@@ -640,19 +660,17 @@
       if (el) el.textContent = subQty[k];
     });
     const PACK_COUNT = { small: 12, medium: 12, large: 6 };
-    const ZONE_FEE = { lisboa: 5, continente: 10 };
-    const goods = Object.keys(subQty).reduce((n, k) => n + CATALOG[k].eur * subQty[k], 0);
-    const total = goods > 0 ? goods + ZONE_FEE[subState.zone] : 0;
+    const total = Object.keys(subQty).reduce((n, k) => n + CATALOG[k].eur * subQty[k], 0);
     const tortillas = Object.keys(subQty).reduce((n, k) => n + PACK_COUNT[k] * subQty[k], 0);
     const countEl = document.getElementById("subCount");
     if (total > 0) {
       go.disabled = false;
-      label.textContent = `${lang === "pt" ? "assinar" : "subscribe"} — €${total} ${CAD_SUFFIX[lang][subState.cad]} · ${lang === "pt" ? "entrega incluída" : "delivery included"}`;
+      label.textContent = `${lang === "pt" ? "assinar" : "subscribe"} — €${total} ${CAD_SUFFIX[lang][subState.cad]}`;
       if (countEl) {
         countEl.hidden = false;
         countEl.textContent = lang === "pt"
-          ? `= ${tortillas} tortillas por entrega`
-          : `= ${tortillas} tortillas per delivery`;
+          ? `= ${tortillas} tortillas por caixa`
+          : `= ${tortillas} tortillas per box`;
       }
     } else {
       go.disabled = true;
@@ -682,18 +700,6 @@
         group.querySelectorAll(".subpick__opt").forEach((x) => x.classList.remove("is-on"));
         b.classList.add("is-on");
         subState.cad = b.dataset.cad;
-        updateSubGo();
-      });
-    });
-  })();
-  (function bindZone() {
-    const group = document.getElementById("subZone");
-    if (!group) return;
-    group.querySelectorAll(".subpick__opt").forEach((b) => {
-      b.addEventListener("click", () => {
-        group.querySelectorAll(".subpick__opt").forEach((x) => x.classList.remove("is-on"));
-        b.classList.add("is-on");
-        subState.zone = b.dataset.zone;
         updateSubGo();
       });
     });

@@ -214,22 +214,33 @@
       try {
         const d = await (await fetch("/api/admin/orders")).json();
         if (d.error) { el.innerHTML = `<p class="small">${d.error}</p>`; return; }
-        if (!d.orders.length) { el.innerHTML = `<p class="small">nothing to pack — new paid orders appear here with address, phone &amp; items.</p>`; return; }
+        if (!d.orders.length) { el.innerHTML = `<p class="small">no orders yet — paid orders appear here with address, phone &amp; items, and a refund button.</p>`; return; }
         el.innerHTML = d.orders.map((o) => {
           let items = "";
           try { items = JSON.parse(o.items || "[]").filter((it) => it.sku !== "delivery").map((it) => `${it.q}×${(it.sku || it.d || "?")[0].toUpperCase()}`).join(" "); } catch (e) {}
           const addr = [o.ship_line1, o.ship_line2, [o.ship_postal, o.ship_city].filter(Boolean).join(" ")].filter(Boolean).map(h).join(", ");
-          const stg = o.status || "new";
-          return `<div style="border:2px solid var(--cream-dim);border-radius:10px;padding:.6rem .75rem;margin-bottom:.55rem">
+          const refunded = (o.refunded_cents || 0) >= o.amount_total && o.amount_total > 0;
+          const stg = refunded ? "refunded" : (o.status || "new");
+          return `<div style="border:2px solid var(--cream-dim);border-radius:10px;padding:.6rem .75rem;margin-bottom:.55rem${refunded ? ";opacity:.55" : ""}">
             <div class="row" style="padding:.1rem 0"><span class="mono" style="font-size:.8rem;font-weight:700">${h(o.ship_name || o.cust_name || o.email)} ${items ? `<span style="opacity:.55;font-weight:400">${items}</span>` : ""}${o.mode === "subscription" ? " ↻" : ""}</span><span class="mono" style="font-weight:700">${eur(o.amount_total)}</span></div>
             <div class="small" style="margin:.15rem 0 0">${addr || "<span style='opacity:.5'>Lisboa local (see Stripe)</span>"}${o.ship_phone ? " · ☎ " + h(o.ship_phone) : ""}${o.ship_method ? "<br>" + h(o.ship_method) : ""}</div>
-            <div class="row" style="padding:.4rem 0 0"><span class="mono" style="font-size:.68rem;opacity:.55;text-transform:uppercase;letter-spacing:.08em">${stg}</span>${STAGES[stg] ? `<button class="save ghost" style="padding:.3rem .8rem;font-size:.7rem" data-oid="${o.id}" data-next="${STAGES[stg]}">${LABEL[stg]}</button>` : `<span class="kpi__chip kpi__chip--up">done ✓</span>`}</div>
+            <div class="row" style="padding:.4rem 0 0;gap:.5rem"><span class="mono" style="font-size:.68rem;opacity:.55;text-transform:uppercase;letter-spacing:.08em">${stg}</span><span style="display:flex;gap:.4rem;margin-left:auto">${!refunded && STAGES[stg] ? `<button class="save ghost" style="padding:.3rem .8rem;font-size:.7rem" data-oid="${o.id}" data-next="${STAGES[stg]}">${LABEL[stg]}</button>` : (!refunded ? `<span class="kpi__chip kpi__chip--up">done ✓</span>` : "")}${!refunded ? `<button class="save ghost" style="padding:.3rem .8rem;font-size:.7rem;border-color:var(--oxblood);color:var(--oxblood)" data-refund="${o.id}" data-amt="${eur(o.amount_total)}">refund</button>` : `<span class="kpi__chip kpi__chip--down">refunded ↩</span>`}</span></div>
           </div>`;
         }).join("");
         el.querySelectorAll("[data-oid]").forEach((b) => { b.onclick = async () => {
           b.disabled = true;
           await fetch("/api/admin/order-status", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: Number(b.dataset.oid), status: b.dataset.next }) });
           loadOrders();
+        }; });
+        el.querySelectorAll("[data-refund]").forEach((b) => { b.onclick = async () => {
+          if (!confirm(`Refund ${b.dataset.amt} to this customer? This sends the money back via Stripe and can't be undone.`)) return;
+          b.disabled = true; b.textContent = "refunding…";
+          try {
+            const r = await fetch("/api/admin/refund", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: Number(b.dataset.refund) }) });
+            const dd = await r.json();
+            if (!dd.ok) { alert(dd.error || "refund failed"); b.disabled = false; b.textContent = "refund"; return; }
+          } catch (e) { alert("network error — try again"); b.disabled = false; b.textContent = "refund"; return; }
+          loadOrders(); loadStats();
         }; });
       } catch (e) { el.innerHTML = `<p class="small">orders failed to load</p>`; }
     }

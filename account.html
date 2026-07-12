@@ -103,6 +103,7 @@
               <input id="loginCode" inputmode="numeric" maxlength="6" placeholder="123456" autocomplete="one-time-code"
                 style="font-family:var(--font-mono);font-size:1.3rem;letter-spacing:.4em;text-align:center;padding:.85rem 1rem;border:3px solid var(--ink);border-radius:12px;background:#fff;width:100%">
               <button class="btn btn--ink" id="verifyCode" type="submit" style="justify-content:center;width:100%">sign in · entrar</button>
+              <button type="button" id="resendCode" style="background:none;border:0;font-family:var(--font-mono);font-size:.75rem;text-decoration:underline;text-underline-offset:.25em;cursor:pointer;color:var(--ink);opacity:.7;padding:.2rem">didn't get it? resend · reenviar</button>
             </div>
             <p id="loginMsg" class="acct__empty" style="min-height:1.2em"></p>
           </form>
@@ -115,22 +116,35 @@
         document.getElementById("sendCode").disabled = b;
         const vc = document.getElementById("verifyCode"); if (vc) vc.disabled = b;
       };
-      const sendCode = async () => {
+      const sendCode = async (resend) => {
         const email = document.getElementById("loginEmail").value.trim();
-        if (!email) { msg().textContent = "enter your email first"; return; }
-        setBusy(true); msg().textContent = "sending…";
+        if (!email) { msg().textContent = "enter your email first · escreve o teu email"; return; }
+        setBusy(true); msg().textContent = resend ? "sending a new code…" : "sending…";
         try {
           const r = await fetch("/api/login-request", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email }) });
           const d = await r.json();
           if (d.ok) {
             codeStep = true;
+            document.getElementById("sendCode").style.display = "none";
             document.getElementById("codeRow").style.display = "grid";
-            document.getElementById("loginCode").focus();
-            msg().textContent = "code sent — check your inbox (and spam)";
+            const cf = document.getElementById("loginCode");
+            cf.value = ""; cf.focus();
+            msg().textContent = resend
+              ? "new code sent — check your inbox (and spam) · novo código enviado"
+              : "code sent — good for 30 min, no rush · código válido 30 min";
           } else msg().textContent = d.error || "something went wrong";
-        } catch (e) { msg().textContent = "network error — try again"; }
+        } catch (e) { msg().textContent = "network error — try again · erro de rede"; }
         finally { setBusy(false); }
       };
+      /* resend with a short cooldown so a double-tap can't burn the rate limit */
+      let resendCooling = false;
+      const resendBtn = document.getElementById("resendCode");
+      if (resendBtn) resendBtn.addEventListener("click", () => {
+        if (busy || resendCooling) return;
+        resendCooling = true; resendBtn.style.opacity = ".35";
+        sendCode(true);
+        setTimeout(() => { resendCooling = false; resendBtn.style.opacity = ".7"; }, 15000);
+      });
       const verifyCode = async () => {
         const email = document.getElementById("loginEmail").value.trim();
         const code = document.getElementById("loginCode").value.trim();

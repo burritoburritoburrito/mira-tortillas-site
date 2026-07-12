@@ -421,38 +421,11 @@ export default {
         p.set(`line_items[${i}][quantity]`, String(it.quantity));
       });
 
-      /* subscriptions: delivery is charged as a recurring line item matching the
-         box rhythm (zone picked in the builder: Lisboa €5 / continente €10 per delivery) */
-      if (mode === "subscription") {
-        const zone = body.zone === "continente"
-          ? { amt: 1000, name: "envio refrigerado · continente / refrigerated shipping" }
-          : { amt: 500, name: "entrega em casa · lisboa / home delivery" };
-        const cad = (PRICES[items[0].price] || {}).cad || "weekly";
-        const rec = cad === "weekly" ? ["week", 1] : cad === "biweekly" ? ["week", 2] : ["month", 1];
-        const di = items.length;
-        p.set(`line_items[${di}][quantity]`, "1");
-        p.set(`line_items[${di}][price_data][currency]`, "eur");
-        p.set(`line_items[${di}][price_data][unit_amount]`, String(zone.amt));
-        p.set(`line_items[${di}][price_data][product_data][name]`, zone.name);
-        p.set(`line_items[${di}][price_data][recurring][interval]`, rec[0]);
-        p.set(`line_items[${di}][price_data][recurring][interval_count]`, String(rec[1]));
-      }
-
-      /* shipping choices (one-off orders only): every delivery costs us money,
-         so every delivery is charged — Lisboa courier flat + mainland frozen box.
-         Amounts are owner-set (2026-07-12): Lisboa €5, continente €10. */
-      if (mode === "payment") {
-        const rates = [
-          { name: "Lisboa · entrega em casa / home delivery", amount: 500 },
-          { name: "Portugal continental · envio refrigerado, seg–qua / ships Mon–Wed", amount: 1000 },
-        ];
-        rates.forEach((r, i) => {
-          p.set(`shipping_options[${i}][shipping_rate_data][display_name]`, r.name);
-          p.set(`shipping_options[${i}][shipping_rate_data][type]`, "fixed_amount");
-          p.set(`shipping_options[${i}][shipping_rate_data][fixed_amount][amount]`, String(r.amount));
-          p.set(`shipping_options[${i}][shipping_rate_data][fixed_amount][currency]`, "eur");
-        });
-      }
+      /* NO delivery fees for now (owner call, 2026-07-12): shipping logistics
+         aren't set up yet — no boxes, no courier pricing. We still collect the
+         address + phone so pickup/delivery can be arranged personally after the
+         order. When shipping is real, re-add shipping_options (one-off) and a
+         recurring delivery line item (subscriptions) here. */
 
       const res = await fetch("https://api.stripe.com/v1/checkout/sessions", {
         method: "POST",
@@ -695,12 +668,12 @@ export default {
       const code = String(crypto.getRandomValues(new Uint32Array(1))[0] % 1000000).padStart(6, "0");
       await env.DB.prepare(
         `INSERT INTO login_codes (email, code, attempts, ip, expires_at)
-         VALUES (?1, ?2, 0, ?3, datetime('now', '+10 minutes'))
+         VALUES (?1, ?2, 0, ?3, datetime('now', '+30 minutes'))
          ON CONFLICT(email) DO UPDATE SET code = excluded.code, attempts = 0,
            ip = excluded.ip, expires_at = excluded.expires_at, created_at = datetime('now')`
       ).bind(email, code, ip).run();
       const sent = await sendEmail(env, email, "your mira login code",
-        `your login code: ${code}\n\nit's valid for 10 minutes.\n\no teu código de acesso: ${code} (válido 10 minutos)\n\n— mira tortillas`);
+        `your login code: ${code}\n\nit's valid for 30 minutes, no rush.\n\no teu código de acesso: ${code} (válido 30 minutos, sem pressa)\n\n— mira tortillas`);
       if (!sent) return json({ error: "couldn't send the email — try again in a minute" }, 502);
       return json({ ok: true });
     }
@@ -831,11 +804,11 @@ export default {
     if (url.pathname === "/api/admin/orders") {
       if (!(await isAdmin(env, request))) return json({ error: "not authorized" }, 401);
       const rows = (await env.DB.prepare(
-        `SELECT o.id, o.created_at, o.amount_total, o.mode, o.items, o.status,
+        `SELECT o.id, o.created_at, o.amount_total, o.mode, o.items, o.status, o.refunded_cents,
                 o.ship_name, o.ship_phone, o.ship_line1, o.ship_line2, o.ship_postal, o.ship_city, o.ship_method,
                 c.email, c.name AS cust_name, c.city AS cust_city
          FROM orders o JOIN customers c ON c.id = o.customer_id
-         WHERE COALESCE(o.status,'new') != 'delivered' ORDER BY o.id DESC LIMIT 60`).all()).results || [];
+         ORDER BY o.id DESC LIMIT 60`).all()).results || [];
       return json({ orders: rows });
     }
 
@@ -846,6 +819,45 @@ export default {
       if (!st || !Number.isInteger(b.id)) return json({ error: "bad params" }, 400);
       await env.DB.prepare(`UPDATE orders SET status = ?1 WHERE id = ?2`).bind(st, b.id).run();
       return json({ ok: true });
+    }
+
+    /* owner: one-click full refund from the dashboard. Money goes back via Stripe;
+       the charge.refunded webhook then fixes revenue + claws back points. */
+    if (url.pathname === "/api/admin/refund" && request.method === "POST") {
+      if (!(await isAdmin(env, request))) return json({ error: "not authorized" }, 401);
+      let b; try { b = await request.json(); } catch { return json({ error: "bad json" }, 400); }
+      if (!Number.isInteger(b.id)) return json({ error: "bad params" }, 400);
+      const o = await env.DB.prepare(
+        `SELECT id, customer_id, stripe_session_id, amount_total, refunded_cents FROM orders WHERE id = ?1`
+      ).bind(b.id).first();
+      if (!o) return json({ error: "order not found" }, 404);
+      if ((o.refunded_cents || 0) >= o.amount_total) return json({ error: "already refunded" }, 409);
+      /* find the payment behind this order (checkout session or renewal invoice) */
+      let pi = null;
+      if (/^cs_/.test(o.stripe_session_id)) {
+        const s = await stripeGet(env, `/v1/checkout/sessions/${o.stripe_session_id}`);
+        pi = s && (typeof s.payment_intent === "string" ? s.payment_intent : s.payment_intent && s.payment_intent.id);
+      } else if (/^in_/.test(o.stripe_session_id)) {
+        const inv = await stripeGet(env, `/v1/invoices/${o.stripe_session_id}`);
+        pi = inv && (typeof inv.payment_intent === "string" ? inv.payment_intent : inv.payment_intent && inv.payment_intent.id);
+      }
+      if (!pi) return json({ error: "couldn't find the payment in Stripe — refund it at dashboard.stripe.com/payments" }, 502);
+      const res = await fetch("https://api.stripe.com/v1/refunds", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${env.STRIPE_SECRET_KEY}`, "Content-Type": "application/x-www-form-urlencoded" },
+        body: new URLSearchParams({ payment_intent: pi }),
+      });
+      const refund = await res.json();
+      if (!res.ok) return json({ error: refund.error?.message || "stripe refused the refund" }, 502);
+      /* mark immediately so the dashboard reflects it even before the webhook lands
+         (the webhook then sees nothing new and won't double-process) */
+      await env.DB.prepare(
+        `UPDATE orders SET refunded_cents = amount_total, status = 'refunded' WHERE id = ?1`
+      ).bind(o.id).run();
+      const clawback = Math.floor((o.amount_total - (o.refunded_cents || 0)) / 100);
+      if (clawback > 0)
+        await env.DB.prepare(`UPDATE customers SET points = MAX(points - ?1, 0) WHERE id = ?2`).bind(clawback, o.customer_id).run();
+      return json({ ok: true, refunded: o.amount_total });
     }
 
     /* owner: this week's bake sheet — active Stripe subscriptions grouped by size */
