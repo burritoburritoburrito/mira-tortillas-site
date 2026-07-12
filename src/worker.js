@@ -581,14 +581,22 @@ export default {
         `SELECT COUNT(*) n, COALESCE(SUM(amount_total),0) cents FROM orders`).first();
       const week = await env.DB.prepare(
         `SELECT COUNT(*) n, COALESCE(SUM(amount_total),0) cents FROM orders WHERE created_at >= datetime('now','-7 days')`).first();
+      const prevWeek = await env.DB.prepare(
+        `SELECT COUNT(*) n, COALESCE(SUM(amount_total),0) cents FROM orders
+         WHERE created_at >= datetime('now','-14 days') AND created_at < datetime('now','-7 days')`).first();
       const today = await env.DB.prepare(
         `SELECT COUNT(*) n, COALESCE(SUM(amount_total),0) cents FROM orders WHERE date(created_at) = date('now')`).first();
+      const daily = (await env.DB.prepare(
+        `SELECT date(created_at) d, COUNT(*) n, COALESCE(SUM(amount_total),0) cents FROM orders
+         WHERE created_at >= datetime('now','-13 days') GROUP BY date(created_at)`).all()).results || [];
       const customers = await env.DB.prepare(
         `SELECT COUNT(*) n, COALESCE(SUM(marketing_ok),0) newsletter FROM customers`).first();
+      const newCustomers = await env.DB.prepare(
+        `SELECT COUNT(*) n FROM customers WHERE created_at >= datetime('now','-7 days')`).first();
       const recent = (await env.DB.prepare(
         `SELECT o.created_at, o.amount_total, o.mode, o.points_earned, c.email, c.name, c.city
          FROM orders o JOIN customers c ON c.id = o.customer_id ORDER BY o.id DESC LIMIT 15`).all()).results || [];
-      return json({ allTime, week, today, customers, recent });
+      return json({ allTime, week, prevWeek, today, daily, customers, newCustomers, recent });
     }
 
     /* owner: promo codes managed from /admin (Stripe coupons + promotion codes under the hood) */
