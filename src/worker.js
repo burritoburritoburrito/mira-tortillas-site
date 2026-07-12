@@ -725,6 +725,42 @@ export default {
       return json({ ok: true });
     }
 
+    /* owner: raw-materials & packaging inventory (flour/salt/oil/labels/bags/tape) */
+    if (url.pathname === "/api/admin/inventory") {
+      if (!(await isAdmin(env, request))) return json({ error: "not authorized" }, 401);
+      const rows = (await env.DB.prepare(`SELECT * FROM inventory ORDER BY id`).all()).results || [];
+      return json({ items: rows });
+    }
+
+    if (url.pathname === "/api/admin/inventory-save" && request.method === "POST") {
+      if (!(await isAdmin(env, request))) return json({ error: "not authorized" }, 401);
+      let b; try { b = await request.json(); } catch { return json({ error: "bad json" }, 400); }
+      const items = Array.isArray(b.items) ? b.items.slice(0, 50) : [];
+      for (const it of items) {
+        const name = String(it.name || "").trim().slice(0, 60);
+        if (!name) continue;
+        const qty = Number(it.qty) || 0, low = Number(it.low_at) || 0;
+        const unit = String(it.unit || "").slice(0, 12), sup = String(it.supplier || "").slice(0, 80);
+        if (it.id) {
+          await env.DB.prepare(
+            `UPDATE inventory SET name=?1, unit=?2, qty=?3, low_at=?4, supplier=?5, updated_at=datetime('now') WHERE id=?6`
+          ).bind(name, unit, qty, low, sup, it.id).run();
+        } else {
+          await env.DB.prepare(
+            `INSERT OR IGNORE INTO inventory (name, unit, qty, low_at, supplier) VALUES (?1, ?2, ?3, ?4, ?5)`
+          ).bind(name, unit, qty, low, sup).run();
+        }
+      }
+      return json({ ok: true });
+    }
+
+    if (url.pathname === "/api/admin/inventory-delete" && request.method === "POST") {
+      if (!(await isAdmin(env, request))) return json({ error: "not authorized" }, 401);
+      let b; try { b = await request.json(); } catch { return json({ error: "bad json" }, 400); }
+      await env.DB.prepare(`DELETE FROM inventory WHERE id = ?1`).bind(Number(b.id) || 0).run();
+      return json({ ok: true });
+    }
+
     if (url.pathname === "/api/admin/update" && request.method === "POST") {
       if (!(await isAdmin(env, request))) return json({ error: "not authorized" }, 401);
       let b;

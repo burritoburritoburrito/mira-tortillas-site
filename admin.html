@@ -46,6 +46,13 @@
     .chart__head { margin-bottom: .5rem; }
     .chart__peak { font-family: var(--font-mono); font-size: 11px; font-weight: 700; fill: var(--ink); }
     .chart__tick { font-family: var(--font-mono); font-size: 9.5px; fill: var(--ink); opacity: .45; }
+    .inv-row { display: grid; grid-template-columns: minmax(0,2.2fr) 3.6rem 2.6rem 3rem minmax(0,1.6fr) 2.2rem 1.4rem; gap: .35rem; align-items: center; padding: .22rem 0; }
+    .inv-row input { font-family: var(--font-mono); font-size: .78rem; padding: .35rem .45rem; border: 2px solid var(--cream-dim); border-radius: 8px; width: 100%; min-width: 0; }
+    .inv-row input:focus { border-color: var(--ink); outline: none; }
+    .inv-row .inv-qty, .inv-row .inv-low { text-align: center; }
+    .inv-head { font-size: .6rem; text-transform: uppercase; letter-spacing: .1em; opacity: .5; }
+    .inv-del { background: none; border: 0; font-size: 1rem; cursor: pointer; color: var(--oxblood); opacity: .6; }
+    .inv-del:hover { opacity: 1; }
   </style>
 </head>
 <body>
@@ -120,6 +127,16 @@
             <p class="small">"left" at 0 = ESGOTADO sticker + checkout blocks it. Reset sold when a new baking round starts.</p>
             <p class="msg" id="msg"></p>
           </div>
+          <div class="box" id="invBox">
+            <h2>inventory <small style="font-family:var(--font-mono);font-weight:400;font-size:.68rem;text-transform:uppercase;letter-spacing:.1em;opacity:.55">ingredients &amp; packaging</small></h2>
+            <div id="invRows"><p class="mono" style="font-size:.8rem;opacity:.6">loading…</p></div>
+            <div class="row" style="margin-top:.6rem">
+              <button class="save ghost" id="invAdd">+ add item</button>
+              <button class="save" id="invSave">save inventory</button>
+            </div>
+            <p class="small">qty at or below "low" shows a warning — count after each baking round.</p>
+            <p class="msg" id="invMsg"></p>
+          </div>
           <div class="box links">
             <h2>quick links</h2>
             <a href="https://dashboard.stripe.com/payments" target="_blank">stripe payments</a>
@@ -146,8 +163,72 @@
       document.getElementById("reset").onclick = () => { if (confirm("Reset all sold counters to 0?")) post({ resetSold: true }); };
       loadStats();
       loadPromos();
+      loadInventory();
       document.getElementById("pc_create").onclick = createPromo;
+      document.getElementById("invAdd").onclick = () => addInvRow({});
+      document.getElementById("invSave").onclick = saveInventory;
     };
+
+    function invRowHtml(it) {
+      const low = it.id && Number(it.qty) <= Number(it.low_at);
+      return `
+        <div class="inv-row" data-inv-id="${it.id || ""}">
+          <input class="inv-name" value="${(it.name || "").replace(/"/g, "&quot;")}" placeholder="item">
+          <input class="inv-qty" type="number" step="any" value="${it.qty ?? 0}" title="quantity">
+          <input class="inv-unit" value="${(it.unit || "").replace(/"/g, "&quot;")}" placeholder="un" title="unit">
+          <input class="inv-low" type="number" step="any" value="${it.low_at ?? 0}" title="warn at / low threshold">
+          <input class="inv-sup" value="${(it.supplier || "").replace(/"/g, "&quot;")}" placeholder="supplier / fornecedor">
+          <span class="inv-flag">${low ? '<span class="kpi__chip kpi__chip--down">low</span>' : ""}</span>
+          <button class="inv-del" title="remove">×</button>
+        </div>`;
+    }
+
+    function addInvRow(it) {
+      const holder = document.getElementById("invRows");
+      holder.insertAdjacentHTML("beforeend", invRowHtml(it));
+      holder.querySelectorAll(".inv-del").forEach((b) => { b.onclick = () => delInvRow(b); });
+    }
+
+    async function delInvRow(btn) {
+      const row = btn.closest(".inv-row");
+      const id = row.dataset.invId;
+      if (id && !confirm("Remove this item from inventory?")) return;
+      if (id) await fetch("/api/admin/inventory-delete", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: Number(id) }) });
+      row.remove();
+    }
+
+    async function loadInventory() {
+      const holder = document.getElementById("invRows");
+      if (!holder) return;
+      try {
+        const d = await (await fetch("/api/admin/inventory")).json();
+        if (d.error) { holder.innerHTML = `<p class="small">${d.error}</p>`; return; }
+        holder.innerHTML = `
+          <div class="inv-row inv-head mono">
+            <span>item</span><span>qty</span><span>unit</span><span>low</span><span>supplier</span><span></span><span></span>
+          </div>`;
+        d.items.forEach((it) => addInvRow(it));
+      } catch (e) { holder.innerHTML = `<p class="small">inventory failed to load</p>`; }
+    }
+
+    async function saveInventory() {
+      const msg = document.getElementById("invMsg");
+      const items = [...document.querySelectorAll(".inv-row:not(.inv-head)")].map((r) => ({
+        id: r.dataset.invId ? Number(r.dataset.invId) : null,
+        name: r.querySelector(".inv-name").value,
+        qty: r.querySelector(".inv-qty").value,
+        unit: r.querySelector(".inv-unit").value,
+        low_at: r.querySelector(".inv-low").value,
+        supplier: r.querySelector(".inv-sup").value,
+      }));
+      msg.textContent = "saving…";
+      try {
+        const r = await fetch("/api/admin/inventory-save", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ items }) });
+        const d = await r.json();
+        msg.textContent = d.ok ? "saved ✓" : (d.error || "something went wrong");
+        if (d.ok) loadInventory();
+      } catch (e) { msg.textContent = "network error — try again"; }
+    }
 
     async function loadPromos() {
       const el = document.getElementById("promoList");
