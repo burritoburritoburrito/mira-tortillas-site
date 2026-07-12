@@ -33,16 +33,16 @@
       nav_heat: "how-to",
       nav_sizes: "sizes",
       nav_order: "order",
-      hero_blurb: "Flour tortillas — four ingredients, pressed &amp; par-cooked in small batches in Lisboa.<br>You give them the final toast at home.",
+      hero_blurb: "Flour tortillas. Four ingredients, pressed &amp; par-cooked in small batches in Lisboa.<br>You give them the final toast at home",
       hero_cta: "grab a pack",
       nav_sub: "subscribe",
       sub_kicker: "02 — subscriptions",
       sub_title: "never run out.",
-      sub_sub: "Pick a size, pick a rhythm — tortillas on repeat. Pause or cancel anytime.",
+      sub_sub: "Pick a size, pick a rhythm. Tortillas on repeat, pause or cancel anytime",
       sub_weekly: "weekly",
       sub_biweekly: "every 2 weeks",
       sub_monthly: "monthly",
-      sub_note: "manage, pause or cancel anytime — no strings attached.",
+      sub_note: "manage, pause or cancel anytime, no strings attached",
       ing_kicker: "03 — the recipe",
       ing_title: "only four<br>ingredients.",
       ing_note: "The whole label, start to finish. Mixed, rolled and pressed in small batches in Lisboa.",
@@ -63,27 +63,27 @@
       nav_account: "account",
       ev_kicker: "05 — find us",
       ev_title: "upcoming<br>drops &amp; markets.",
-      ev_empty: "nothing on the calendar right now — follow @miratortillas for the next drop.",
+      ev_empty: "nothing on the calendar right now. follow @miratortillas for the next drop",
       sizes_kicker: "01 — pick your size",
       sizes_title: "one dough.<br>three sizes.",
-      sizes_sub: "Taco night, burrito Sunday or snack-size quesadillas — there's a stack for that.",
-      s_name: "small", s_desc: "15&nbsp;cm — tacos &amp; snacks.", s_btn: "add to cart +",
-      m_name: "medium", m_desc: "21–23&nbsp;cm — wraps &amp; quesadillas.", m_btn: "add to cart +",
-      l_name: "large", l_desc: "30&nbsp;cm — burritos.", l_btn: "add to cart +",
+      sizes_sub: "Taco night, burrito Sunday or snack quesadillas. There's a stack for that",
+      s_name: "small", s_desc: "15&nbsp;cm · tacos &amp; snacks", s_btn: "add to cart +",
+      m_name: "medium", m_desc: "21–23&nbsp;cm · wraps &amp; quesadillas", m_btn: "add to cart +",
+      l_name: "large", l_desc: "30&nbsp;cm · burritos", l_btn: "add to cart +",
       marquee: "flour <i>·</i> water <i>·</i> avocado oil <i>·</i> salt <i>·</i>&nbsp;",
-      pay_note: "secure checkout by stripe — card · apple pay · google pay · mb way / multibanco",
+      pay_note: "secure checkout by stripe · card · apple pay · google pay · mb way / multibanco",
       foot_kicker: "hungry? / fome?",
       foot_cta: "order<br>a stack",
       foot_made: "made in lisboa 🇵🇹",
       hero_prices: "<span style='white-space:nowrap'>×12 small €8</span> &nbsp;·&nbsp; <span style='white-space:nowrap'>×12 medium €10</span> &nbsp;·&nbsp; <span style='white-space:nowrap'>×6 large €9</span>",
       quick_all: "1 of each · €27", hero_scroll: "scroll",
-      foot_contact: "questions? cafés &amp; restaurants? say olá —",
+      foot_contact: "questions? cafés &amp; restaurants? say olá →",
       cart_title: "your stack",
-      cart_empty: "nothing here yet.",
+      cart_empty: "nothing here yet",
       cart_total: "total",
       cart_checkout: "checkout",
       cart_back: "back to site",
-      cart_usepoints: "use 100 points — €8 off",
+      cart_usepoints: "use 100 points · €8 off",
       cart_news: "email me about drops & news",
       cart_clear: "clear",
       sub_size: "your box",
@@ -95,7 +95,7 @@
       scene_side1: "side 1 · 15–20s",
       scene_flip: "tiny bubbles? flip!",
       scene_side2: "side 2 · 15–20s",
-      scene_done: "puffed up — ready to eat!",
+      scene_done: "puffed up, ready to eat!",
       doc_title: "mira tortillas — flour tortillas, Lisboa",
     },
     pt: {
@@ -103,16 +103,16 @@
       nav_heat: "como aquecer",
       nav_sizes: "tamanhos",
       nav_order: "encomendar",
-      hero_blurb: "Tortillas de trigo — quatro ingredientes, prensadas e meio cozidas em pequenos lotes em Lisboa.<br>Tu dás-lhes a tostadela final em casa.",
+      hero_blurb: "Tortillas de trigo. Quatro ingredientes, prensadas e meio cozidas em pequenos lotes em Lisboa.<br>Tu dás-lhes a tostadela final em casa",
       hero_cta: "leva um pack",
       nav_sub: "assinar",
       sub_kicker: "02 — assinaturas",
       sub_title: "nunca fiques sem.",
-      sub_sub: "Escolhe o tamanho, escolhe o ritmo — tortillas em repetição. Pausa ou cancela quando quiseres.",
+      sub_sub: "Escolhe o tamanho, escolhe o ritmo. Tortillas em repetição, pausa ou cancela quando quiseres",
       sub_weekly: "semanal",
       sub_biweekly: "quinzenal",
       sub_monthly: "mensal",
-      sub_note: "gere, pausa ou cancela quando quiseres — sem compromissos.",
+      sub_note: "gere, pausa ou cancela quando quiseres, sem compromissos",
       ing_kicker: "03 — a receita",
       ing_title: "só quatro<br>ingredientes.",
       ing_note: "O rótulo inteiro, do início ao fim. Misturadas, tendidas e prensadas em pequenos lotes em Lisboa.",
@@ -133,27 +133,27 @@
       nav_account: "conta",
       ev_kicker: "05 — onde estamos",
       ev_title: "próximos<br>drops &amp; mercados.",
-      ev_empty: "nada agendado de momento — segue @miratortillas para o próximo drop.",
+      ev_empty: "nada agendado de momento. segue @miratortillas para o próximo drop",
       sizes_kicker: "01 — escolhe o tamanho",
       sizes_title: "uma massa.<br>três tamanhos.",
-      sizes_sub: "Noite de tacos, burrito ao domingo ou quesadillas para o lanche — há uma pilha para isso.",
-      s_name: "pequenas", s_desc: "15&nbsp;cm — tacos e snacks.", s_btn: "adicionar +",
-      m_name: "médias", m_desc: "21–23&nbsp;cm — wraps e quesadillas.", m_btn: "adicionar +",
-      l_name: "grandes", l_desc: "30&nbsp;cm — burritos.", l_btn: "adicionar +",
+      sizes_sub: "Noite de tacos, burrito ao domingo ou quesadillas para o lanche. Há uma pilha para isso",
+      s_name: "pequenas", s_desc: "15&nbsp;cm · tacos e snacks", s_btn: "adicionar +",
+      m_name: "médias", m_desc: "21–23&nbsp;cm · wraps e quesadillas", m_btn: "adicionar +",
+      l_name: "grandes", l_desc: "30&nbsp;cm · burritos", l_btn: "adicionar +",
       marquee: "farinha <i>·</i> água <i>·</i> óleo de abacate <i>·</i> sal <i>·</i>&nbsp;",
-      pay_note: "pagamento seguro com stripe — cartão · apple pay · google pay · mb way / multibanco",
+      pay_note: "pagamento seguro com stripe · cartão · apple pay · google pay · mb way / multibanco",
       foot_kicker: "fome? / hungry?",
       foot_cta: "encomenda<br>uma pilha",
       foot_made: "feito em lisboa 🇵🇹",
       hero_prices: "<span style='white-space:nowrap'>×12 pequenas €8</span> &nbsp;·&nbsp; <span style='white-space:nowrap'>×12 médias €10</span> &nbsp;·&nbsp; <span style='white-space:nowrap'>×6 grandes €9</span>",
       quick_all: "1 de cada · €27", hero_scroll: "desliza",
-      foot_contact: "dúvidas? cafés &amp; restaurantes? diz olá —",
+      foot_contact: "dúvidas? cafés &amp; restaurantes? diz olá →",
       cart_title: "a tua pilha",
-      cart_empty: "ainda nada aqui.",
+      cart_empty: "ainda nada aqui",
       cart_total: "total",
       cart_checkout: "finalizar",
       cart_back: "voltar ao site",
-      cart_usepoints: "usar 100 pontos — €8 de desconto",
+      cart_usepoints: "usar 100 pontos · €8 de desconto",
       cart_news: "quero receber novidades por email",
       cart_clear: "limpar",
       sub_size: "a tua caixa",
@@ -165,7 +165,7 @@
       scene_side1: "lado 1 · 15–20s",
       scene_flip: "bolhas? vira!",
       scene_side2: "lado 2 · 15–20s",
-      scene_done: "inchada — pronta a comer!",
+      scene_done: "inchada, pronta a comer!",
       doc_title: "mira tortillas — tortillas de trigo, Lisboa",
     },
   };
@@ -240,6 +240,7 @@
     renderEvents(lang);
     if (window.__subPickReady) updateSubGo();
     if (document.body.classList.contains("cart-mode")) renderCart();
+    if (typeof window.__miraRelabelBuy === "function") window.__miraRelabelBuy();
     try { localStorage.setItem("mira-lang", lang); } catch (e) {}
   }
 
@@ -481,13 +482,18 @@
          shop. Buy buttons keep their native mailto — people email us to order. */
       window.__miraEmailOrder = closed;
       if (closed) {
-        const emailLabel = lang === "pt" ? "encomendar por email" : "email to order";
-        document.querySelectorAll("[data-buy]").forEach((a) => {
-          const span = a.querySelector("[data-i18n]") || a;
-          span.removeAttribute("data-i18n");
-          span.textContent = emailLabel;
-        });
-        /* subscriptions need the store + delivery — not ready yet */
+        /* label survives PT/EN toggles: applyLang calls __miraRelabelBuy again */
+        window.__miraRelabelBuy = () => {
+          const emailLabel = lang === "pt" ? "encomendar por email" : "email to order";
+          document.querySelectorAll("[data-buy]").forEach((a) => {
+            const span = a.querySelector("[data-i18n], [data-dyn]") || a;
+            span.removeAttribute("data-i18n");
+            span.setAttribute("data-dyn", "buy");
+            span.textContent = emailLabel;
+          });
+        };
+        window.__miraRelabelBuy();
+        /* subscriptions need the store + delivery, not ready yet */
         window.__miraSubsClosed = true;
         const go = document.getElementById("subGo");
         if (go) go.classList.add("btn--dead");
@@ -539,7 +545,7 @@
         if (window.__miraEmailOrder) return; /* store off: let the mailto open */
         e.preventDefault();
         if (window.__miraBlocked.has(a.dataset.buy)) {
-          showToast(lang === "pt" ? "esgotado — voltamos em breve! 🌮" : "sold out — back soon! 🌮");
+          showToast(lang === "pt" ? "esgotado, voltamos em breve! 🌮" : "sold out, back soon! 🌮");
           return;
         }
         addToCart(a.dataset.buy, 1);
@@ -665,7 +671,7 @@
     const countEl = document.getElementById("subCount");
     if (total > 0) {
       go.disabled = false;
-      label.textContent = `${lang === "pt" ? "assinar" : "subscribe"} — €${total} ${CAD_SUFFIX[lang][subState.cad]}`;
+      label.textContent = `${lang === "pt" ? "assinar" : "subscribe"} · €${total} ${CAD_SUFFIX[lang][subState.cad]}`;
       if (countEl) {
         countEl.hidden = false;
         countEl.textContent = lang === "pt"

@@ -90,7 +90,7 @@
       box.innerHTML = `
         <div class="acct__login">
           <h1 class="acct__hi">sign in.</h1>
-          <p class="acct__empty" style="margin-bottom:1.6rem">we email you a code — no passwords · enviamos um código — sem passwords</p>
+          <p class="acct__empty" style="margin-bottom:1.6rem">we email you a code, no passwords · enviamos um código, sem passwords</p>
           <form id="loginForm" style="max-width:340px;margin:0 auto;display:grid;gap:.7rem">
             <input id="loginEmail" type="email" placeholder="email" autocomplete="email" required
               style="font-family:var(--font-mono);font-size:.95rem;padding:.85rem 1rem;border:3px solid var(--ink);border-radius:12px;background:#fff;width:100%">
@@ -130,10 +130,10 @@
             const cf = document.getElementById("loginCode");
             cf.value = ""; cf.focus();
             msg().textContent = resend
-              ? "new code sent — check your inbox (and spam) · novo código enviado"
-              : "code sent — good for 30 min, no rush · código válido 30 min";
+              ? "new code sent, check your inbox (and spam) · novo código enviado"
+              : "code sent, good for 30 min, no rush · código válido 30 min";
           } else msg().textContent = d.error || "something went wrong";
-        } catch (e) { msg().textContent = "network error — try again · erro de rede"; }
+        } catch (e) { msg().textContent = "network error, try again · erro de rede"; }
         finally { setBusy(false); }
       };
       /* resend with a short cooldown so a double-tap can't burn the rate limit */
@@ -250,7 +250,7 @@
                 ${field("city", "city / cidade", c.address.city, 'autocomplete="address-level2"')}
                 ${field("birthday", "birthday / aniversário 🎁", c.birthday, 'type="date"')}
               </div>
-              <p class="acct__empty" style="margin-top:.6rem">birthday = a little something from us / no teu aniversário há mimo</p>
+              <p class="acct__empty" style="margin-top:.6rem">birthday = a little something from us · no teu aniversário há mimo</p>
               <label style="display:flex;align-items:center;gap:.55rem;margin-top:.8rem;font-family:var(--font-mono);font-size:.78rem;cursor:pointer">
                 <input type="checkbox" id="pf_news" ${c.newsletter ? "checked" : ""} style="accent-color:var(--oxblood)">
                 <span>email me about drops &amp; news · quero receber novidades</span>

@@ -376,6 +376,7 @@
           <div class="kpi-grid">
             ${tile("revenue · 7d", eur(s.week.cents), delta(s.week.cents, s.prevWeek.cents), "vs prior week")}
             ${tile("orders · 7d", s.week.n, delta(s.week.n, s.prevWeek.n), "vs prior week")}
+            ${tile("today", s.today.n ? eur(s.today.cents) : "—", "", s.today.n ? s.today.n + " order" + (s.today.n === 1 ? "" : "s") : "quiet so far")}
             ${tile("avg order · 7d", s.week.n ? eur(Math.round(aov)) : "—", s.week.n ? delta(aov, prevAov) : "", s.week.n ? "" : "no orders yet")}
             ${tile("customers", s.customers.n, `<span class="kpi__chip ${s.newCustomers.n ? "kpi__chip--up" : "kpi__chip--flat"}">+${s.newCustomers.n} this week</span>`, `${s.customers.newsletter} on newsletter`)}
           </div>`;
@@ -471,7 +472,10 @@
         const delta = !vPrev && !v7 ? '<span class="kpi__chip kpi__chip--flat">—</span>'
           : !vPrev ? '<span class="kpi__chip kpi__chip--up">new</span>'
           : (() => { const pc = Math.round(((v7 - vPrev) / vPrev) * 100); if (pc === 0) return '<span class="kpi__chip kpi__chip--flat">±0%</span>'; return `<span class="kpi__chip ${pc > 0 ? "kpi__chip--up" : "kpi__chip--down"}">${pc > 0 ? "▲" : "▼"} ${Math.abs(pc)}%</span>`; })();
-        const conv = v7 ? ((stats.week.n / v7) * 100).toFixed(1) + "%" : "—";
+        /* same 7 calendar days on both sides of the division (stats.week is rolling 168h) */
+        const last7 = new Set(); for (let i = 0; i < 7; i++) last7.add(key(i));
+        const ord7 = (stats.daily || []).reduce((n, r) => n + (last7.has(r.d) ? r.n : 0), 0);
+        const conv = v7 ? ((ord7 / v7) * 100).toFixed(1) + "%" : "—";
         const days = []; for (let i = 13; i >= 0; i--) days.push({ k: key(i), v: find(key(i)).visits });
         const max = Math.max(...days.map((x) => x.v), 1);
         const W = 560, H = 70, PAD = 6, bw = Math.floor((W - PAD * 2) / 14) - 2;
