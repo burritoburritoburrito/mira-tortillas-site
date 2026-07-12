@@ -344,6 +344,23 @@ export default {
         p.set(`line_items[${i}][quantity]`, String(it.quantity));
       });
 
+      /* subscriptions: delivery is charged as a recurring line item matching the
+         box rhythm (zone picked in the builder: Lisboa €5 / continente €10 per delivery) */
+      if (mode === "subscription") {
+        const zone = body.zone === "continente"
+          ? { amt: 1000, name: "envio refrigerado · continente / refrigerated shipping" }
+          : { amt: 500, name: "entrega em casa · lisboa / home delivery" };
+        const cad = (PRICES[items[0].price] || {}).cad || "weekly";
+        const rec = cad === "weekly" ? ["week", 1] : cad === "biweekly" ? ["week", 2] : ["month", 1];
+        const di = items.length;
+        p.set(`line_items[${di}][quantity]`, "1");
+        p.set(`line_items[${di}][price_data][currency]`, "eur");
+        p.set(`line_items[${di}][price_data][unit_amount]`, String(zone.amt));
+        p.set(`line_items[${di}][price_data][product_data][name]`, zone.name);
+        p.set(`line_items[${di}][price_data][recurring][interval]`, rec[0]);
+        p.set(`line_items[${di}][price_data][recurring][interval_count]`, String(rec[1]));
+      }
+
       /* shipping choices (one-off orders only): every delivery costs us money,
          so every delivery is charged — Lisboa courier flat + mainland frozen box.
          Amounts are owner-set (2026-07-12): Lisboa €5, continente €10. */

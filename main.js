@@ -85,7 +85,7 @@
       cart_news: "email me about drops & news",
       cart_clear: "clear",
       sub_size: "your box",
-      sub_starter: "starter box — 1 of each",
+      sub_zone: "delivery", sub_zone_lx: "lisboa — €5", sub_zone_ct: "continente — €10", sub_incl: "delivery included",
       sub_rhythm: "rhythm",
       sc_note: "secure checkout · stripe",
       sc_fun: "almost taco time 🌮 quase lá",
@@ -154,7 +154,7 @@
       cart_news: "quero receber novidades por email",
       cart_clear: "limpar",
       sub_size: "a tua caixa",
-      sub_starter: "caixa inicial — 1 de cada",
+      sub_zone: "entrega", sub_zone_lx: "lisboa — €5", sub_zone_ct: "continente — €10", sub_incl: "entrega incluída",
       sub_rhythm: "ritmo",
       sc_note: "pagamento seguro · stripe",
       sc_fun: "quase lá 🌮 almost taco time",
@@ -357,7 +357,7 @@
       const r = await fetch("/api/checkout", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ items, usePoints: !!usePoints }),
+        body: JSON.stringify({ items, usePoints: !!usePoints, zone: subState.zone }),
       });
       const raw = await r.text();
       let d;
@@ -564,7 +564,7 @@
     "large:biweekly": "https://buy.stripe.com/4gMaEQf5Ob0t4L3bV76J20a",
     "large:monthly": "https://buy.stripe.com/9B64gsg9Sb0t0uN1gt6J20b",
   };
-  const subState = { cad: "weekly" };
+  const subState = { cad: "weekly", zone: "lisboa" };
   const subQty = { small: 0, medium: 1, large: 0 };
   const CAD_SUFFIX = {
     en: { weekly: "/ week", biweekly: "/ 2 weeks", monthly: "/ month" },
@@ -579,12 +579,14 @@
       if (el) el.textContent = subQty[k];
     });
     const PACK_COUNT = { small: 12, medium: 12, large: 6 };
-    const total = Object.keys(subQty).reduce((n, k) => n + CATALOG[k].eur * subQty[k], 0);
+    const ZONE_FEE = { lisboa: 5, continente: 10 };
+    const goods = Object.keys(subQty).reduce((n, k) => n + CATALOG[k].eur * subQty[k], 0);
+    const total = goods > 0 ? goods + ZONE_FEE[subState.zone] : 0;
     const tortillas = Object.keys(subQty).reduce((n, k) => n + PACK_COUNT[k] * subQty[k], 0);
     const countEl = document.getElementById("subCount");
     if (total > 0) {
       go.disabled = false;
-      label.textContent = `${lang === "pt" ? "assinar" : "subscribe"} — €${total} ${CAD_SUFFIX[lang][subState.cad]}`;
+      label.textContent = `${lang === "pt" ? "assinar" : "subscribe"} — €${total} ${CAD_SUFFIX[lang][subState.cad]} · ${lang === "pt" ? "entrega incluída" : "delivery included"}`;
       if (countEl) {
         countEl.hidden = false;
         countEl.textContent = lang === "pt"
@@ -604,14 +606,6 @@
       updateSubGo();
     });
   });
-  (function bindSubStarter() {
-    const b = document.getElementById("subStarter");
-    if (!b) return;
-    b.addEventListener("click", () => {
-      subQty.small = 1; subQty.medium = 1; subQty.large = 1;
-      updateSubGo();
-    });
-  })();
   document.querySelectorAll("[data-sub-dec]").forEach((b) => {
     b.addEventListener("click", () => {
       const k = b.dataset.subDec;
@@ -627,6 +621,18 @@
         group.querySelectorAll(".subpick__opt").forEach((x) => x.classList.remove("is-on"));
         b.classList.add("is-on");
         subState.cad = b.dataset.cad;
+        updateSubGo();
+      });
+    });
+  })();
+  (function bindZone() {
+    const group = document.getElementById("subZone");
+    if (!group) return;
+    group.querySelectorAll(".subpick__opt").forEach((b) => {
+      b.addEventListener("click", () => {
+        group.querySelectorAll(".subpick__opt").forEach((x) => x.classList.remove("is-on"));
+        b.classList.add("is-on");
+        subState.zone = b.dataset.zone;
         updateSubGo();
       });
     });
