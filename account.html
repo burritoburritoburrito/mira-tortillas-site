@@ -235,6 +235,10 @@
                 ${field("birthday", "birthday / aniversário 🎁", c.birthday, 'type="date"')}
               </div>
               <p class="acct__empty" style="margin-top:.6rem">birthday = a little something from us / no teu aniversário há mimo</p>
+              <label style="display:flex;align-items:center;gap:.55rem;margin-top:.8rem;font-family:var(--font-mono);font-size:.78rem;cursor:pointer">
+                <input type="checkbox" id="pf_news" ${c.newsletter ? "checked" : ""} style="accent-color:var(--oxblood)">
+                <span>email me about drops &amp; news · quero receber novidades</span>
+              </label>
               <div style="display:flex;align-items:center;gap:1rem;margin-top:.9rem">
                 <button class="btn btn--ink" id="saveProfile" style="justify-content:center">save · guardar</button>
                 <span id="profileMsg" class="acct__empty"></span>
@@ -281,7 +285,8 @@
       try {
         const r = await fetch("/api/profile", { method: "POST", headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ name: v("name"), phone: v("phone"), line1: v("line1"), line2: v("line2"),
-            postal_code: v("postal"), city: v("city"), birthday: v("birthday") }) });
+            postal_code: v("postal"), city: v("city"), birthday: v("birthday"),
+            newsletter: !!document.getElementById("pf_news")?.checked }) });
         const d = await r.json();
         msg.textContent = d.ok ? "saved ✓ / guardado ✓" : (d.error || "something went wrong");
       } catch (e) { msg.textContent = "network error — try again"; }

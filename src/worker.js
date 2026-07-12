@@ -535,6 +535,7 @@ export default {
         loggedIn: true,
         customer: {
           email: c.email, name: c.name, phone: c.phone, points: c.points, birthday: c.birthday,
+          newsletter: c.marketing_ok === 1,
           address: { line1: c.address_line1, line2: c.address_line2, postal_code: c.postal_code, city: c.city, country: c.country },
         },
         orders: orders.results || [],
@@ -551,14 +552,17 @@ export default {
       const clean = (v, max) => (typeof v === "string" && v.trim() ? v.trim().slice(0, max) : null);
       const birthday = clean(b.birthday, 10);
       if (birthday && !/^\d{4}-\d{2}-\d{2}$/.test(birthday)) return json({ error: "birthday must be YYYY-MM-DD" }, 400);
+      /* newsletter is a customer right (GDPR): honor an explicit true/false, both directions */
+      const news = b.newsletter === true ? 1 : b.newsletter === false ? 0 : null;
       await env.DB.prepare(
         `UPDATE customers SET
            name = ?1, phone = ?2, address_line1 = ?3, address_line2 = ?4,
-           postal_code = ?5, city = ?6, birthday = ?7, updated_at = datetime('now')
-         WHERE id = ?8`
+           postal_code = ?5, city = ?6, birthday = ?7,
+           marketing_ok = COALESCE(?8, marketing_ok), updated_at = datetime('now')
+         WHERE id = ?9`
       ).bind(
         clean(b.name, 80), clean(b.phone, 24), clean(b.line1, 120), clean(b.line2, 120),
-        clean(b.postal_code, 12), clean(b.city, 60), birthday, c.id
+        clean(b.postal_code, 12), clean(b.city, 60), birthday, news, c.id
       ).run();
       return json({ ok: true });
     }
@@ -680,8 +684,8 @@ export default {
       });
     }
 
-    /* owner: send yourself a test SMS (admin-only) — visit /api/admin/test-sms while logged in */
-    if (url.pathname === "/api/admin/test-sms") {
+    /* owner: send yourself a test SMS (admin-only, POST so it can't fire from a GET/link) */
+    if (url.pathname === "/api/admin/test-sms" && request.method === "POST") {
       if (!(await isAdmin(env, request))) return json({ error: "not authorized — sign in at /account first" }, 401);
       if (!env.OWNER_PHONE) return json({ error: "OWNER_PHONE var not set in Cloudflare yet" }, 400);
       const ok = await sendSMS(env, "mira: SMS test OK — order alerts armed 🌯");
