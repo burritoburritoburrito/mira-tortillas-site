@@ -274,8 +274,8 @@
     document.addEventListener("click", (ev) => {
       if (ev.target && ev.target.id === "custCsv") {
         const esc = (v) => { let s = String(v == null ? "" : v); if (/^[=+\-@\t\r]/.test(s)) s = "'" + s; /* neutralize spreadsheet formula injection */ return `"${s.replace(/"/g, '""')}"`; };
-        const csv = ["email,name,city,company,wholesale,newsletter,points,orders,total_eur,joined",
-          ...CUSTOMERS.map((c) => [c.email, c.name, c.city, c.company, c.wholesale ? 1 : 0, c.marketing_ok ? 1 : 0, c.points, c.orders, (c.cents / 100).toFixed(2), (c.created_at || "").slice(0, 10)].map(esc).join(","))].join("\n");
+        const csv = ["email,name,phone,address,postal,city,company,wholesale,newsletter,points,orders,total_eur,joined",
+          ...CUSTOMERS.map((c) => [c.email, c.name, c.phone, c.address_line1, c.postal_code, c.city, c.company, c.wholesale ? 1 : 0, c.marketing_ok ? 1 : 0, c.points, c.orders, (c.cents / 100).toFixed(2), (c.created_at || "").slice(0, 10)].map(esc).join(","))].join("\n");
         const a = document.createElement("a");
         a.href = URL.createObjectURL(new Blob([csv], { type: "text/csv" }));
         a.download = "mira-customers.csv";

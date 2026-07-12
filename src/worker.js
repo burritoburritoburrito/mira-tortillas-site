@@ -221,9 +221,8 @@ async function processSession(env, session) {
     if (inserted.meta.changes > 0) {
       if (points > 0)
         await env.DB.prepare(`UPDATE customers SET points = points + ?1 WHERE id = ?2`).bind(points, customer.id).run();
-      const redeemed = parseInt((session.metadata && session.metadata.points_redeemed) || "0", 10);
-      if (redeemed > 0)
-        await env.DB.prepare(`UPDATE customers SET points = MAX(points - ?1, 0) WHERE id = ?2`).bind(redeemed, customer.id).run();
+      /* redeemed points were already reserved at checkout creation (atomic decrement) —
+         no second decrement here, or racing checkouts would double-charge the balance */
       /* stock accounting: count packs sold per size (one-off orders, once per session) */
       if (session.mode === "payment" && session.line_items && session.line_items.data) {
         for (const li of session.line_items.data) {
@@ -232,6 +231,18 @@ async function processSession(env, session) {
             `UPDATE settings SET v = CAST(CAST(v AS INTEGER) + ?1 AS TEXT) WHERE k = ?2`
           ).bind(li.quantity || 1, "sold_" + sku).run();
         }
+        /* two buyers can pass the cap check before either pays — if that happens,
+           tell the owner immediately so they can bake extra or contact the customer */
+        try {
+          const shop2 = await getSettings(env);
+          const over = Object.keys(shop2.caps).filter((k) => shop2.sold[k] > shop2.caps[k])
+            .map((k) => `${k}: sold ${shop2.sold[k]} / cap ${shop2.caps[k]}`);
+          if (over.length) {
+            await sendEmail(env, "ola@miratortillas.pt", "⚠️ oversold — simultaneous checkouts",
+              `two checkouts passed the stock check at the same time:\n\n${over.join("\n")}\n\nbake extra or contact the last buyer.\ndashboard: https://miratortillas.pt/admin`);
+            await sendSMS(env, `mira: ⚠️ OVERSOLD ${over.join("; ")} — see email`);
+          }
+        } catch (e) { /* alert only */ }
       }
       /* owner heads-up: one email per new order via ola@ (best-effort, never blocks the order) */
       try {
@@ -370,11 +381,19 @@ export default {
         }
       }
 
-      /* points redemption: 100 pts = €8 off, one-off orders of €8+, signed-in only */
+      /* points redemption: 100 pts = €8 off, one-off orders of €8+, signed-in only.
+         Points are RESERVED here atomically (conditional decrement) so two open
+         checkouts can't spend the same balance twice; refunded via webhook if the
+         session expires or its async payment fails. */
       let redeemer = null;
       if (body.usePoints === true && mode === "payment" && subtotal >= 800) {
         const c = await currentCustomer(env, request);
-        if (c && c.points >= 100) redeemer = c;
+        if (c) {
+          const res = await env.DB.prepare(
+            `UPDATE customers SET points = points - 100 WHERE id = ?1 AND points >= 100`
+          ).bind(c.id).run();
+          if (res.meta.changes === 1) redeemer = c;
+        }
       }
 
       const p = new URLSearchParams();
@@ -386,6 +405,7 @@ export default {
       if (redeemer) {
         p.set("discounts[0][coupon]", POINTS_COUPON);
         p.set("metadata[points_redeemed]", "100");
+        p.set("metadata[points_customer]", String(redeemer.id));
       } else {
         /* Stripe's native promo-code box in checkout (can't combine with discounts) */
         p.set("allow_promotion_codes", "true");
@@ -490,6 +510,72 @@ export default {
         /^in_[A-Za-z0-9]+$/.test(objId || "")
       ) {
         await processInvoice(env, objId);
+      } else if (
+        (type === "checkout.session.expired" || type === "checkout.session.async_payment_failed") &&
+        /^cs_(live|test)_[A-Za-z0-9]+$/.test(objId || "")
+      ) {
+        /* a checkout that reserved points never paid — give them back */
+        const s = await stripeGet(env, `/v1/checkout/sessions/${objId}`);
+        if (s && s.payment_status !== "paid" && s.metadata && s.metadata.points_redeemed) {
+          const cid = parseInt(s.metadata.points_customer || "0", 10);
+          const pts = parseInt(s.metadata.points_redeemed, 10);
+          if (cid > 0 && pts > 0)
+            await env.DB.prepare(`UPDATE customers SET points = points + ?1 WHERE id = ?2`).bind(pts, cid).run();
+        }
+      } else if (type === "charge.refunded" && /^ch_[A-Za-z0-9]+$/.test(objId || "")) {
+        /* refunds flow back so dashboard revenue stays honest; points are clawed back */
+        const ch = await stripeGet(env, `/v1/charges/${objId}`);
+        if (ch) {
+          const refunded = ch.amount_refunded || 0;
+          let sid = typeof ch.invoice === "string" ? ch.invoice : (ch.invoice && ch.invoice.id) || null;
+          if (!sid && ch.payment_intent) {
+            const ss = await stripeGet(env, `/v1/checkout/sessions?payment_intent=${ch.payment_intent}&limit=1`);
+            sid = ss && ss.data && ss.data[0] && ss.data[0].id;
+          }
+          const o = sid && await env.DB.prepare(
+            `SELECT id, customer_id, amount_total, refunded_cents FROM orders WHERE stripe_session_id = ?1`
+          ).bind(sid).first();
+          if (o && refunded > (o.refunded_cents || 0)) {
+            await env.DB.prepare(
+              `UPDATE orders SET refunded_cents = ?1,
+                 status = CASE WHEN ?1 >= amount_total THEN 'refunded' ELSE status END WHERE id = ?2`
+            ).bind(refunded, o.id).run();
+            const clawback = Math.floor(refunded / 100) - Math.floor((o.refunded_cents || 0) / 100);
+            if (clawback > 0)
+              await env.DB.prepare(`UPDATE customers SET points = MAX(points - ?1, 0) WHERE id = ?2`).bind(clawback, o.customer_id).run();
+            try {
+              await sendEmail(env, "ola@miratortillas.pt", `↩️ reembolso — €${(refunded / 100).toFixed(2)}`,
+                `refund recorded / reembolso registado\n\n€${(refunded / 100).toFixed(2)} of €${(o.amount_total / 100).toFixed(2)}\n\ndashboard revenue is adjusted automatically.\nstripe: https://dashboard.stripe.com/payments`);
+            } catch (e) { /* alert only */ }
+          }
+        }
+      } else if (type === "charge.dispute.created" && /^d[pu]_?[A-Za-z0-9]*$/.test(objId || "")) {
+        /* disputes have a response deadline — this must never be silent */
+        try {
+          const dp = await stripeGet(env, `/v1/disputes/${objId}`);
+          const amt = dp ? ((dp.amount || 0) / 100).toFixed(2) : "?";
+          await sendEmail(env, "ola@miratortillas.pt", `🚨 DISPUTE — €${amt} (responder no Stripe)`,
+            `a customer disputed a charge of €${amt}.\n\nyou have a DEADLINE to respond — open Stripe now:\nhttps://dashboard.stripe.com/disputes\n\nignoring it = automatic loss + €15 fee.`);
+          await sendSMS(env, `mira: 🚨 DISPUTE €${amt} — responde no Stripe (prazo!) dashboard.stripe.com/disputes`);
+        } catch (e) { /* alert only */ }
+      } else if (type === "customer.subscription.deleted" && /^sub_[A-Za-z0-9]+$/.test(objId || "")) {
+        try {
+          const s = await stripeGet(env, `/v1/subscriptions/${objId}`);
+          const scid = s && (typeof s.customer === "string" ? s.customer : s.customer && s.customer.id);
+          const c = scid && await env.DB.prepare(`SELECT email, name FROM customers WHERE stripe_customer_id = ?1`).bind(scid).first();
+          await sendEmail(env, "ola@miratortillas.pt", "👋 assinatura cancelada",
+            `subscription cancelled / assinatura cancelada\n\n${(c && (c.name || c.email)) || objId}\n\nbake sheet updates automatically. maybe worth a friendly "sentimos a tua falta" email later (manual — never automatic).`);
+        } catch (e) { /* alert only */ }
+      } else if (type === "invoice.payment_failed" && /^in_[A-Za-z0-9]+$/.test(objId || "")) {
+        try {
+          const inv = await stripeGet(env, `/v1/invoices/${objId}`);
+          if (inv && inv.status !== "paid" && inv.billing_reason !== "subscription_create") {
+            const amt = ((inv.amount_due || 0) / 100).toFixed(2);
+            await sendEmail(env, "ola@miratortillas.pt", `⚠️ renovação falhou — €${amt}`,
+              `a subscription renewal payment failed / pagamento de renovação falhou\n\n${inv.customer_email || "?"} · €${amt}\n\nStripe retries automatically for ~1 week, then pauses the subscription.\nDON'T deliver this renewal until it shows paid.\nstripe: https://dashboard.stripe.com/invoices/${inv.id}`);
+            await sendSMS(env, `mira: ⚠️ renovação FALHOU €${amt} (${inv.customer_email || "?"}) — não entregar; Stripe vai repetir`);
+          }
+        } catch (e) { /* alert only */ }
       }
       return json({ received: true });
     }
@@ -500,11 +586,13 @@ export default {
       if (!c) return json({ loggedIn: false }, 200);
       const orders = await env.DB.prepare(
         `SELECT amount_total, currency, mode, points_earned, created_at
-         FROM orders WHERE customer_id = ?1 ORDER BY id DESC LIMIT 20`
+         FROM orders WHERE customer_id = ?1 ORDER BY id DESC LIMIT 200`
       ).bind(c.id).all();
       let subs = [];
+      let subsError = false;
       if (c.stripe_customer_id) {
         const list = await stripeGet(env, `/v1/subscriptions?customer=${c.stripe_customer_id}&status=all&limit=10`);
+        if (!list || !list.data) subsError = true; /* Stripe hiccup ≠ "no subscription" */
         if (list && list.data) {
           subs = list.data
             .filter((s) => s.status !== "incomplete_expired" && s.status !== "incomplete")
@@ -540,6 +628,7 @@ export default {
         },
         orders: orders.results || [],
         subscriptions: subs,
+        subsError,
       });
     }
 
@@ -625,10 +714,12 @@ export default {
       const row = await env.DB.prepare(
         `SELECT * FROM login_codes WHERE email = ?1 AND expires_at > datetime('now')`
       ).bind(email).first();
-      if (!row || row.attempts >= 5) return json({ error: "code expired — request a new one" }, 400);
+      if (!row) return json({ error: "code expired — request a new one · código expirado, pede outro" }, 400);
+      if (row.attempts >= 5) return json({ error: "too many tries — request a new code · demasiadas tentativas, pede novo código" }, 400);
       if (row.code !== code) {
         await env.DB.prepare(`UPDATE login_codes SET attempts = attempts + 1 WHERE email = ?1`).bind(email).run();
-        return json({ error: "wrong code" }, 400);
+        const left = 5 - (row.attempts + 1);
+        return json({ error: left > 0 ? `wrong code · código errado (${left} ${left === 1 ? "try" : "tries"} left)` : "too many tries — request a new code · demasiadas tentativas, pede novo código" }, 400);
       }
       await env.DB.prepare(`DELETE FROM login_codes WHERE email = ?1`).bind(email).run();
       const created = await env.DB.prepare(`INSERT OR IGNORE INTO customers (email) VALUES (?1)`).bind(email).run();
@@ -701,16 +792,16 @@ export default {
     if (url.pathname === "/api/admin/stats") {
       if (!(await isAdmin(env, request))) return json({ error: "not authorized" }, 401);
       const allTime = await env.DB.prepare(
-        `SELECT COUNT(*) n, COALESCE(SUM(amount_total),0) cents FROM orders`).first();
+        `SELECT COUNT(*) n, COALESCE(SUM(amount_total - COALESCE(refunded_cents,0)),0) cents FROM orders`).first();
       const week = await env.DB.prepare(
-        `SELECT COUNT(*) n, COALESCE(SUM(amount_total),0) cents FROM orders WHERE created_at >= datetime('now','-7 days')`).first();
+        `SELECT COUNT(*) n, COALESCE(SUM(amount_total - COALESCE(refunded_cents,0)),0) cents FROM orders WHERE created_at >= datetime('now','-7 days')`).first();
       const prevWeek = await env.DB.prepare(
-        `SELECT COUNT(*) n, COALESCE(SUM(amount_total),0) cents FROM orders
+        `SELECT COUNT(*) n, COALESCE(SUM(amount_total - COALESCE(refunded_cents,0)),0) cents FROM orders
          WHERE created_at >= datetime('now','-14 days') AND created_at < datetime('now','-7 days')`).first();
       const today = await env.DB.prepare(
-        `SELECT COUNT(*) n, COALESCE(SUM(amount_total),0) cents FROM orders WHERE date(created_at) = date('now')`).first();
+        `SELECT COUNT(*) n, COALESCE(SUM(amount_total - COALESCE(refunded_cents,0)),0) cents FROM orders WHERE date(created_at) = date('now')`).first();
       const daily = (await env.DB.prepare(
-        `SELECT date(created_at) d, COUNT(*) n, COALESCE(SUM(amount_total),0) cents FROM orders
+        `SELECT date(created_at) d, COUNT(*) n, COALESCE(SUM(amount_total - COALESCE(refunded_cents,0)),0) cents FROM orders
          WHERE date(created_at) >= date('now','-13 days') GROUP BY date(created_at)`).all()).results || [];
       const customers = await env.DB.prepare(
         `SELECT COUNT(*) n, COALESCE(SUM(marketing_ok),0) newsletter FROM customers`).first();
@@ -821,10 +912,11 @@ export default {
     if (url.pathname === "/api/admin/customers") {
       if (!(await isAdmin(env, request))) return json({ error: "not authorized" }, 401);
       const rows = (await env.DB.prepare(
-        `SELECT c.id, c.email, c.name, c.city, c.points, c.marketing_ok, c.wholesale, c.company, c.created_at,
-                COUNT(o.id) orders, COALESCE(SUM(o.amount_total), 0) cents
+        `SELECT c.id, c.email, c.name, c.phone, c.address_line1, c.postal_code, c.city,
+                c.points, c.marketing_ok, c.wholesale, c.company, c.created_at,
+                COUNT(o.id) orders, COALESCE(SUM(o.amount_total - COALESCE(o.refunded_cents,0)), 0) cents
          FROM customers c LEFT JOIN orders o ON o.customer_id = c.id
-         GROUP BY c.id ORDER BY c.id DESC LIMIT 300`).all()).results || [];
+         GROUP BY c.id ORDER BY c.id DESC LIMIT 5000`).all()).results || [];
       return json({ customers: rows });
     }
 

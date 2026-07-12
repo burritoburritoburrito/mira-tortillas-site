@@ -324,17 +324,18 @@
     const co = document.getElementById("cartCheckout");
     co.style.display = skus.length ? "" : "none";
     co.classList.toggle("btn--dead", !!(skus.length && blocked));
-    document.getElementById("cartTotal").textContent = "€" + total;
     const pointsRow = document.getElementById("cartPoints");
+    const cb = document.getElementById("usePoints");
+    let discount = 0;
     if (pointsRow) {
       const eligible = window.__miraMe && window.__miraMe.loggedIn &&
         window.__miraMe.customer.points >= 100 && total >= 8;
       pointsRow.hidden = !eligible;
-      if (!eligible) {
-        const cb = document.getElementById("usePoints");
-        if (cb) cb.checked = false;
-      }
+      if (!eligible && cb) cb.checked = false;
+      if (eligible && cb && cb.checked) discount = 8;
     }
+    const totalEl = document.getElementById("cartTotal");
+    totalEl.textContent = discount ? `−€8 → €${total - discount}` : "€" + total;
     const count = skus.reduce((n, s) => n + cart[s], 0);
     const badge = document.getElementById("cartCount");
     badge.hidden = !count;
@@ -572,6 +573,8 @@
       if (inc) addToCart(inc.dataset.inc, 1);
       if (dec) addToCart(dec.dataset.dec, -1);
     });
+    const upcb = document.getElementById("usePoints");
+    if (upcb) upcb.addEventListener("change", renderCart); /* reflect −€8 in the total live */
     document.getElementById("cartCheckout").addEventListener("click", (e) => {
       if (e.currentTarget.classList.contains("btn--dead")) return; /* paused/sold-out */
       const cart = readCart();

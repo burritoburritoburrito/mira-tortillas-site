@@ -175,7 +175,9 @@
             <span class="mono">${s.amount ? eur(s.amount) : ""} / ${s.interval || ""}${s.renews ? (s.cancelAtEnd ? " · ends: " : " · next: ") + s.renews : ""}</span>
             <span style="flex-basis:100%;display:flex;gap:.5rem;margin-top:.4rem">${subActions(s)}</span>
           </div>`).join("")
-      : `<p class="acct__empty">no subscription yet / ainda sem assinatura</p>`;
+      : me.subsError
+        ? `<p class="acct__empty">couldn't reach the subscription service just now — refresh in a moment / não foi possível carregar, tenta daqui a pouco</p>`
+        : `<p class="acct__empty">no subscription yet / ainda sem assinatura</p>`;
 
     const ordersHtml = me.orders.length
       ? me.orders.map((o) => `

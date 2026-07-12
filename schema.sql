@@ -53,7 +53,8 @@ CREATE TABLE orders (
   shipping_option TEXT,
   points_earned INTEGER DEFAULT 0,
   created_at TEXT DEFAULT (datetime('now'))
-, items TEXT, ship_name TEXT, ship_phone TEXT, ship_line1 TEXT, ship_line2 TEXT, ship_postal TEXT, ship_city TEXT, ship_method TEXT, status TEXT DEFAULT 'new');
+, items TEXT, ship_name TEXT, ship_phone TEXT, ship_line1 TEXT, ship_line2 TEXT, ship_postal TEXT, ship_city TEXT, ship_method TEXT, status TEXT DEFAULT 'new',
+  refunded_cents INTEGER DEFAULT 0);
 
 CREATE TABLE sessions (
   token TEXT PRIMARY KEY,
