@@ -10,7 +10,11 @@
   <link rel="stylesheet" href="styles.css?v=45">
   <style>
     body { cursor: auto; background: var(--cream); }
-    .adm { max-width: 640px; margin: 0 auto; padding: 1.4rem var(--pad) 5rem; }
+    .adm { max-width: 1120px; margin: 0 auto; padding: 1.4rem var(--pad) 5rem; }
+    .adm__grid { display: grid; grid-template-columns: minmax(0, 7fr) minmax(0, 4fr); gap: 1.1rem; align-items: start; }
+    .adm__col { display: grid; gap: 1.1rem; min-width: 0; }
+    .adm__col .box { margin-bottom: 0; }
+    @media (max-width: 900px) { .adm__grid { grid-template-columns: 1fr; } }
     .adm__nav { display: flex; align-items: center; justify-content: space-between; padding: .4rem 0 2rem; }
     .adm__nav img { height: 30px; }
     .adm__nav a { font-family: var(--font-mono); font-size: .85rem; text-decoration: underline; text-underline-offset: .25em; }
@@ -68,57 +72,63 @@
 
     const render = (s) => {
       box.innerHTML = `
-        <div class="box">
-          <h2>store status</h2>
-          <button class="bigbtn ${s.open ? "open" : "paused"}" id="toggle">
-            ${s.open ? "🟢 OPEN — customers can buy (tap to pause)" : "⏸ PAUSED — sales off (tap to open)"}
-          </button>
-          <p class="small">Paused = buy buttons show "coming soon", checkout API rejects everything. Site stays visible.</p>
-        </div>
-        <div class="box">
-          <h2>stock — packs available this round</h2>
-          ${["small","medium","large"].map(k => `
-            <div class="row"><span class="mono">${k}</span>
-              <span class="mono" style="opacity:.6">sold ${s.sold[k]}</span>
-              <span>cap <input type="number" min="0" max="9999" id="cap_${k}" value="${s.caps[k]}"></span>
-              <span class="mono" style="font-weight:700">${Math.max(s.caps[k]-s.sold[k],0)} left</span>
-            </div>`).join("")}
-          <div class="row" style="margin-top:.6rem">
-            <button class="save" id="save">save caps</button>
-            <button class="save ghost" id="reset">reset sold → 0</button>
+      <div class="adm__grid">
+        <div class="adm__col">
+          <div class="box" id="salesBox">
+            <h2>sales</h2>
+            <p class="mono" style="font-size:.8rem;opacity:.6">loading…</p>
           </div>
-          <p class="small">When "left" hits 0 the card shows ESGOTADO and checkout blocks it. Reset sold counters when a new baking round starts.</p>
-          <p class="msg" id="msg"></p>
-        </div>
-        <div class="box" id="salesBox">
-          <h2>sales</h2>
-          <p class="mono" style="font-size:.8rem;opacity:.6">loading…</p>
-        </div>
-        <div class="box" id="promoBox">
-          <h2>promo codes</h2>
-          <div id="promoList"><p class="mono" style="font-size:.8rem;opacity:.6">loading…</p></div>
-          <div class="row" style="flex-wrap:wrap;gap:.5rem;margin-top:.8rem;border-top:2px solid var(--cream-dim);padding-top:.9rem">
-            <input id="pc_code" placeholder="CODE (e.g. AMIGOS10)" maxlength="20"
-              style="font-family:var(--font-mono);text-transform:uppercase;font-size:.85rem;padding:.5rem .7rem;border:2px solid var(--ink);border-radius:10px;flex:1;min-width:150px">
-            <input id="pc_value" type="number" min="1" placeholder="10" style="width:4.5rem">
-            <select id="pc_type" style="font-family:var(--font-mono);font-size:.85rem;padding:.5rem;border:2px solid var(--ink);border-radius:10px">
-              <option value="percent">% off</option>
-              <option value="amount">€ off</option>
-            </select>
-            <input id="pc_max" type="number" min="1" placeholder="uses" title="max uses (optional)" style="width:4.5rem">
-            <input id="pc_days" type="number" min="1" placeholder="days" title="expires in N days (optional)" style="width:4.5rem">
-            <button class="save" id="pc_create">create</button>
+          <div class="box" id="promoBox">
+            <h2>promo codes</h2>
+            <div id="promoList"><p class="mono" style="font-size:.8rem;opacity:.6">loading…</p></div>
+            <div class="row" style="flex-wrap:wrap;gap:.5rem;margin-top:.8rem;border-top:2px solid var(--cream-dim);padding-top:.9rem">
+              <input id="pc_code" placeholder="CODE (e.g. AMIGOS10)" maxlength="20"
+                style="font-family:var(--font-mono);text-transform:uppercase;font-size:.85rem;padding:.5rem .7rem;border:2px solid var(--ink);border-radius:10px;flex:1;min-width:150px">
+              <input id="pc_value" type="number" min="1" placeholder="10" style="width:4.5rem">
+              <select id="pc_type" style="font-family:var(--font-mono);font-size:.85rem;padding:.5rem;border:2px solid var(--ink);border-radius:10px">
+                <option value="percent">% off</option>
+                <option value="amount">€ off</option>
+              </select>
+              <input id="pc_max" type="number" min="1" placeholder="uses" title="max uses (optional)" style="width:4.5rem">
+              <input id="pc_days" type="number" min="1" placeholder="days" title="expires in N days (optional)" style="width:4.5rem">
+              <button class="save" id="pc_create">create</button>
+            </div>
+            <p class="small">Customers type the code in checkout ("Add code"). "uses" + "days" optional. Discount hits products, not shipping; on subscriptions it applies to the first delivery.</p>
+            <p class="msg" id="pc_msg"></p>
           </div>
-          <p class="small">Customers type the code in checkout ("Add code"). "uses" + "days" optional. Discount hits products, not shipping; on subscriptions it applies to the first delivery.</p>
-          <p class="msg" id="pc_msg"></p>
         </div>
-        <div class="box links">
-          <h2>quick links</h2>
-          <a href="https://dashboard.stripe.com/payments" target="_blank">stripe payments</a>
-          <a href="https://dash.cloudflare.com/77f21a888cac91e9fdbbf4d84bd068b1/web-analytics" target="_blank">visitor analytics</a>
-          <a href="https://app.brevo.com" target="_blank">brevo</a>
-          <a href="https://dash.cloudflare.com" target="_blank">cloudflare</a>
-        </div>`;
+        <div class="adm__col">
+          <div class="box">
+            <h2>store status</h2>
+            <button class="bigbtn ${s.open ? "open" : "paused"}" id="toggle">
+              ${s.open ? "🟢 OPEN — customers can buy (tap to pause)" : "⏸ PAUSED — sales off (tap to open)"}
+            </button>
+            <p class="small">Paused = buy buttons show "coming soon", checkout API rejects everything. Site stays visible.</p>
+          </div>
+          <div class="box">
+            <h2>stock — packs this round</h2>
+            ${["small","medium","large"].map(k => `
+              <div class="row"><span class="mono">${k}</span>
+                <span class="mono" style="opacity:.6">sold ${s.sold[k]}</span>
+                <span>cap <input type="number" min="0" max="9999" id="cap_${k}" value="${s.caps[k]}"></span>
+                <span class="mono" style="font-weight:700">${Math.max(s.caps[k]-s.sold[k],0)} left</span>
+              </div>`).join("")}
+            <div class="row" style="margin-top:.6rem">
+              <button class="save" id="save">save caps</button>
+              <button class="save ghost" id="reset">reset sold → 0</button>
+            </div>
+            <p class="small">"left" at 0 = ESGOTADO sticker + checkout blocks it. Reset sold when a new baking round starts.</p>
+            <p class="msg" id="msg"></p>
+          </div>
+          <div class="box links">
+            <h2>quick links</h2>
+            <a href="https://dashboard.stripe.com/payments" target="_blank">stripe payments</a>
+            <a href="https://dash.cloudflare.com/77f21a888cac91e9fdbbf4d84bd068b1/web-analytics" target="_blank">visitor analytics</a>
+            <a href="https://app.brevo.com" target="_blank">brevo</a>
+            <a href="https://dash.cloudflare.com" target="_blank">cloudflare</a>
+          </div>
+        </div>
+      </div>`;
 
       const post = async (body) => {
         document.getElementById("msg").textContent = "saving…";
