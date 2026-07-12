@@ -594,16 +594,22 @@ export default {
     /* owner: promo codes managed from /admin (Stripe coupons + promotion codes under the hood) */
     if (url.pathname === "/api/admin/promos") {
       if (!(await isAdmin(env, request))) return json({ error: "not authorized" }, 401);
-      const list = await stripeGet(env, "/v1/promotion_codes?limit=20&expand[]=data.coupon");
+      /* API ≥2025-09-30: coupon lives under promotion.coupon; older versions: top-level coupon */
+      let list = await stripeGet(env, "/v1/promotion_codes?limit=20&expand[]=data.promotion.coupon");
+      if (!list) list = await stripeGet(env, "/v1/promotion_codes?limit=20&expand[]=data.coupon");
       if (!list) return json({ error: "stripe error" }, 502);
+      const couponOf = (p) => {
+        const c = (p.promotion && p.promotion.coupon) || p.coupon;
+        return c && typeof c === "object" ? c : null;
+      };
       return json({ promos: list.data
-        .filter((p) => p.coupon && !p.coupon.deleted && p.coupon.valid !== false)
-        .map((p) => ({
-          id: p.id, code: p.code, active: p.active, couponId: p.coupon.id,
-          off: p.coupon.percent_off ? p.coupon.percent_off + "%" : "€" + (p.coupon.amount_off / 100),
+        .filter((p) => { const c = couponOf(p); return c && !c.deleted && c.valid !== false; })
+        .map((p) => { const c = couponOf(p); return {
+          id: p.id, code: p.code, active: p.active, couponId: c.id,
+          off: c.percent_off ? c.percent_off + "%" : "€" + (c.amount_off / 100),
           used: p.times_redeemed, max: p.max_redemptions || null,
           expires: p.expires_at ? new Date(p.expires_at * 1000).toISOString().slice(0, 10) : null,
-        })) });
+        }; }) });
     }
 
     if (url.pathname === "/api/admin/promo-create" && request.method === "POST") {
@@ -626,14 +632,25 @@ export default {
       } else return json({ error: "set a % or € discount" }, 400);
       const coupon = await stripePostRaw(env, "/v1/coupons", cp);
       if (!coupon.ok) return json({ error: "coupon: " + coupon.err }, 502);
-      const pc = new URLSearchParams();
-      pc.set("coupon", coupon.data.id);
-      pc.set("code", code);
-      const maxUses = parseInt(b.maxUses, 10);
-      if (maxUses > 0) pc.set("max_redemptions", String(maxUses));
-      const expDays = parseInt(b.expiresDays, 10);
-      if (expDays > 0) pc.set("expires_at", String(Math.floor(Date.now() / 1000) + expDays * 86400));
-      const promo = await stripePostRaw(env, "/v1/promotion_codes", pc);
+      const pcParams = (newShape) => {
+        const pc = new URLSearchParams();
+        if (newShape) { /* API ≥2025-09-30 (clover): polymorphic promotion field */
+          pc.set("promotion[type]", "coupon");
+          pc.set("promotion[coupon]", coupon.data.id);
+        } else {
+          pc.set("coupon", coupon.data.id);
+        }
+        pc.set("code", code);
+        const maxUses = parseInt(b.maxUses, 10);
+        if (maxUses > 0) pc.set("max_redemptions", String(maxUses));
+        const expDays = parseInt(b.expiresDays, 10);
+        if (expDays > 0) pc.set("expires_at", String(Math.floor(Date.now() / 1000) + expDays * 86400));
+        return pc;
+      };
+      let promo = await stripePostRaw(env, "/v1/promotion_codes", pcParams(true));
+      if (!promo.ok && /unknown parameter: promotion/i.test(promo.err || "")) {
+        promo = await stripePostRaw(env, "/v1/promotion_codes", pcParams(false));
+      }
       if (!promo.ok) return json({ error: "code: " + promo.err }, 502);
       return json({ ok: true, code: promo.data.code });
     }

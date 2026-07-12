@@ -98,14 +98,6 @@
           <p class="small">Customers type the code in checkout ("Add code"). "uses" + "days" optional. Discount hits products, not shipping; on subscriptions it applies to the first delivery.</p>
           <p class="msg" id="pc_msg"></p>
         </div>
-        <div class="box">
-          <h2>order alerts</h2>
-          <p style="font-size:.9rem;line-height:1.6">Every paid order → email to ola@ + SMS to you and Mel.</p>
-          <div class="row" style="margin-top:.4rem">
-            <button class="save ghost" id="testSms">send test SMS</button>
-            <span class="msg" id="smsMsg" style="margin:0"></span>
-          </div>
-        </div>
         <div class="box links">
           <h2>quick links</h2>
           <a href="https://dashboard.stripe.com/payments" target="_blank">stripe payments</a>
@@ -131,14 +123,6 @@
       loadStats();
       loadPromos();
       document.getElementById("pc_create").onclick = createPromo;
-      document.getElementById("testSms").onclick = async () => {
-        const m = document.getElementById("smsMsg");
-        m.textContent = "sending…";
-        try {
-          const d = await (await fetch("/api/admin/test-sms")).json();
-          m.textContent = d.sent ? "sent ✓ — " + (d.hint || "check your phones") : (d.error || d.hint || "failed");
-        } catch (e) { m.textContent = "network error"; }
-      };
     };
 
     async function loadPromos() {
