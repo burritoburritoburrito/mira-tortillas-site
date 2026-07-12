@@ -88,6 +88,20 @@ async function stripeGet(env, path) {
   return res.ok ? data : null;
 }
 
+/* like stripePost but surfaces Stripe's error message (admin tools need real errors) */
+async function stripePostRaw(env, path, params) {
+  const res = await fetch(`https://api.stripe.com${path}`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${env.STRIPE_SECRET_KEY}`,
+      "Content-Type": "application/x-www-form-urlencoded",
+    },
+    body: params,
+  });
+  const data = await res.json();
+  return { ok: res.ok, data, err: !res.ok ? (data.error && data.error.message) || "stripe error" : null };
+}
+
 async function stripePost(env, path, params) {
   const res = await fetch(`https://api.stripe.com${path}`, {
     method: "POST",
@@ -582,12 +596,14 @@ export default {
       if (!(await isAdmin(env, request))) return json({ error: "not authorized" }, 401);
       const list = await stripeGet(env, "/v1/promotion_codes?limit=20&expand[]=data.coupon");
       if (!list) return json({ error: "stripe error" }, 502);
-      return json({ promos: list.data.map((p) => ({
-        id: p.id, code: p.code, active: p.active,
-        off: p.coupon.percent_off ? p.coupon.percent_off + "%" : "€" + (p.coupon.amount_off / 100),
-        used: p.times_redeemed, max: p.max_redemptions || null,
-        expires: p.expires_at ? new Date(p.expires_at * 1000).toISOString().slice(0, 10) : null,
-      })) });
+      return json({ promos: list.data
+        .filter((p) => p.coupon && !p.coupon.deleted && p.coupon.valid !== false)
+        .map((p) => ({
+          id: p.id, code: p.code, active: p.active, couponId: p.coupon.id,
+          off: p.coupon.percent_off ? p.coupon.percent_off + "%" : "€" + (p.coupon.amount_off / 100),
+          used: p.times_redeemed, max: p.max_redemptions || null,
+          expires: p.expires_at ? new Date(p.expires_at * 1000).toISOString().slice(0, 10) : null,
+        })) });
     }
 
     if (url.pathname === "/api/admin/promo-create" && request.method === "POST") {
@@ -608,18 +624,18 @@ export default {
         cp.set("amount_off", String(a));
         cp.set("currency", "eur");
       } else return json({ error: "set a % or € discount" }, 400);
-      const coupon = await stripePost(env, "/v1/coupons", cp);
-      if (!coupon) return json({ error: "stripe rejected the coupon" }, 502);
+      const coupon = await stripePostRaw(env, "/v1/coupons", cp);
+      if (!coupon.ok) return json({ error: "coupon: " + coupon.err }, 502);
       const pc = new URLSearchParams();
-      pc.set("coupon", coupon.id);
+      pc.set("coupon", coupon.data.id);
       pc.set("code", code);
       const maxUses = parseInt(b.maxUses, 10);
       if (maxUses > 0) pc.set("max_redemptions", String(maxUses));
       const expDays = parseInt(b.expiresDays, 10);
       if (expDays > 0) pc.set("expires_at", String(Math.floor(Date.now() / 1000) + expDays * 86400));
-      const promo = await stripePost(env, "/v1/promotion_codes", pc);
-      if (!promo) return json({ error: "couldn't create — code already exists?" }, 502);
-      return json({ ok: true, code: promo.code });
+      const promo = await stripePostRaw(env, "/v1/promotion_codes", pc);
+      if (!promo.ok) return json({ error: "code: " + promo.err }, 502);
+      return json({ ok: true, code: promo.data.code });
     }
 
     if (url.pathname === "/api/admin/promo-toggle" && request.method === "POST") {
@@ -630,6 +646,21 @@ export default {
       const r = await stripePost(env, `/v1/promotion_codes/${encodeURIComponent(String(b.id || ""))}`, p);
       if (!r) return json({ error: "stripe error" }, 502);
       return json({ ok: true, active: r.active });
+    }
+
+    /* delete = deactivate the code + delete its coupon (Stripe can't hard-delete promo codes) */
+    if (url.pathname === "/api/admin/promo-delete" && request.method === "POST") {
+      if (!(await isAdmin(env, request))) return json({ error: "not authorized" }, 401);
+      let b; try { b = await request.json(); } catch { return json({ error: "bad json" }, 400); }
+      const off = new URLSearchParams();
+      off.set("active", "false");
+      await stripePost(env, `/v1/promotion_codes/${encodeURIComponent(String(b.id || ""))}`, off);
+      const res = await fetch(`https://api.stripe.com/v1/coupons/${encodeURIComponent(String(b.couponId || ""))}`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${env.STRIPE_SECRET_KEY}` },
+      });
+      if (!res.ok) return json({ error: "couldn't delete the coupon" }, 502);
+      return json({ ok: true });
     }
 
     if (url.pathname === "/api/admin/update" && request.method === "POST") {

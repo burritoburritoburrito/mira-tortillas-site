@@ -98,6 +98,14 @@
           <p class="small">Customers type the code in checkout ("Add code"). "uses" + "days" optional. Discount hits products, not shipping; on subscriptions it applies to the first delivery.</p>
           <p class="msg" id="pc_msg"></p>
         </div>
+        <div class="box">
+          <h2>order alerts</h2>
+          <p style="font-size:.9rem;line-height:1.6">Every paid order → email to ola@ + SMS to you and Mel.</p>
+          <div class="row" style="margin-top:.4rem">
+            <button class="save ghost" id="testSms">send test SMS</button>
+            <span class="msg" id="smsMsg" style="margin:0"></span>
+          </div>
+        </div>
         <div class="box links">
           <h2>quick links</h2>
           <a href="https://dashboard.stripe.com/payments" target="_blank">stripe payments</a>
@@ -123,6 +131,14 @@
       loadStats();
       loadPromos();
       document.getElementById("pc_create").onclick = createPromo;
+      document.getElementById("testSms").onclick = async () => {
+        const m = document.getElementById("smsMsg");
+        m.textContent = "sending…";
+        try {
+          const d = await (await fetch("/api/admin/test-sms")).json();
+          m.textContent = d.sent ? "sent ✓ — " + (d.hint || "check your phones") : (d.error || d.hint || "failed");
+        } catch (e) { m.textContent = "network error"; }
+      };
     };
 
     async function loadPromos() {
@@ -135,13 +151,25 @@
           <div class="row" style="font-size:.88rem">
             <span class="mono" style="font-weight:700;${p.active ? "" : "text-decoration:line-through;opacity:.45"}">${p.code}</span>
             <span class="mono" style="opacity:.7">${p.off} off · used ${p.used}${p.max ? "/" + p.max : ""}${p.expires ? " · until " + p.expires : ""}</span>
-            <button class="save ghost" style="padding:.3rem .9rem;font-size:.72rem" data-promo="${p.id}" data-active="${p.active ? 1 : 0}">${p.active ? "disable" : "re-enable"}</button>
+            <span style="display:flex;gap:.4rem">
+              <button class="save ghost" style="padding:.3rem .9rem;font-size:.72rem" data-promo="${p.id}" data-active="${p.active ? 1 : 0}">${p.active ? "pause" : "re-enable"}</button>
+              <button class="save ghost" style="padding:.3rem .7rem;font-size:.72rem;border-color:var(--oxblood);color:var(--oxblood)" data-del="${p.id}" data-coupon="${p.couponId}">delete</button>
+            </span>
           </div>`).join("") : `<p class="small">no codes yet — make one below, it's live in checkout instantly.</p>`;
         el.querySelectorAll("[data-promo]").forEach((b) => {
           b.onclick = async () => {
             b.disabled = true;
             await fetch("/api/admin/promo-toggle", { method: "POST", headers: { "Content-Type": "application/json" },
               body: JSON.stringify({ id: b.dataset.promo, active: b.dataset.active !== "1" }) });
+            loadPromos();
+          };
+        });
+        el.querySelectorAll("[data-del]").forEach((b) => {
+          b.onclick = async () => {
+            if (!confirm("Delete this code for good? Customers can no longer use it.")) return;
+            b.disabled = true;
+            await fetch("/api/admin/promo-delete", { method: "POST", headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ id: b.dataset.del, couponId: b.dataset.coupon }) });
             loadPromos();
           };
         });
