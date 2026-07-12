@@ -543,8 +543,20 @@ export default {
         return json({ error: "wrong code" }, 400);
       }
       await env.DB.prepare(`DELETE FROM login_codes WHERE email = ?1`).bind(email).run();
-      await env.DB.prepare(`INSERT OR IGNORE INTO customers (email) VALUES (?1)`).bind(email).run();
+      const created = await env.DB.prepare(`INSERT OR IGNORE INTO customers (email) VALUES (?1)`).bind(email).run();
       const customer = await env.DB.prepare(`SELECT * FROM customers WHERE email = ?1`).bind(email).first();
+      /* mailing-list opt-in ticked on the sign-in form (only ever upgrades to yes) */
+      if (body.newsletter === true) {
+        await env.DB.prepare(`UPDATE customers SET marketing_ok = 1 WHERE id = ?1`).bind(customer.id).run();
+      }
+      /* owner heads-up on brand-new profiles (never blocks the login) */
+      if (created.meta.changes > 0) {
+        try {
+          const n = await env.DB.prepare(`SELECT COUNT(*) n FROM customers`).first();
+          await sendEmail(env, "ola@miratortillas.pt", `🌯 new tortilla lover — ${email}`,
+            `new account on miratortillas.pt\n\n${email}${body.newsletter === true ? "\njoined the mailing list ✓" : ""}\n\ncustomers total: ${n.n}\ndashboard: https://miratortillas.pt/admin`);
+        } catch (e) { /* notification failure must never block login */ }
+      }
       const cookie = await createSession(env, customer.id);
       return json({ ok: true }, 200, { "Set-Cookie": cookie });
     }
