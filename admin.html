@@ -430,7 +430,47 @@
           ${rows ? `<h2 style="margin-top:1.4rem">recent orders</h2>${rows}` : ""}
           <div class="row" style="margin-top:.8rem"><span class="mono" style="opacity:.6">all time</span><span class="mono" style="font-weight:700">${eur(s.allTime.cents)} · ${s.allTime.n} order${s.allTime.n === 1 ? "" : "s"}</span></div>
           <p class="small">money-truth (refunds, payouts) lives in <a href="https://dashboard.stripe.com/payments" target="_blank" style="text-decoration:underline">Stripe</a> · visitors in <a href="https://dash.cloudflare.com/77f21a888cac91e9fdbbf4d84bd068b1/web-analytics" target="_blank" style="text-decoration:underline">web analytics</a>.</p>`;
+        loadVisitors(s);
       } catch (e) { el.querySelector("p").textContent = "stats failed to load"; }
+    }
+
+    async function loadVisitors(stats) {
+      const holder = document.getElementById("visitorsBlock");
+      if (!holder) return;
+      try {
+        const d = await (await fetch("/api/admin/visitors")).json();
+        if (d.error) { holder.innerHTML = `<p class="small">visitors: ${d.error}</p>`; return; }
+        const today = new Date();
+        const key = (i) => new Date(today.getTime() - i * 86400000).toISOString().slice(0, 10);
+        const find = (k) => d.daily.find((r) => r.date === k) || { visits: 0, views: 0 };
+        let v7 = 0, vPrev = 0, pv7 = 0;
+        for (let i = 0; i < 7; i++) { const r = find(key(i)); v7 += r.visits; pv7 += r.views; }
+        for (let i = 7; i < 14; i++) vPrev += find(key(i)).visits;
+        const delta = !vPrev && !v7 ? '<span class="kpi__chip kpi__chip--flat">—</span>'
+          : !vPrev ? '<span class="kpi__chip kpi__chip--up">new</span>'
+          : (() => { const pc = Math.round(((v7 - vPrev) / vPrev) * 100); return `<span class="kpi__chip ${pc >= 0 ? "kpi__chip--up" : "kpi__chip--down"}">${pc >= 0 ? "▲" : "▼"} ${Math.abs(pc)}%</span>`; })();
+        const conv = v7 ? ((stats.week.n / v7) * 100).toFixed(1) + "%" : "—";
+        const days = []; for (let i = 13; i >= 0; i--) days.push({ k: key(i), v: find(key(i)).visits });
+        const max = Math.max(...days.map((x) => x.v), 1);
+        const W = 560, H = 70, PAD = 6, bw = Math.floor((W - PAD * 2) / 14) - 2;
+        const bars = `<svg viewBox="0 0 ${W} ${H}" style="width:100%;height:auto;display:block" role="img" aria-label="visits per day">
+            <line x1="${PAD}" y1="${H - 14}" x2="${W - PAD}" y2="${H - 14}" stroke="var(--cream-dim)" stroke-width="2"></line>
+            ${days.map((x, i) => { const h = x.v ? Math.max(Math.round((x.v / max) * (H - 22)), 3) : 2; const px = PAD + i * (bw + 2); return `<g><title>${x.k.slice(5)} — ${x.v} visit${x.v === 1 ? "" : "s"}</title><rect x="${px}" y="${H - 14 - h}" width="${bw}" height="${h}" rx="3" fill="${x.v ? "#20844c" : "var(--cream-dim)"}"></rect></g>`; }).join("")}
+          </svg>`;
+        const geo = d.countries.filter((c) => c.country).map((c) => `${c.country} ${c.visits}`).join(" · ") || "no visits recorded this week yet";
+        const dev = d.devices.filter((x) => x.device).map((x) => `${/mobile|smartphone|tablet/i.test(x.device) ? "📱" : "💻"} ${x.device} ${x.visits}`).join(" · ");
+        holder.innerHTML = `
+          <div class="chart" style="margin-top:1.2rem">
+            <div class="chart__head"><span class="kpi__label">visitors — last 14 days</span></div>
+            <div class="kpi-grid" style="margin:.5rem 0 .8rem">
+              <div class="kpi"><span class="kpi__label">visits · 7d</span><span class="kpi__value">${v7}</span><span class="kpi__foot">${delta}<span class="kpi__sub">vs prior week</span></span></div>
+              <div class="kpi"><span class="kpi__label">pageviews · 7d</span><span class="kpi__value">${pv7}</span></div>
+              <div class="kpi"><span class="kpi__label">conversion · 7d</span><span class="kpi__value">${conv}</span><span class="kpi__sub">orders ÷ visits</span></div>
+            </div>
+            ${bars}
+            <p class="small" style="margin-top:.5rem">${geo}${dev ? " &nbsp;·&nbsp; " + dev : ""}</p>
+          </div>`;
+      } catch (e) { holder.innerHTML = `<p class="small">visitors failed to load</p>`; }
     }
 
     render(st);
