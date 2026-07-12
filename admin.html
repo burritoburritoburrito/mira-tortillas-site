@@ -269,17 +269,40 @@
             ${allZero ? `<p class="small" style="margin-top:.4rem">fills in as orders land — every paid order also pings your phones.</p>` : ""}
           </div>`;
 
+        const itemsTag = (o) => {
+          try {
+            const its = JSON.parse(o.items || "[]");
+            const tag = its.map((it) => `${it.q}${(it.sku || it.d || "?")[0].toUpperCase()}`).join(" ");
+            return tag ? `<span class="mono" style="opacity:.55;font-size:.72rem">${tag}</span>` : "";
+          } catch (e) { return ""; }
+        };
         const rows = s.recent.length ? s.recent.map((o) => `
           <div class="row" style="font-size:.85rem">
             <span class="mono" style="opacity:.6">${o.created_at.slice(5, 16)}</span>
             <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${o.name || o.email}${o.city ? " · " + o.city : ""}</span>
+            ${itemsTag(o)}
             <span class="mono" style="font-weight:700">${eur(o.amount_total)}${o.mode === "subscription" ? " ↻" : ""}</span>
           </div>`).join("") : "";
 
+        const sz = s.bySize || {};
+        const szMax = Math.max(sz.small || 0, sz.medium || 0, sz.large || 0);
+        const szBars = szMax ? `
+          <div class="chart" style="margin-top:1rem">
+            <div class="chart__head"><span class="kpi__label">packs sold by size — 30 days</span></div>
+            ${["small","medium","large"].map((k) => `
+              <div class="row" style="padding:.25rem 0;gap:.7rem">
+                <span class="mono" style="width:4.2rem;font-size:.78rem">${k}</span>
+                <span style="flex:1;height:14px;border-radius:4px;background:var(--cream-dim);overflow:hidden">
+                  <span style="display:block;height:100%;width:${Math.round(((sz[k] || 0) / szMax) * 100)}%;background:var(--oxblood);border-radius:4px"></span>
+                </span>
+                <span class="mono" style="font-weight:700;width:2.5rem;text-align:right">${sz[k] || 0}</span>
+              </div>`).join("")}
+          </div>` : "";
         el.innerHTML = `
           <h2>sales</h2>
           ${tiles}
           ${chart}
+          ${szBars}
           ${rows ? `<h2 style="margin-top:1.4rem">recent orders</h2>${rows}` : ""}
           <div class="row" style="margin-top:.8rem"><span class="mono" style="opacity:.6">all time</span><span class="mono" style="font-weight:700">${eur(s.allTime.cents)} · ${s.allTime.n} order${s.allTime.n === 1 ? "" : "s"}</span></div>
           <p class="small">money-truth (refunds, payouts) lives in <a href="https://dashboard.stripe.com/payments" target="_blank" style="text-decoration:underline">Stripe</a> · visitors in <a href="https://dash.cloudflare.com/77f21a888cac91e9fdbbf4d84bd068b1/web-analytics" target="_blank" style="text-decoration:underline">web analytics</a>.</p>`;

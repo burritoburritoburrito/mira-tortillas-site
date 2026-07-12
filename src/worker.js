@@ -190,10 +190,16 @@ async function processSession(env, session) {
   const paid = session.payment_status === "paid" || session.payment_status === "no_payment_required";
   if (paid) {
     const points = Math.floor((session.amount_total || 0) / 100);
+    /* what's inside the order — feeds sales-by-size analytics + the future bake sheet */
+    const itemsJson = JSON.stringify(((session.line_items && session.line_items.data) || []).map((li) => ({
+      sku: PRICE_SKU[(li.price && li.price.id) || ""] || null,
+      d: (li.description || "").slice(0, 40),
+      q: li.quantity || 1,
+    })));
     const inserted = await env.DB.prepare(
-      `INSERT OR IGNORE INTO orders (customer_id, stripe_session_id, amount_total, currency, mode, points_earned)
-       VALUES (?1, ?2, ?3, ?4, ?5, ?6)`
-    ).bind(customer.id, session.id, session.amount_total || 0, session.currency || "eur", session.mode, points).run();
+      `INSERT OR IGNORE INTO orders (customer_id, stripe_session_id, amount_total, currency, mode, points_earned, items)
+       VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)`
+    ).bind(customer.id, session.id, session.amount_total || 0, session.currency || "eur", session.mode, points, itemsJson).run();
     if (inserted.meta.changes > 0) {
       if (points > 0)
         await env.DB.prepare(`UPDATE customers SET points = points + ?1 WHERE id = ?2`).bind(points, customer.id).run();
@@ -593,10 +599,24 @@ export default {
         `SELECT COUNT(*) n, COALESCE(SUM(marketing_ok),0) newsletter FROM customers`).first();
       const newCustomers = await env.DB.prepare(
         `SELECT COUNT(*) n FROM customers WHERE created_at >= datetime('now','-7 days')`).first();
+      /* packs sold by size, last 30 days (from order items JSON) */
+      const itemRows = (await env.DB.prepare(
+        `SELECT items FROM orders WHERE created_at >= datetime('now','-30 days') AND items IS NOT NULL`).all()).results || [];
+      const bySize = { small: 0, medium: 0, large: 0 };
+      for (const r of itemRows) {
+        try {
+          for (const it of JSON.parse(r.items)) {
+            const s = it.sku || (/pequen|small/i.test(it.d || "") ? "small"
+              : /m[eé]di|medium/i.test(it.d || "") ? "medium"
+              : /grand|large/i.test(it.d || "") ? "large" : null);
+            if (s && bySize[s] !== undefined) bySize[s] += it.q || 1;
+          }
+        } catch (e) { /* ignore malformed rows */ }
+      }
       const recent = (await env.DB.prepare(
-        `SELECT o.created_at, o.amount_total, o.mode, o.points_earned, c.email, c.name, c.city
+        `SELECT o.created_at, o.amount_total, o.mode, o.points_earned, o.items, c.email, c.name, c.city
          FROM orders o JOIN customers c ON c.id = o.customer_id ORDER BY o.id DESC LIMIT 15`).all()).results || [];
-      return json({ allTime, week, prevWeek, today, daily, customers, newCustomers, recent });
+      return json({ allTime, week, prevWeek, today, daily, customers, newCustomers, bySize, recent });
     }
 
     /* owner: promo codes managed from /admin (Stripe coupons + promotion codes under the hood) */
