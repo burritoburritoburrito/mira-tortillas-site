@@ -2,3 +2,6 @@ src
 wrangler.jsonc
 .gitignore
 .dev.vars
+.git
+.wrangler
+schema.sql

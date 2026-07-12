@@ -20,11 +20,16 @@ const PRICES = {
   "price_1Tp6jo2KMRu6Fi6hOAHj9Uo4": { mode: "subscription", cad: "monthly" },  // large
 };
 
-/* sku per one-off price id — stock caps + sold-out accounting */
+/* sku per price id — stock caps + sold-out accounting + sales-by-size.
+   Includes subscription prices so every pack line item is tagged at write time
+   (order items are unbackfillable — a null sku would vanish from analytics). */
 const PRICE_SKU = {
   "price_1Tp6jR2KMRu6Fi6htz56SDPI": "small",
   "price_1Tp6jS2KMRu6Fi6hI68OSLWD": "medium",
   "price_1Tp6jU2KMRu6Fi6hj58ozoRh": "large",
+  "price_1Tp6je2KMRu6Fi6hri2mQkM8": "small",  "price_1Tp6jf2KMRu6Fi6hnOZhEOkg": "small",  "price_1Tp6jg2KMRu6Fi6h26hVNFiV": "small",
+  "price_1Tp6jh2KMRu6Fi6hvlaea75S": "medium", "price_1Tp6jj2KMRu6Fi6hCJSEMrlK": "medium", "price_1Tp6jk2KMRu6Fi6h7svhoyec": "medium",
+  "price_1Tp6jm2KMRu6Fi6hJ0jJ2qVn": "large",  "price_1Tp6jn2KMRu6Fi6h47lAOYZs": "large",  "price_1Tp6jo2KMRu6Fi6hOAHj9Uo4": "large",
 };
 
 /* owner dashboard access (email-code login as one of these = admin) */
@@ -43,7 +48,9 @@ async function getSettings(env) {
 
 async function isAdmin(env, request) {
   const c = await currentCustomer(env, request);
-  return !!(c && ADMIN_EMAILS.includes((c.email || "").toLowerCase()));
+  /* admin requires a code-VERIFIED session (proved inbox control), not a
+     claim-minted one — a Stripe-checkout email is not an authenticated identity */
+  return !!(c && c._verified === 1 && ADMIN_EMAILS.includes((c.email || "").toLowerCase()));
 }
 
 const json = (data, status = 200, extraHeaders = {}) =>
@@ -65,18 +72,19 @@ async function currentCustomer(env, request) {
   const token = getCookie(request, "mira_session");
   if (!token) return null;
   const row = await env.DB.prepare(
-    `SELECT c.* FROM sessions s JOIN customers c ON c.id = s.customer_id
+    `SELECT c.*, s.verified AS _verified FROM sessions s JOIN customers c ON c.id = s.customer_id
      WHERE s.token = ?1 AND s.expires_at > datetime('now')`
   ).bind(token).first();
   return row || null;
 }
 
-async function createSession(env, customerId) {
+/* verified=1 = email-code login (proved inbox); verified=0 = claim after checkout (weak identity) */
+async function createSession(env, customerId, verified = 0) {
   const token = crypto.randomUUID() + crypto.randomUUID().replace(/-/g, "");
   await env.DB.prepare(
-    `INSERT INTO sessions (token, customer_id, expires_at)
-     VALUES (?1, ?2, datetime('now', '+${SESSION_DAYS} days'))`
-  ).bind(token, customerId).run();
+    `INSERT INTO sessions (token, customer_id, verified, expires_at)
+     VALUES (?1, ?2, ?3, datetime('now', '+${SESSION_DAYS} days'))`
+  ).bind(token, customerId, verified ? 1 : 0).run();
   return `mira_session=${token}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=${SESSION_DAYS * 86400}`;
 }
 
@@ -190,16 +198,26 @@ async function processSession(env, session) {
   const paid = session.payment_status === "paid" || session.payment_status === "no_payment_required";
   if (paid) {
     const points = Math.floor((session.amount_total || 0) / 100);
-    /* what's inside the order — feeds sales-by-size analytics + the future bake sheet */
+    /* what's inside the order — feeds sales-by-size analytics + the bake sheet.
+       Delivery line items carry sku:"delivery" so they're skipped in pack tallies. */
+    const isDelivery = (li) => /entrega|envio|delivery|shipping/i.test(li.description || "");
     const itemsJson = JSON.stringify(((session.line_items && session.line_items.data) || []).map((li) => ({
-      sku: PRICE_SKU[(li.price && li.price.id) || ""] || null,
+      sku: PRICE_SKU[(li.price && li.price.id) || ""] || (isDelivery(li) ? "delivery" : null),
       d: (li.description || "").slice(0, 40),
       q: li.quantity || 1,
     })));
+    /* chosen shipping option (Lisboa €5 / continente €10) from the paid session */
+    const sc = session.shipping_cost || {};
+    const shipMethod = (sc.shipping_rate && typeof sc.shipping_rate === "object" && sc.shipping_rate.display_name) ||
+      (session.shipping_options && session.shipping_options[0] && session.shipping_options[0].shipping_rate_data && session.shipping_options[0].shipping_rate_data.display_name) || null;
     const inserted = await env.DB.prepare(
-      `INSERT OR IGNORE INTO orders (customer_id, stripe_session_id, amount_total, currency, mode, points_earned, items)
-       VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)`
-    ).bind(customer.id, session.id, session.amount_total || 0, session.currency || "eur", session.mode, points, itemsJson).run();
+      `INSERT OR IGNORE INTO orders
+        (customer_id, stripe_session_id, amount_total, currency, mode, points_earned, items,
+         ship_name, ship_phone, ship_line1, ship_line2, ship_postal, ship_city, ship_method, status)
+       VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, 'new')`
+    ).bind(customer.id, session.id, session.amount_total || 0, session.currency || "eur", session.mode, points, itemsJson,
+      cd.name || null, cd.phone || null, addr.line1 || null, addr.line2 || null,
+      addr.postal_code || null, addr.city || null, shipMethod).run();
     if (inserted.meta.changes > 0) {
       if (points > 0)
         await env.DB.prepare(`UPDATE customers SET points = points + ?1 WHERE id = ?2`).bind(points, customer.id).run();
@@ -220,13 +238,51 @@ async function processSession(env, session) {
         const lis = (session.line_items && session.line_items.data) || [];
         const itemsTxt = lis.map((li) => `${li.quantity}× ${li.description || (li.price && li.price.id) || "item"}`).join("\n") || `(${session.mode})`;
         const total = ((session.amount_total || 0) / 100).toFixed(2);
+        const packs = lis.filter((li) => PRICE_SKU[(li.price && li.price.id) || ""]).map((li) => li.quantity).reduce((a, b) => a + b, 0);
         await sendEmail(env, "ola@miratortillas.pt", `🌯 nova encomenda — €${total}`,
-          `nova encomenda / new order\n\n${itemsTxt}\n\ntotal: €${total} · ${session.mode}\n\n${cd.name || "?"} · ${email}\n${[addr.line1, addr.line2, [addr.postal_code, addr.city].filter(Boolean).join(" ")].filter(Boolean).join("\n")}\n\nstripe: https://dashboard.stripe.com/payments\ndashboard: https://miratortillas.pt/admin`);
-        await sendSMS(env, `mira: nova encomenda €${total} — ${cd.name || email} (${lis.map((li) => li.quantity).reduce((a, b) => a + b, 0) || "?"} packs)`);
+          `nova encomenda / new order\n\n${itemsTxt}\n\ntotal: €${total} · ${session.mode}\nentrega / shipping: ${shipMethod || "—"}\n\n${cd.name || "?"} · ${email}${cd.phone ? " · " + cd.phone : ""}\n${[addr.line1, addr.line2, [addr.postal_code, addr.city].filter(Boolean).join(" ")].filter(Boolean).join("\n")}\n\nstripe: https://dashboard.stripe.com/payments\ndashboard: https://miratortillas.pt/admin`);
+        await sendSMS(env, `mira: nova encomenda €${total} — ${cd.name || email} (${packs || "?"} packs)`);
       } catch (e) { /* notification failure must never fail an order */ }
     }
   }
   return customer;
+}
+
+/* subscription RENEWALS arrive as invoice.paid (no checkout session) — record them
+   the same way so revenue/points/alerts/backup all include recurring charges.
+   Untrusted payload: caller only passes the invoice id; we re-fetch from Stripe. */
+async function processInvoice(env, invoiceId) {
+  const inv = await stripeGet(env, `/v1/invoices/${invoiceId}?expand[]=lines`);
+  if (!inv || inv.status !== "paid") return;
+  /* the very first subscription invoice is already covered by the checkout.session flow — skip it */
+  if (inv.billing_reason === "subscription_create") return;
+  const email = (inv.customer_email || "").toLowerCase();
+  if (!email) return;
+  const customer = await env.DB.prepare(`SELECT * FROM customers WHERE email = ?1`).bind(email).first();
+  if (!customer) return; /* unknown customer — first order always precedes a renewal */
+  const points = Math.floor((inv.amount_paid || 0) / 100);
+  const lines = (inv.lines && inv.lines.data) || [];
+  const isDelivery = (l) => /entrega|envio|delivery|shipping/i.test((l.description || "") + " " + ((l.price && l.price.nickname) || ""));
+  const itemsJson = JSON.stringify(lines.map((l) => ({
+    sku: PRICE_SKU[(l.price && l.price.id) || ""] || (isDelivery(l) ? "delivery" : null),
+    d: (l.description || "").slice(0, 40),
+    q: l.quantity || 1,
+  })));
+  const inserted = await env.DB.prepare(
+    `INSERT OR IGNORE INTO orders (customer_id, stripe_session_id, amount_total, currency, mode, points_earned, items, status)
+     VALUES (?1, ?2, ?3, ?4, 'subscription', ?5, ?6, 'new')`
+  ).bind(customer.id, inv.id, inv.amount_paid || 0, inv.currency || "eur", points, itemsJson).run();
+  if (inserted.meta.changes === 0) return; /* already recorded (idempotent on invoice id) */
+  if (points > 0)
+    await env.DB.prepare(`UPDATE customers SET points = points + ?1 WHERE id = ?2`).bind(points, customer.id).run();
+  try {
+    const total = ((inv.amount_paid || 0) / 100).toFixed(2);
+    const itemsTxt = lines.map((l) => `${l.quantity || 1}× ${l.description || "item"}`).join("\n");
+    await sendEmail(env, "ola@miratortillas.pt", `🔁 renovação de assinatura — €${total}`,
+      `subscription renewal / renovação\n\n${itemsTxt}\n\ntotal: €${total}\n\n${customer.name || "?"} · ${email}${customer.phone ? " · " + customer.phone : ""}\n${[customer.address_line1, [customer.postal_code, customer.city].filter(Boolean).join(" ")].filter(Boolean).join("\n")}\n\ndashboard: https://miratortillas.pt/admin`);
+    const packs = lines.filter((l) => PRICE_SKU[(l.price && l.price.id) || ""]).map((l) => l.quantity || 1).reduce((a, b) => a + b, 0);
+    await sendSMS(env, `mira: renovação €${total} — ${customer.name || email} (${packs || "?"} packs)`);
+  } catch (e) { /* never block */ }
 }
 
 export default {
@@ -248,8 +304,9 @@ export default {
       if (alert)
         await sendEmail(env, "ola@miratortillas.pt", "⚠️ mira self-check FAILED", alert + "\ncheck: https://dash.cloudflare.com → mira-shop");
       if (new Date().getUTCDay() === 1) {
+        const cell = (v) => '"' + String(v ?? "").replace(/"/g, '""') + '"'; /* RFC-4180 CSV escaping */
         const csv = (rows) => rows.length
-          ? Object.keys(rows[0]).join(",") + "\n" + rows.map((r) => Object.values(r).map((v) => JSON.stringify(v ?? "")).join(",")).join("\n")
+          ? Object.keys(rows[0]).join(",") + "\n" + rows.map((r) => Object.values(r).map(cell).join(",")).join("\n")
           : "(empty)";
         const cust = (await env.DB.prepare(`SELECT * FROM customers`).all()).results || [];
         const ord = (await env.DB.prepare(`SELECT * FROM orders`).all()).results || [];
@@ -403,9 +460,15 @@ export default {
       const customer = await processSession(env, session);
       if (!customer) return json({ error: "no email on session" }, 400);
 
-      const cookie = await createSession(env, customer.id);
-      const fresh = await env.DB.prepare(`SELECT points FROM customers WHERE id = ?1`).bind(customer.id).first();
-      return json({ ok: true, email: customer.email, name: customer.name, points: fresh.points }, 200, { "Set-Cookie": cookie });
+      const paid = session.payment_status === "paid" || session.payment_status === "no_payment_required";
+      /* auto-login ONLY on the fresh post-checkout redirect (bounds the leaked-session_id
+         replay window); never a verified session — a checkout email isn't proven identity */
+      const fresh = String(Date.now() / 1000 - (session.created || 0) < 3600); /* < 1h old */
+      let cookie = null;
+      if (fresh === "true") cookie = await createSession(env, customer.id, 0);
+      const bal = await env.DB.prepare(`SELECT points FROM customers WHERE id = ?1`).bind(customer.id).first();
+      return json({ ok: true, paid, email: customer.email, name: customer.name, points: bal.points },
+        200, cookie ? { "Set-Cookie": cookie } : {});
     }
 
     /* Stripe webhook: records orders/points even if the buyer never returns to the site
@@ -422,6 +485,11 @@ export default {
       ) {
         const session = await stripeGet(env, `/v1/checkout/sessions/${objId}?expand[]=line_items`);
         if (session && session.status === "complete") await processSession(env, session);
+      } else if (
+        (type === "invoice.paid" || type === "invoice.payment_succeeded") &&
+        /^in_[A-Za-z0-9]+$/.test(objId || "")
+      ) {
+        await processInvoice(env, objId);
       }
       return json({ received: true });
     }
@@ -441,18 +509,24 @@ export default {
           subs = list.data
             .filter((s) => s.status !== "incomplete_expired" && s.status !== "incomplete")
             .map((s) => {
-              const it = s.items && s.items.data[0];
+              const items = (s.items && s.items.data) || [];
+              const it = items[0];
+              /* sum ALL line items (box sizes + the recurring delivery fee), not just the first */
+              const amount = items.reduce((t, i) => t + ((i.price && i.price.unit_amount) || 0) * (i.quantity || 1), 0) || null;
+              const plan = items.map((i) => i.price && i.price.nickname).filter(Boolean).join(" + ") || "subscription";
+              /* current_period_end moved to item level in Stripe API ≥2025-03-31 */
+              const periodEnd = s.current_period_end || (it && it.current_period_end);
               return {
                 id: s.id,
                 cancelAtEnd: !!s.cancel_at_period_end,
                 paused: !!s.pause_collection,
                 status: s.status,
-                plan: (it && it.price && it.price.nickname) || "subscription",
-                amount: it && it.price ? it.price.unit_amount * (it.quantity || 1) : null,
+                plan,
+                amount,
                 interval: it && it.price && it.price.recurring
                   ? `${it.price.recurring.interval_count > 1 ? it.price.recurring.interval_count + " " : ""}${it.price.recurring.interval}`
                   : null,
-                renews: s.current_period_end ? new Date(s.current_period_end * 1000).toISOString().slice(0, 10) : null,
+                renews: periodEnd ? new Date(periodEnd * 1000).toISOString().slice(0, 10) : null,
               };
             });
         }
@@ -496,7 +570,7 @@ export default {
       if (!c.stripe_customer_id) return json({ error: "no payment profile yet — appears after your first order" }, 400);
       const p = new URLSearchParams();
       p.set("customer", c.stripe_customer_id);
-      p.set("return_url", `${url.origin}/account`);
+      p.set("return_url", `${url.origin}/account#payments`);
       const sess = await stripePost(env, "/v1/billing_portal/sessions", p);
       if (!sess) return json({ error: "portal unavailable" }, 502);
       return json({ url: sess.url });
@@ -510,18 +584,28 @@ export default {
       if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return json({ error: "invalid email" }, 400);
       if (!env.BREVO_API_KEY)
         return json({ error: "email login isn't connected yet — your account signs in automatically after any order" }, 503);
-      /* max one code per email per minute */
+      /* throttle: one code per email/minute AND per-IP burst AND a global daily
+         ceiling — stops flooding arbitrary inboxes + draining Brevo credits */
       const recent = await env.DB.prepare(
         `SELECT 1 AS hit FROM login_codes WHERE email = ?1 AND created_at > datetime('now', '-60 seconds')`
       ).bind(email).first();
       if (recent) return json({ error: "code already sent — wait a minute before requesting another" }, 429);
-      const code = String(Math.floor(100000 + Math.random() * 900000));
+      const ip = request.headers.get("CF-Connecting-IP") || "?";
+      const ipHits = await env.DB.prepare(
+        `SELECT COUNT(*) n FROM login_codes WHERE ip = ?1 AND created_at > datetime('now', '-1 hour')`
+      ).bind(ip).first().catch(() => ({ n: 0 }));
+      if ((ipHits.n || 0) >= 8) return json({ error: "too many requests — try again later" }, 429);
+      const dayHits = await env.DB.prepare(
+        `SELECT COUNT(*) n FROM login_codes WHERE created_at > datetime('now', '-1 day')`
+      ).first().catch(() => ({ n: 0 }));
+      if ((dayHits.n || 0) >= 500) return json({ error: "login temporarily unavailable — try again later" }, 429);
+      const code = String(crypto.getRandomValues(new Uint32Array(1))[0] % 1000000).padStart(6, "0");
       await env.DB.prepare(
-        `INSERT INTO login_codes (email, code, attempts, expires_at)
-         VALUES (?1, ?2, 0, datetime('now', '+10 minutes'))
+        `INSERT INTO login_codes (email, code, attempts, ip, expires_at)
+         VALUES (?1, ?2, 0, ?3, datetime('now', '+10 minutes'))
          ON CONFLICT(email) DO UPDATE SET code = excluded.code, attempts = 0,
-           expires_at = excluded.expires_at, created_at = datetime('now')`
-      ).bind(email, code).run();
+           ip = excluded.ip, expires_at = excluded.expires_at, created_at = datetime('now')`
+      ).bind(email, code, ip).run();
       const sent = await sendEmail(env, email, "your mira login code",
         `your login code: ${code}\n\nit's valid for 10 minutes.\n\no teu código de acesso: ${code} (válido 10 minutos)\n\n— mira tortillas`);
       if (!sent) return json({ error: "couldn't send the email — try again in a minute" }, 502);
@@ -557,7 +641,7 @@ export default {
             `new account on miratortillas.pt\n\n${email}${body.newsletter === true ? "\njoined the mailing list ✓" : ""}\n\ncustomers total: ${n.n}\ndashboard: https://miratortillas.pt/admin`);
         } catch (e) { /* notification failure must never block login */ }
       }
-      const cookie = await createSession(env, customer.id);
+      const cookie = await createSession(env, customer.id, 1); /* code-verified = trusted */
       return json({ ok: true }, 200, { "Set-Cookie": cookie });
     }
 
@@ -623,7 +707,7 @@ export default {
         `SELECT COUNT(*) n, COALESCE(SUM(amount_total),0) cents FROM orders WHERE date(created_at) = date('now')`).first();
       const daily = (await env.DB.prepare(
         `SELECT date(created_at) d, COUNT(*) n, COALESCE(SUM(amount_total),0) cents FROM orders
-         WHERE created_at >= datetime('now','-13 days') GROUP BY date(created_at)`).all()).results || [];
+         WHERE date(created_at) >= date('now','-13 days') GROUP BY date(created_at)`).all()).results || [];
       const customers = await env.DB.prepare(
         `SELECT COUNT(*) n, COALESCE(SUM(marketing_ok),0) newsletter FROM customers`).first();
       const newCustomers = await env.DB.prepare(
@@ -646,6 +730,52 @@ export default {
         `SELECT o.created_at, o.amount_total, o.mode, o.points_earned, o.items, c.email, c.name, c.city
          FROM orders o JOIN customers c ON c.id = o.customer_id ORDER BY o.id DESC LIMIT 15`).all()).results || [];
       return json({ allTime, week, prevWeek, today, daily, customers, newCustomers, bySize, recent });
+    }
+
+    /* owner: orders to fulfill — the pack/deliver list, newest first, with address + status */
+    if (url.pathname === "/api/admin/orders") {
+      if (!(await isAdmin(env, request))) return json({ error: "not authorized" }, 401);
+      const rows = (await env.DB.prepare(
+        `SELECT o.id, o.created_at, o.amount_total, o.mode, o.items, o.status,
+                o.ship_name, o.ship_phone, o.ship_line1, o.ship_line2, o.ship_postal, o.ship_city, o.ship_method,
+                c.email, c.name AS cust_name, c.city AS cust_city
+         FROM orders o JOIN customers c ON c.id = o.customer_id
+         WHERE COALESCE(o.status,'new') != 'delivered' ORDER BY o.id DESC LIMIT 60`).all()).results || [];
+      return json({ orders: rows });
+    }
+
+    if (url.pathname === "/api/admin/order-status" && request.method === "POST") {
+      if (!(await isAdmin(env, request))) return json({ error: "not authorized" }, 401);
+      let b; try { b = await request.json(); } catch { return json({ error: "bad json" }, 400); }
+      const st = ["new", "packed", "delivered"].includes(b.status) ? b.status : null;
+      if (!st || !Number.isInteger(b.id)) return json({ error: "bad params" }, 400);
+      await env.DB.prepare(`UPDATE orders SET status = ?1 WHERE id = ?2`).bind(st, b.id).run();
+      return json({ ok: true });
+    }
+
+    /* owner: this week's bake sheet — active Stripe subscriptions grouped by size */
+    if (url.pathname === "/api/admin/subs") {
+      if (!(await isAdmin(env, request))) return json({ error: "not authorized" }, 401);
+      const list = await stripeGet(env, "/v1/subscriptions?status=active&limit=100&expand[]=data.items");
+      if (!list) return json({ error: "stripe error" }, 502);
+      const tally = { small: 0, medium: 0, large: 0 };
+      const subs = (list.data || []).map((s) => {
+        const items = (s.items && s.items.data) || [];
+        const sizes = [];
+        for (const it of items) {
+          const sku = PRICE_SKU[(it.price && it.price.id) || ""];
+          if (sku && tally[sku] !== undefined) { tally[sku] += it.quantity || 1; sizes.push(`${it.quantity || 1}×${sku[0].toUpperCase()}`); }
+        }
+        const first = items[0];
+        return {
+          id: s.id, sizes: sizes.join(" "),
+          interval: first && first.price && first.price.recurring ? first.price.recurring.interval : "?",
+          renews: (s.current_period_end || (first && first.current_period_end))
+            ? new Date((s.current_period_end || first.current_period_end) * 1000).toISOString().slice(0, 10) : null,
+          paused: !!s.pause_collection, cancelAtEnd: !!s.cancel_at_period_end,
+        };
+      });
+      return json({ subs, tally, count: subs.length });
     }
 
     /* owner: visitor analytics pulled from Cloudflare Web Analytics (GraphQL) */
@@ -850,7 +980,19 @@ export default {
 
     if (url.pathname.startsWith("/api/")) return json({ error: "not found" }, 404);
 
-    /* run_worker_first is on (for the canonical-host 301s) — everything else is a static asset */
-    return env.ASSETS.fetch(request);
+    /* run_worker_first is on (for the canonical-host 301s) — everything else is a static asset.
+       Add baseline security headers; deny framing on the owner-only pages (clickjacking). */
+    const assetRes = await env.ASSETS.fetch(request);
+    const res = new Response(assetRes.body, assetRes);
+    res.headers.set("Strict-Transport-Security", "max-age=31536000; includeSubDomains");
+    res.headers.set("Referrer-Policy", "strict-origin-when-cross-origin");
+    res.headers.set("X-Content-Type-Options", "nosniff");
+    res.headers.set("Permissions-Policy", "geolocation=(), microphone=(), camera=()");
+    if (/^\/(admin|account|inventory)\b/.test(url.pathname)) {
+      res.headers.set("X-Frame-Options", "DENY");
+      res.headers.set("Content-Security-Policy", "frame-ancestors 'none'");
+      res.headers.set("Cache-Control", "no-store");
+    }
+    return res;
   },
 };
