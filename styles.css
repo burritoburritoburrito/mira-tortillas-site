@@ -943,6 +943,11 @@ body { background: var(--sky); }
 
 /* the tape/marquee overflow must never scroll the page (body clip alone doesn't stop html) */
 html { overflow-x: clip; }
+/* The `overflow-x: clip` above forces overflow-y into a broken nested-auto state
+   that traps vertical scroll on pages Lenis isn't driving (admin, account,
+   inventory). The homepage gets the `.lenis` class once smooth-scroll inits, so
+   scope the scroll restore to everywhere Lenis is absent. */
+html:not(.lenis) { overflow-y: auto; height: auto; }
 /* subscribe button: long label ("· delivery included") must wrap on phones, not overflow */
 @media (max-width: 560px) {
   .subpick__go { max-width: 100%; white-space: normal; text-align: center; justify-content: center; line-height: 1.35; }
