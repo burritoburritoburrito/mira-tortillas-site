@@ -347,8 +347,9 @@ a { color: inherit; text-decoration: none; }
 .hstep:last-child { border-bottom: 2px solid color-mix(in srgb, var(--cream) 25%, transparent); }
 .hstep__icon {
   flex: 0 0 auto;
-  width: clamp(76px, 8vw, 108px);
-  height: auto;
+  /* size by height so the different canvas widths (padded handles) stay the same pan size */
+  height: clamp(52px, 5.5vw, 74px);
+  width: auto;
   margin-top: .2rem;
 }
 .hstep h3 {
