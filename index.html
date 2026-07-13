@@ -15,7 +15,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500&family=Archivo+Black&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=51">
+  <link rel="stylesheet" href="styles.css?v=52">
 </head>
 <body>
 
@@ -29,7 +29,6 @@
     </a>
     <nav class="nav__links mono" aria-label="Main">
       <a href="#tamanhos" data-hover data-i18n="nav_sizes">sizes</a>
-      <a href="#assinar" data-hover data-i18n="nav_sub">subscribe</a>
       <a href="#ingredientes" data-hover data-i18n="nav_ing">ingredients</a>
       <a href="#como" data-hover data-i18n="nav_heat">how-to</a>
       <a href="#eventos" data-hover data-i18n="nav_events">events</a>
@@ -128,44 +127,6 @@
       <p class="sizes__pay mono" data-reveal data-i18n="pay_note">secure checkout by stripe · card · apple pay · google pay · mb way / multibanco</p>
     </section>
 
-    <!-- ───────── subscriptions ───────── -->
-    <section class="subs" id="assinar">
-      <div class="subs__head">
-        <span class="kicker mono" data-reveal data-i18n="sub_kicker">02 — subscriptions</span>
-        <h2 class="subs__title"><span data-split-lines data-i18n="sub_title">never run out.</span></h2>
-        <p class="subs__sub" data-reveal data-i18n="sub_sub">Pick a size, pick a rhythm. Tortillas on repeat, pause or cancel anytime</p>
-      </div>
-      <div class="subpick" data-reveal>
-        <div class="subpick__row subpick__row--top">
-          <span class="subpick__label mono" data-i18n="sub_size">your box</span>
-          <div class="subpick__sizes">
-            <div class="subq">
-              <span class="subq__name"><b data-i18n="s_name">small</b> <em class="mono">×12 · €8</em></span>
-              <span class="subq__ctl mono"><button data-sub-dec="small" aria-label="less small">−</button><b id="subq-small">0</b><button data-sub-inc="small" aria-label="more small">+</button></span>
-            </div>
-            <div class="subq">
-              <span class="subq__name"><b data-i18n="m_name">medium</b> <em class="mono">×12 · €10</em></span>
-              <span class="subq__ctl mono"><button data-sub-dec="medium" aria-label="less medium">−</button><b id="subq-medium">1</b><button data-sub-inc="medium" aria-label="more medium">+</button></span>
-            </div>
-            <div class="subq">
-              <span class="subq__name"><b data-i18n="l_name">large</b> <em class="mono">×6 · €9</em></span>
-              <span class="subq__ctl mono"><button data-sub-dec="large" aria-label="less large">−</button><b id="subq-large">0</b><button data-sub-inc="large" aria-label="more large">+</button></span>
-            </div>
-          </div>
-        </div>
-        <div class="subpick__row">
-          <span class="subpick__label mono" data-i18n="sub_rhythm">rhythm</span>
-          <div class="subpick__opts" id="subCad">
-            <button class="subpick__opt is-on" data-cad="weekly"><b data-i18n="sub_weekly">weekly</b></button>
-            <button class="subpick__opt" data-cad="biweekly"><b data-i18n="sub_biweekly">every 2 weeks</b></button>
-            <button class="subpick__opt" data-cad="monthly"><b data-i18n="sub_monthly">monthly</b></button>
-          </div>
-        </div>
-        <p class="subpick__count mono" id="subCount" hidden></p>
-        <button class="btn btn--ink subpick__go" id="subGo" data-hover><span id="subGoLabel">subscribe · €10 / week</span><span class="btn__dot"></span></button>
-      </div>
-      <p class="subs__note mono" data-reveal data-i18n="sub_note">manage, pause or cancel anytime, no strings attached</p>
-    </section>
 
     <!-- ───────── ingredients ───────── -->
     <section class="ingredients" id="ingredientes">
@@ -371,6 +332,6 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.7/gsap.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.7/ScrollTrigger.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/lenis@1.1.20/dist/lenis.min.js"></script>
-  <script src="main.js?v=56"></script>
+  <script src="main.js?v=57"></script>
 </body>
 </html>

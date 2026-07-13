@@ -965,3 +965,18 @@ html:not(.lenis) { overflow-y: auto; height: auto; }
 /* cart line: sold-out / over-stock marker */
 .citem__soldout { color: var(--oxblood); font-size: .62rem; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; }
 .citem--out { opacity: .75; }
+
+/* ═════════ storefront green accents retired → label palette (2026-07-13, tester feedback) ═════════ */
+.loader { background: var(--sky); }
+.cursor { background: #fff; }
+::selection { background: var(--oxblood); color: var(--cream); }
+.nav__acct.is-in { background: var(--oxblood); }
+.nav__acct.is-in:hover { background: var(--ink); }
+.nav__badge { background: var(--masa); color: var(--ink); }
+.card--oxblood .card__price { background: var(--masa); color: var(--ink); }
+.stick--2 { background: var(--masa); }
+.hero__scroll-line { background: var(--ink); }
+/* pre-launch: single "order by email" line under the size cards */
+.sizes__ordernote { text-align: center; margin: 1.6rem auto 0; font-family: var(--font-mono); font-size: .82rem; opacity: .75; }
+.sizes__ordernote a { color: var(--oxblood); text-decoration: underline; text-underline-offset: .2em; }
+.nav__links a::after { background: var(--oxblood); }

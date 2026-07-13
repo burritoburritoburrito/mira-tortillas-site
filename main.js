@@ -482,15 +482,31 @@
          shop. Buy buttons keep their native mailto — people email us to order. */
       window.__miraEmailOrder = closed;
       if (closed) {
-        /* label survives PT/EN toggles: applyLang calls __miraRelabelBuy again */
+        /* label survives PT/EN toggles: applyLang calls __miraRelabelBuy again.
+           buttons just say "order" (they open a pre-filled email); how-to-order
+           is stated ONCE in a caption under the cards, not repeated per button. */
         window.__miraRelabelBuy = () => {
-          const emailLabel = lang === "pt" ? "encomendar por email" : "email to order";
+          const btnLabel = lang === "pt" ? "encomendar" : "order";
           document.querySelectorAll("[data-buy]").forEach((a) => {
             const span = a.querySelector("[data-i18n], [data-dyn]") || a;
             span.removeAttribute("data-i18n");
             span.setAttribute("data-dyn", "buy");
-            span.textContent = emailLabel;
+            span.textContent = btnLabel;
           });
+          const grid = document.getElementById("escolher");
+          if (grid) {
+            let note = document.getElementById("orderNote");
+            if (!note) {
+              note = document.createElement("p");
+              note.id = "orderNote";
+              note.className = "sizes__ordernote mono";
+              grid.insertAdjacentElement("afterend", note);
+            }
+            note.innerHTML = (lang === "pt"
+              ? 'Encomenda por email enquanto preparamos tudo &rarr; '
+              : 'Order by email while we get set up &rarr; ')
+              + '<a href="mailto:ola@miratortillas.pt">ola@miratortillas.pt</a>';
+          }
         };
         window.__miraRelabelBuy();
         /* subscriptions need the store + delivery, not ready yet */
