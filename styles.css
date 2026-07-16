@@ -981,3 +981,12 @@ html:not(.lenis) { overflow-y: auto; height: auto; }
 .sizes__ordernote { text-align: center; margin: 1.6rem auto 0; font-family: var(--font-mono); font-size: .82rem; opacity: .75; }
 .sizes__ordernote a { color: var(--oxblood); text-decoration: underline; text-underline-offset: .2em; }
 .nav__links a::after { background: var(--oxblood); }
+
+/* ═════════ nav logo must never squish; tighten mobile so the PT order label fits (2026-07-13) ═════════ */
+.nav__logo { flex: 0 0 auto; }
+.nav__logo img { max-width: none; width: auto; }
+@media (max-width: 480px) {
+  .nav { padding-left: .9rem; padding-right: .9rem; gap: .5rem; }
+  .nav__right { gap: .5rem; }
+  .nav__cta { padding-left: 1rem; padding-right: 1rem; }
+}

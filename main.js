@@ -90,7 +90,7 @@
       sub_rhythm: "rhythm",
       sc_note: "secure checkout · stripe",
       sc_fun: "almost taco time 🌮 quase lá",
-      ship_note: "we'll message you after the order to sort delivery or pickup together",
+      ship_note: "weekly pickup in Gra&ccedil;a, Lisboa. we'll confirm the day &amp; spot when you order",
       scene_start: "dry pan · no oil",
       scene_side1: "side 1 · 15–20s",
       scene_flip: "tiny bubbles? flip!",
@@ -160,7 +160,7 @@
       sub_rhythm: "ritmo",
       sc_note: "pagamento seguro · stripe",
       sc_fun: "quase lá 🌮 almost taco time",
-      ship_note: "depois da encomenda falamos contigo para combinar entrega ou recolha",
+      ship_note: "recolha semanal na Gra&ccedil;a, Lisboa. combinamos o dia &amp; o local quando encomendas",
       scene_start: "frigideira seca · sem óleo",
       scene_side1: "lado 1 · 15–20s",
       scene_flip: "bolhas? vira!",
@@ -503,8 +503,8 @@
               grid.insertAdjacentElement("afterend", note);
             }
             note.innerHTML = (lang === "pt"
-              ? 'Encomenda por email enquanto preparamos tudo &rarr; '
-              : 'Order by email while we get set up &rarr; ')
+              ? 'Encomenda por email &#183; recolha semanal na Gra&ccedil;a &rarr; '
+              : 'Order by email &#183; weekly pickup in Gra&ccedil;a &rarr; ')
               + '<a href="mailto:ola@miratortillas.pt">ola@miratortillas.pt</a>';
           }
         };
