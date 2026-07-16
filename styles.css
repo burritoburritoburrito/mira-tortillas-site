@@ -990,3 +990,12 @@ html:not(.lenis) { overflow-y: auto; height: auto; }
   .nav__right { gap: .5rem; }
   .nav__cta { padding-left: 1rem; padding-right: 1rem; }
 }
+
+/* ═════════ PT nav labels were squishing the wordmark on iPhone (2026-07-13) ═════════ */
+.nav__logo, .nav__logo img { flex: 0 0 auto; }
+.nav__logo img { max-width: none; }
+@media (max-width: 460px) {
+  .nav { gap: .5rem; }
+  .nav__cta { padding: .7rem 1rem; }
+  .nav__acct, .nav__lang { width: 2.5rem; height: 2.5rem; }
+}

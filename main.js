@@ -438,9 +438,15 @@
       : (lang === "pt" ? "obrigado! encomenda confirmada 🌯" : "obrigado! order confirmed 🌯");
     const box = document.createElement("div");
     box.style.cssText = "position:fixed;left:50%;bottom:1.4rem;transform:translateX(-50%);z-index:120;background:var(--cream);color:var(--ink);border:3px solid var(--ink);border-radius:16px;padding:1.1rem 1.3rem;max-width:min(430px,92vw);box-shadow:6px 7px 0 rgba(20,20,18,.25);font-family:var(--font-mono);font-size:.82rem;line-height:1.5";
+    const pickupLine = pending ? "" :
+      '<div style="opacity:.75;margin:0 0 .8rem">' +
+      (lang === "pt"
+        ? "Est&aacute; reservado e pago. Enviamos-te o dia e o local da recolha na Gra&ccedil;a por email."
+        : "Reserved and paid. We'll email you the day and spot for pickup in Gra&ccedil;a.") + "</div>";
     box.innerHTML =
       '<button id="ordClose" style="position:absolute;top:.35rem;right:.6rem;background:none;border:0;font-size:1.2rem;line-height:1;cursor:pointer;color:var(--ink)">×</button>' +
       '<div style="font-weight:500;margin:0 1rem .8rem 0">' + headline + ptsLine + "</div>" +
+      pickupLine +
       '<button id="ordNews" style="display:flex;align-items:center;gap:.55rem;width:100%;background:none;border:2px solid var(--ink);border-radius:999px;padding:.5rem .95rem;font-family:inherit;font-size:.76rem;cursor:pointer;color:var(--ink);text-align:left">' +
       '<span id="ordBox" style="width:1rem;height:1rem;border:2px solid var(--ink);border-radius:4px;flex:none;display:grid;place-items:center;font-size:.7rem"></span>' +
       '<span id="ordTxt">' + (lang === "pt" ? "quero novidades &amp; drops por email" : "email me about drops &amp; news") + "</span></button>";
@@ -453,7 +459,8 @@
         const d = await r.json();
         if (d.ok) {
           box.querySelector("#ordBox").textContent = "✓";
-          box.querySelector("#ordBox").style.background = "var(--green)";
+          box.querySelector("#ordBox").style.background = "var(--oxblood)";
+          box.querySelector("#ordBox").style.color = "var(--cream)";
           box.querySelector("#ordTxt").textContent = lang === "pt" ? "estás na lista ✓" : "you're on the list ✓";
           box.querySelector("#ordNews").disabled = true;
           setTimeout(close, 2500);

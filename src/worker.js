@@ -414,7 +414,8 @@ export default {
          before a pause/sell-out could still complete (default is 24h) */
       p.set("expires_at", String(Math.floor(Date.now() / 1000) + 1800));
       p.set("return_url", `${url.origin}/?checkout=success&session_id={CHECKOUT_SESSION_ID}`);
-      p.set("shipping_address_collection[allowed_countries][0]", "PT");
+      /* pickup model: no delivery address needed — just a phone so we can send the
+         customer the weekly Graça pickup day & spot (email is collected by Stripe) */
       p.set("phone_number_collection[enabled]", "true");
       items.forEach((it, i) => {
         p.set(`line_items[${i}][price]`, it.price);
