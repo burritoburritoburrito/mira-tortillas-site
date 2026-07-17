@@ -3,18 +3,6 @@
   "use strict";
 
   /* ─────────────────────────────────────────────
-     STRIPE PAYMENT LINKS — paste yours here.
-     Create them at dashboard.stripe.com → Payment Links
-     (one per product). Until a link is filled in, the
-     buy buttons fall back to an order email.
-  ───────────────────────────────────────────── */
-  const STRIPE_LINKS = {
-    small: "https://buy.stripe.com/6oUbIU5ve5G9fpH4sF6J200",   // 12 small — €8
-    medium: "https://buy.stripe.com/3cIbIU8Hq1pT3GZf7j6J201",  // 12 medium — €10
-    large: "https://buy.stripe.com/7sYdR24rab0tb9r5wJ6J202",   // 6 large — €9
-  };
-
-  /* ─────────────────────────────────────────────
      UPCOMING EVENTS — edit this list, that's it.
      date: "YYYY-MM-DD" (past dates hide themselves)
      name: { en: "...", pt: "..." }
@@ -241,6 +229,7 @@
     if (window.__subPickReady) updateSubGo();
     if (document.body.classList.contains("cart-mode")) renderCart();
     if (typeof window.__miraRelabelBuy === "function") window.__miraRelabelBuy();
+    document.querySelectorAll('[data-dyn="soldout"]').forEach((el) => { el.textContent = lang === "pt" ? "esgotado" : "sold out"; });
     try { localStorage.setItem("mira-lang", lang); } catch (e) {}
   }
 
@@ -482,46 +471,46 @@
     document.body.classList.add("cart-mode");
     /* owner controls: pause + per-size sold-out from /api/status */
     window.__miraBlocked = new Set();
+    /* enter browse-and-order-by-email mode: buy buttons open a pre-filled email,
+       no live Stripe checkout. Used when the store is paused OR the status call fails. */
+    const enterEmailOrder = () => {
+      window.__miraEmailOrder = true;
+      const pay = document.querySelector(".sizes__pay");
+      if (pay) pay.style.display = "none"; /* don't advertise live stripe checkout while off */
+      /* label survives PT/EN toggles: applyLang calls __miraRelabelBuy again.
+         buttons just say "order"; how-to-order is stated ONCE in a caption under the cards. */
+      window.__miraRelabelBuy = () => {
+        const btnLabel = lang === "pt" ? "encomendar" : "order";
+        document.querySelectorAll("[data-buy]").forEach((a) => {
+          const span = a.querySelector("[data-i18n], [data-dyn]") || a;
+          span.removeAttribute("data-i18n");
+          span.setAttribute("data-dyn", "buy");
+          span.textContent = btnLabel;
+        });
+        const grid = document.getElementById("escolher");
+        if (grid) {
+          let note = document.getElementById("orderNote");
+          if (!note) {
+            note = document.createElement("p");
+            note.id = "orderNote";
+            note.className = "sizes__ordernote mono";
+            grid.insertAdjacentElement("afterend", note);
+          }
+          note.innerHTML = (lang === "pt"
+            ? 'Encomenda por email &#183; recolha semanal na Gra&ccedil;a &rarr; '
+            : 'Order by email &#183; weekly pickup in Gra&ccedil;a &rarr; ')
+            + '<a href="mailto:ola@miratortillas.pt">ola@miratortillas.pt</a>';
+        }
+      };
+      window.__miraRelabelBuy();
+      window.__miraSubsClosed = true;
+      const go = document.getElementById("subGo");
+      if (go) go.classList.add("btn--dead");
+    };
     fetch("/api/status").then((r) => r.json()).then((st) => {
       window.__miraStatus = st;
-      const closed = !st.open;
-      /* store off (logistics not ready): the site is a browse-and-order-by-email
-         shop. Buy buttons keep their native mailto — people email us to order. */
-      window.__miraEmailOrder = closed;
-      if (closed) {
-        /* label survives PT/EN toggles: applyLang calls __miraRelabelBuy again.
-           buttons just say "order" (they open a pre-filled email); how-to-order
-           is stated ONCE in a caption under the cards, not repeated per button. */
-        window.__miraRelabelBuy = () => {
-          const btnLabel = lang === "pt" ? "encomendar" : "order";
-          document.querySelectorAll("[data-buy]").forEach((a) => {
-            const span = a.querySelector("[data-i18n], [data-dyn]") || a;
-            span.removeAttribute("data-i18n");
-            span.setAttribute("data-dyn", "buy");
-            span.textContent = btnLabel;
-          });
-          const grid = document.getElementById("escolher");
-          if (grid) {
-            let note = document.getElementById("orderNote");
-            if (!note) {
-              note = document.createElement("p");
-              note.id = "orderNote";
-              note.className = "sizes__ordernote mono";
-              grid.insertAdjacentElement("afterend", note);
-            }
-            note.innerHTML = (lang === "pt"
-              ? 'Encomenda por email &#183; recolha semanal na Gra&ccedil;a &rarr; '
-              : 'Order by email &#183; weekly pickup in Gra&ccedil;a &rarr; ')
-              + '<a href="mailto:ola@miratortillas.pt">ola@miratortillas.pt</a>';
-          }
-        };
-        window.__miraRelabelBuy();
-        /* subscriptions need the store + delivery, not ready yet */
-        window.__miraSubsClosed = true;
-        const go = document.getElementById("subGo");
-        if (go) go.classList.add("btn--dead");
-        return;
-      }
+      if (!st.open) { enterEmailOrder(); return; } /* store paused → email-order shop */
+      window.__miraEmailOrder = false;
       document.querySelectorAll("[data-buy]").forEach((a) => {
         const sku = a.dataset.buy;
         const out = ((st.remaining || {})[sku] || 0) <= 0;
@@ -530,6 +519,7 @@
           a.classList.add("btn--dead");
           const span = a.querySelector("[data-i18n]") || a;
           span.removeAttribute("data-i18n");
+          span.setAttribute("data-dyn", "soldout");
           span.textContent = lang === "pt" ? "esgotado" : "sold out";
           a.closest(".card").classList.add("card--soldout");
         }
@@ -550,7 +540,10 @@
       });
       const qa = document.querySelector("[data-quick-all]");
       if (qa && ["small", "medium", "large"].every((k) => window.__miraBlocked.has(k))) qa.classList.add("btn--dead");
-    }).catch(() => {});
+    }).catch(() => {
+      /* status unreachable → fail safe to email-order; never leave live-cart buttons that 503 */
+      enterEmailOrder();
+    });
     /* buy buttons add to cart WITHOUT opening the drawer (so all sizes stay reachable).
        The toast itself opens the cart on tap, and the nav un-hides so ORDER is visible. */
     const addedToast = (sku) => {

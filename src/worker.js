@@ -97,6 +97,25 @@ async function stripeGet(env, path) {
 }
 
 /* like stripePost but surfaces Stripe's error message (admin tools need real errors) */
+/* Verify a Stripe webhook signature (HMAC-SHA256 over `${t}.${rawBody}`, 5-min tolerance,
+   constant-time compare). Returns false on any malformed/stale/mismatched signature. */
+async function verifyStripeSig(raw, header, secret) {
+  if (!header || !secret) return false;
+  const parts = {};
+  for (const kv of header.split(",")) { const i = kv.indexOf("="); if (i > 0) parts[kv.slice(0, i).trim()] = kv.slice(i + 1).trim(); }
+  const t = parts.t, v1 = parts.v1;
+  if (!t || !v1) return false;
+  if (Math.abs(Math.floor(Date.now() / 1000) - Number(t)) > 300) return false;
+  const enc = new TextEncoder();
+  const key = await crypto.subtle.importKey("raw", enc.encode(secret), { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
+  const mac = await crypto.subtle.sign("HMAC", key, enc.encode(`${t}.${raw}`));
+  const expected = [...new Uint8Array(mac)].map((b) => b.toString(16).padStart(2, "0")).join("");
+  if (expected.length !== v1.length) return false;
+  let diff = 0;
+  for (let i = 0; i < expected.length; i++) diff |= expected.charCodeAt(i) ^ v1.charCodeAt(i);
+  return diff === 0;
+}
+
 async function stripePostRaw(env, path, params) {
   const res = await fetch(`https://api.stripe.com${path}`, {
     method: "POST",
@@ -250,9 +269,11 @@ async function processSession(env, session) {
         const itemsTxt = lis.map((li) => `${li.quantity}× ${li.description || (li.price && li.price.id) || "item"}`).join("\n") || `(${session.mode})`;
         const total = ((session.amount_total || 0) / 100).toFixed(2);
         const packs = lis.filter((li) => PRICE_SKU[(li.price && li.price.id) || ""]).map((li) => li.quantity).reduce((a, b) => a + b, 0);
+        const addrLines = [addr.line1, addr.line2, [addr.postal_code, addr.city].filter(Boolean).join(" ")].filter(Boolean).join("\n");
+        const fulfil = addrLines ? `\nmorada / address:\n${addrLines}` : `\nlevantamento / pickup: Graça (envia dia + local)`;
         await sendEmail(env, "ola@miratortillas.pt", `🌯 nova encomenda — €${total}`,
-          `nova encomenda / new order\n\n${itemsTxt}\n\ntotal: €${total} · ${session.mode}\nentrega / shipping: ${shipMethod || "—"}\n\n${cd.name || "?"} · ${email}${cd.phone ? " · " + cd.phone : ""}\n${[addr.line1, addr.line2, [addr.postal_code, addr.city].filter(Boolean).join(" ")].filter(Boolean).join("\n")}\n\nstripe: https://dashboard.stripe.com/payments\ndashboard: https://miratortillas.pt/admin`);
-        await sendSMS(env, `mira: nova encomenda €${total} — ${cd.name || email} (${packs || "?"} packs)`);
+          `nova encomenda / new order\n\n${itemsTxt}\n\ntotal: €${total} · ${session.mode}\n\n${cd.name || "?"} · ${email}${cd.phone ? " · ☎ " + cd.phone : ""}${fulfil}\n\nstripe: https://dashboard.stripe.com/payments\ndashboard: https://miratortillas.pt/admin`);
+        await sendSMS(env, `mira: nova encomenda €${total} — ${cd.name || email} (${packs || "?"} packs) · Graça pickup`);
       } catch (e) { /* notification failure must never fail an order */ }
     }
   }
@@ -374,7 +395,9 @@ export default {
       if (mode === "payment") {
         for (const it of items) {
           const sku = PRICE_SKU[it.price];
-          if (!sku) continue;
+          /* a cap of 0 = "no weekly limit set" = unlimited, NOT sold out — otherwise
+             flipping the store live before setting caps rejects every order as esgotado */
+          if (!sku || !(shop.caps[sku] > 0)) continue;
           const left = Math.max(shop.caps[sku] - shop.sold[sku], 0);
           if (Number(it.quantity) > left)
             return json({ error: `${sku}: esgotado / sold out${left > 0 ? ` — only ${left} left` : ""}` }, 409);
@@ -437,7 +460,12 @@ export default {
         body: p,
       });
       const session = await res.json();
-      if (!res.ok) return json({ error: session.error?.message || "stripe error" }, 502);
+      if (!res.ok) {
+        /* Stripe session never created — give back any points we already reserved,
+           or the customer silently loses them (no session id = no webhook refund path) */
+        if (redeemer) await env.DB.prepare(`UPDATE customers SET points = points + 100 WHERE id = ?1`).bind(redeemer.id).run();
+        return json({ error: session.error?.message || "stripe error" }, 502);
+      }
       return json({ clientSecret: session.client_secret });
     }
 
@@ -469,8 +497,21 @@ export default {
        (closed tab, or async methods like Multibanco that settle later).
        Payload is untrusted — we only take the session id and re-fetch from Stripe. */
     if (url.pathname === "/api/webhook" && request.method === "POST") {
+      const raw = await request.text();
+      /* verify the Stripe signature when a signing secret is configured — rejects
+         forged POSTs (which could otherwise spam owner alerts / drain SMS credits) */
+      if (env.STRIPE_WEBHOOK_SECRET) {
+        const okSig = await verifyStripeSig(raw, request.headers.get("Stripe-Signature"), env.STRIPE_WEBHOOK_SECRET);
+        if (!okSig) return json({ error: "bad signature" }, 400);
+      }
       let evt;
-      try { evt = await request.json(); } catch { return json({ received: true }); }
+      try { evt = JSON.parse(raw); } catch { return json({ received: true }); }
+      /* idempotency: Stripe can deliver the same event more than once — handle each once
+         (also stops a replayed event from re-crediting reserved points) */
+      if (evt.id) {
+        const seen = await env.DB.prepare(`INSERT OR IGNORE INTO webhook_events (id) VALUES (?1)`).bind(String(evt.id)).run();
+        if (seen.meta.changes === 0) return json({ received: true });
+      }
       const type = evt.type || "";
       const objId = evt.data && evt.data.object && evt.data.object.id;
       if (
@@ -523,22 +564,27 @@ export default {
             } catch (e) { /* alert only */ }
           }
         }
-      } else if (type === "charge.dispute.created" && /^d[pu]_?[A-Za-z0-9]*$/.test(objId || "")) {
-        /* disputes have a response deadline — this must never be silent */
+      } else if (type === "charge.dispute.created" && /^d[pu]_[A-Za-z0-9]+$/.test(objId || "")) {
+        /* disputes have a response deadline — this must never be silent.
+           Only alert once the dispute is confirmed real via re-fetch (a forged id fetches null → no alert). */
         try {
           const dp = await stripeGet(env, `/v1/disputes/${objId}`);
-          const amt = dp ? ((dp.amount || 0) / 100).toFixed(2) : "?";
-          await sendEmail(env, "ola@miratortillas.pt", `🚨 DISPUTE — €${amt} (responder no Stripe)`,
-            `a customer disputed a charge of €${amt}.\n\nyou have a DEADLINE to respond — open Stripe now:\nhttps://dashboard.stripe.com/disputes\n\nignoring it = automatic loss + €15 fee.`);
-          await sendSMS(env, `mira: 🚨 DISPUTE €${amt} — responde no Stripe (prazo!) dashboard.stripe.com/disputes`);
+          if (dp && dp.amount != null) {
+            const amt = (dp.amount / 100).toFixed(2);
+            await sendEmail(env, "ola@miratortillas.pt", `🚨 DISPUTE — €${amt} (responder no Stripe)`,
+              `a customer disputed a charge of €${amt}.\n\nyou have a DEADLINE to respond — open Stripe now:\nhttps://dashboard.stripe.com/disputes\n\nignoring it = automatic loss + €15 fee.`);
+            await sendSMS(env, `mira: 🚨 DISPUTE €${amt} — responde no Stripe (prazo!) dashboard.stripe.com/disputes`);
+          }
         } catch (e) { /* alert only */ }
       } else if (type === "customer.subscription.deleted" && /^sub_[A-Za-z0-9]+$/.test(objId || "")) {
         try {
           const s = await stripeGet(env, `/v1/subscriptions/${objId}`);
-          const scid = s && (typeof s.customer === "string" ? s.customer : s.customer && s.customer.id);
-          const c = scid && await env.DB.prepare(`SELECT email, name FROM customers WHERE stripe_customer_id = ?1`).bind(scid).first();
-          await sendEmail(env, "ola@miratortillas.pt", "👋 assinatura cancelada",
-            `subscription cancelled / assinatura cancelada\n\n${(c && (c.name || c.email)) || objId}\n\nbake sheet updates automatically. maybe worth a friendly "sentimos a tua falta" email later (manual — never automatic).`);
+          if (s && s.id) {
+            const scid = typeof s.customer === "string" ? s.customer : s.customer && s.customer.id;
+            const c = scid && await env.DB.prepare(`SELECT email, name FROM customers WHERE stripe_customer_id = ?1`).bind(scid).first();
+            await sendEmail(env, "ola@miratortillas.pt", "👋 assinatura cancelada",
+              `subscription cancelled / assinatura cancelada\n\n${(c && (c.name || c.email)) || objId}\n\nbake sheet updates automatically. maybe worth a friendly "sentimos a tua falta" email later (manual — never automatic).`);
+          }
         } catch (e) { /* alert only */ }
       } else if (type === "invoice.payment_failed" && /^in_[A-Za-z0-9]+$/.test(objId || "")) {
         try {

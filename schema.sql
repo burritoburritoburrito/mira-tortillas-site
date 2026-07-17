@@ -71,3 +71,4 @@ CREATE INDEX idx_orders_customer ON orders(customer_id);
 
 CREATE INDEX idx_sessions_customer ON sessions(customer_id);
 
+CREATE TABLE IF NOT EXISTS webhook_events (id TEXT PRIMARY KEY, seen_at TEXT DEFAULT (datetime('now')));
