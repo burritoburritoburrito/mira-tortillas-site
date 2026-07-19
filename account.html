@@ -241,6 +241,7 @@
           <section data-pane="profile" hidden>
             <div class="acct__card">
               <h2>profile <small>perfil — share what you like, all optional</small></h2>
+              <form id="profileForm" autocomplete="on">
               <div class="pf-grid">
                 ${field("name", "name / nome", c.name, 'autocomplete="name"')}
                 ${field("phone", "phone / telemóvel", c.phone, 'autocomplete="tel" inputmode="tel"')}
@@ -270,9 +271,10 @@
                 <span>email me about drops &amp; news · quero receber novidades</span>
               </label>
               <div style="display:flex;align-items:center;gap:1rem;margin-top:.9rem">
-                <button class="btn btn--ink" id="saveProfile" style="justify-content:center">save · guardar</button>
+                <button class="btn btn--ink" id="saveProfile" type="submit" style="justify-content:center">save · guardar</button>
                 <span id="profileMsg" class="acct__empty"></span>
               </div>
+              </form>
             </div>
           </section>
           <section data-pane="payments" hidden>
@@ -308,7 +310,8 @@
       location.href = "/";
     });
 
-    document.getElementById("saveProfile").addEventListener("click", async () => {
+    document.getElementById("profileForm").addEventListener("submit", async (ev) => {
+      ev.preventDefault();
       const v = (id) => document.getElementById("pf_" + id).value;
       const msg = document.getElementById("profileMsg");
       msg.textContent = "saving…";
