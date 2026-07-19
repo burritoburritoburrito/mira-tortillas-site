@@ -91,7 +91,7 @@
       nav_heat: "como aquecer",
       nav_sizes: "tamanhos",
       nav_order: "encomendar",
-      hero_blurb: "Tortillas de trigo. Quatro ingredientes, prensadas e meio cozidas em pequenos lotes em Lisboa.<br>Tu dás-lhes a tostadela final em casa",
+      hero_blurb: "Tortillas de trigo. Quatro ingredientes, prensadas e meio cozidas em pequenos lotes em Lisboa.<br>A tostadela final é contigo, em casa",
       hero_cta: "leva um pack",
       nav_sub: "assinar",
       sub_kicker: "02 — assinaturas",
@@ -110,7 +110,7 @@
       step1_h: "frigideira seca, lume forte",
       step1_p: "Frigideira, chapa ou grelha, sem óleo. Deixa aquecer bem e pousa a tortilla",
       step2_h: "vês bolhas? vira",
-      step2_p: "Quando se formarem pequenas bolhas, vira para o outro lado",
+      step2_p: "Quando se formarem bolhinhas, vira-a para o outro lado",
       step3_h: "inchou? está pronta",
       step3_p: "Empilha-as num pano limpo para ficarem quentes e macias",
       heat_store: "conservar no frigorífico · 7 dias&nbsp;&nbsp;/&nbsp;&nbsp;ou congelar · 3 meses",
@@ -124,7 +124,7 @@
       ev_empty: "nada agendado de momento. segue @miratortillas para o próximo drop",
       sizes_kicker: "01 — escolhe o tamanho",
       sizes_title: "uma massa.<br>três tamanhos.",
-      sizes_sub: "Noite de tacos, burrito ao domingo ou quesadillas para o lanche. Temos um pacote para isso",
+      sizes_sub: "Noite de tacos, burrito ao domingo ou quesadillas para o lanche. Temos um pack para isso",
       s_name: "pequenas", s_desc: "15&nbsp;cm · tacos e snacks", s_btn: "adicionar +",
       m_name: "médias", m_desc: "21–23&nbsp;cm · wraps e quesadillas", m_btn: "adicionar +",
       l_name: "grandes", l_desc: "30&nbsp;cm · burritos", l_btn: "adicionar +",
@@ -132,7 +132,7 @@
       pay_note: "pagamento seguro com stripe · cartão · apple pay · google pay · mb way / multibanco",
       foot_kicker: "fome? / hungry?",
       foot_cta: "encomenda<br>tortillas",
-      foot_made: "feito em lisboa 🇵🇹",
+      foot_made: "feitas em lisboa 🇵🇹",
       hero_prices: "<span style='white-space:nowrap'>×12 pequenas €8</span> &nbsp;·&nbsp; <span style='white-space:nowrap'>×12 médias €10</span> &nbsp;·&nbsp; <span style='white-space:nowrap'>×6 grandes €9</span>",
       quick_all: "1 de cada · €27", hero_scroll: "desliza",
       foot_contact: "dúvidas? cafés &amp; restaurantes? diz olá →",
@@ -142,13 +142,13 @@
       cart_checkout: "finalizar",
       cart_back: "voltar ao site",
       cart_usepoints: "usar 100 pontos · €8 de desconto",
-      cart_news: "quero receber novidades por email",
+      cart_news: "quero saber de drops & novidades por email",
       cart_clear: "limpar",
       sub_size: "a tua caixa",
       sub_rhythm: "ritmo",
       sc_note: "pagamento seguro · stripe",
-      sc_fun: "quase lá 🌮 almost taco time",
-      ship_note: "recolha semanal na Gra&ccedil;a, Lisboa. combinamos o dia &amp; o local quando encomendas",
+      sc_fun: "já cheira a tacos 🌮 almost taco time",
+      ship_note: "recolha semanal na Gra&ccedil;a, Lisboa. combinamos o dia &amp; o local quando encomendares",
       scene_start: "frigideira seca · sem óleo",
       scene_side1: "lado 1 · 15–20s",
       scene_flip: "bolhas? vira!",
@@ -423,14 +423,14 @@
       ? (lang === "pt" ? ` · ${pts} pontos na tua conta` : ` · ${pts} points in your account`)
       : "";
     const headline = pending
-      ? (lang === "pt" ? "pagamento Multibanco pendente — confirmamos por email assim que for pago 🌯" : "Multibanco payment pending — we'll email you once it's paid 🌯")
+      ? (lang === "pt" ? "pagamento Multibanco pendente: confirmamos por email assim que estiver pago 🌯" : "Multibanco payment pending, we'll email you once it's paid 🌯")
       : (lang === "pt" ? "obrigado! encomenda confirmada 🌯" : "obrigado! order confirmed 🌯");
     const box = document.createElement("div");
     box.style.cssText = "position:fixed;left:50%;bottom:1.4rem;transform:translateX(-50%);z-index:120;background:var(--cream);color:var(--ink);border:3px solid var(--ink);border-radius:16px;padding:1.1rem 1.3rem;max-width:min(430px,92vw);box-shadow:6px 7px 0 rgba(20,20,18,.25);font-family:var(--font-mono);font-size:.82rem;line-height:1.5";
     const pickupLine = pending ? "" :
       '<div style="opacity:.75;margin:0 0 .8rem">' +
       (lang === "pt"
-        ? "Est&aacute; reservado e pago. Enviamos-te o dia e o local da recolha na Gra&ccedil;a por email."
+        ? "Reservada e paga. Enviamos-te por email o dia e o local da recolha na Gra&ccedil;a."
         : "Reserved and paid. We'll email you the day and spot for pickup in Gra&ccedil;a.") + "</div>";
     box.innerHTML =
       '<button id="ordClose" style="position:absolute;top:.35rem;right:.6rem;background:none;border:0;font-size:1.2rem;line-height:1;cursor:pointer;color:var(--ink)">×</button>' +
@@ -550,7 +550,7 @@
       const name = I18N[lang][CATALOG[sku].nameKey] || sku;
       const nav = document.getElementById("nav");
       if (nav) nav.classList.remove("nav--hidden");
-      showToast(lang === "pt" ? `+1 ${name} · ver carrinho →` : `+1 ${name} · view cart →`);
+      showToast(lang === "pt" ? `+1 pack de ${name} · ver carrinho →` : `+1 ${name} · view cart →`);
       const t = document.getElementById("toast");
       t.style.cursor = "pointer";
       t.onclick = () => { t.hidden = true; t.onclick = null; openCart(); };
@@ -561,7 +561,7 @@
         if (window.__miraEmailOrder) return; /* store off: let the mailto open */
         e.preventDefault();
         if (window.__miraBlocked.has(a.dataset.buy)) {
-          showToast(lang === "pt" ? "esgotado, voltamos em breve! 🌮" : "sold out, back soon! 🌮");
+          showToast(lang === "pt" ? "esgotado, há mais em breve! 🌮" : "sold out, back soon! 🌮");
           return;
         }
         addToCart(a.dataset.buy, 1);
@@ -732,7 +732,7 @@
   if (subGo) {
     subGo.addEventListener("click", () => {
       if (window.__miraSubsClosed) {
-        showToast(lang === "pt" ? "assinaturas brevemente! 🌮" : "subscriptions coming soon! 🌮");
+        showToast(lang === "pt" ? "subscrições a caminho! 🌮" : "subscriptions coming soon! 🌮");
         return;
       }
       const sizes = Object.keys(subQty).filter((k) => subQty[k] > 0);

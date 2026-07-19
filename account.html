@@ -90,7 +90,7 @@
       box.innerHTML = `
         <div class="acct__login">
           <h1 class="acct__hi">sign in.</h1>
-          <p class="acct__empty" style="margin-bottom:1.6rem">we email you a code, no passwords · enviamos um código, sem passwords</p>
+          <p class="acct__empty" style="margin-bottom:1.6rem">we email you a code, no passwords · enviamos-te um código por email, sem passwords</p>
           <form id="loginForm" style="max-width:340px;margin:0 auto;display:grid;gap:.7rem">
             <input id="loginEmail" type="email" placeholder="email" autocomplete="email" required
               style="font-family:var(--font-mono);font-size:.95rem;padding:.85rem 1rem;border:3px solid var(--ink);border-radius:12px;background:#fff;width:100%">
@@ -191,7 +191,7 @@
           </div>`).join("")
       : me.subsError
         ? `<p class="acct__empty">couldn't reach the subscription service just now — refresh in a moment / não foi possível carregar, tenta daqui a pouco</p>`
-        : `<p class="acct__empty">no subscription yet / ainda sem assinatura</p>`;
+        : `<p class="acct__empty">no subscription yet / ainda sem subscrição</p>`;
 
     const ordersHtml = me.orders.length
       ? me.orders.map((o) => `
@@ -209,7 +209,7 @@
         <nav class="acct__tabs" id="acctTabs" aria-label="account sections">
           <button data-tab="overview" class="is-on">overview <small>resumo</small></button>
           <button data-tab="orders">orders <small>encomendas</small></button>
-          <button data-tab="subs">subscriptions <small>assinaturas</small></button>
+          <button data-tab="subs">subscriptions <small>subscrições</small></button>
           <button data-tab="profile">profile <small>perfil</small></button>
           <button data-tab="payments">payments <small>pagamentos</small></button>
           <button class="acct__logout" id="logout">log out / sair</button>
@@ -217,11 +217,11 @@
         <div class="acct__panes">
           <section data-pane="overview">
             <div class="acct__points"><b>${c.points}</b><span>points / pontos</span></div>
-            <p class="acct__empty" style="margin:-1.4rem 0 1.6rem">100 points = €8 off — tick "use points" in the cart / 100 pontos = €8 de desconto no carrinho</p>
+            <p class="acct__empty" style="margin:-1.4rem 0 1.6rem">100 points = €8 off, tick "use points" in the cart / 100 pontos = €8 de desconto, marca «usar 100 pontos» no carrinho</p>
             <div class="acct__card">
               <h2>at a glance <small>num relance</small></h2>
               <div class="acct__row"><span>orders / encomendas</span><span class="mono">${me.orders.length}</span></div>
-              <div class="acct__row"><span>subscriptions / assinaturas</span><span class="mono">${me.subscriptions.length || "—"}</span></div>
+              <div class="acct__row"><span>subscriptions / subscrições</span><span class="mono">${me.subscriptions.length || "—"}</span></div>
               <div class="acct__row"><span>last order / última</span><span class="mono">${lastOrder ? lastOrder.created_at.slice(0, 10) + " · " + eur(lastOrder.amount_total) : "—"}</span></div>
             </div>
           </section>
@@ -233,7 +233,7 @@
           </section>
           <section data-pane="subs" hidden>
             <div class="acct__card">
-              <h2>subscriptions <small>assinaturas</small></h2>
+              <h2>subscriptions <small>subscrições</small></h2>
               ${subsHtml}
               <p class="acct__empty" style="margin-top:.8rem">want a standing weekly box? email <a href="mailto:ola@miratortillas.pt" style="text-decoration:underline">ola@miratortillas.pt</a> / queres uma caixa semanal? escreve-nos</p>
             </div>
@@ -326,7 +326,7 @@
           cancel: "cancel this subscription at the end of the current period? / cancelar no fim do período atual?",
           pause: "pause deliveries until you resume? / pausar entregas até retomares?",
           resume: "resume deliveries? / retomar entregas?",
-          keep: "keep the subscription going? / manter a assinatura?",
+          keep: "keep the subscription going? / manter a subscrição?",
         };
         if (!confirm(asks[act])) return;
         b.disabled = true; b.textContent = "…";

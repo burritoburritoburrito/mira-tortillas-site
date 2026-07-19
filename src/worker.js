@@ -391,7 +391,7 @@ export default {
 
       /* owner controls: store pause + per-size stock caps (caps apply to one-off packs) */
       const shop = await getSettings(env);
-      if (!shop.open) return json({ error: "loja em pausa — back soon" }, 503);
+      if (!shop.open) return json({ error: "loja em pausa, voltamos em breve · store paused, back soon" }, 503);
       if (mode === "payment") {
         for (const it of items) {
           const sku = PRICE_SKU[it.price];
@@ -400,7 +400,7 @@ export default {
           if (!sku || !(shop.caps[sku] > 0)) continue;
           const left = Math.max(shop.caps[sku] - shop.sold[sku], 0);
           if (Number(it.quantity) > left)
-            return json({ error: `${sku}: esgotado / sold out${left > 0 ? ` — only ${left} left` : ""}` }, 409);
+            return json({ error: left > 0 ? `${sku}: esgotado, só restam ${left} · sold out, only ${left} left` : `${sku}: esgotado · sold out` }, 409);
         }
       }
 
@@ -720,7 +720,7 @@ export default {
            ip = excluded.ip, expires_at = excluded.expires_at, created_at = datetime('now')`
       ).bind(email, code, ip).run();
       const sent = await sendEmail(env, email, "your mira login code",
-        `your login code: ${code}\n\nit's valid for 30 minutes, no rush.\n\no teu código de acesso: ${code} (válido 30 minutos, sem pressa)\n\n— mira tortillas`);
+        `your login code: ${code}\n\nit's valid for 30 minutes, no rush.\n\no teu código de acesso: ${code} (válido por 30 minutos, sem pressa)\n\n— mira tortillas`);
       if (!sent) return json({ error: "couldn't send the email — try again in a minute" }, 502);
       return json({ ok: true });
     }
@@ -734,12 +734,12 @@ export default {
       const row = await env.DB.prepare(
         `SELECT * FROM login_codes WHERE email = ?1 AND expires_at > datetime('now')`
       ).bind(email).first();
-      if (!row) return json({ error: "code expired — request a new one · código expirado, pede outro" }, 400);
-      if (row.attempts >= 5) return json({ error: "too many tries — request a new code · demasiadas tentativas, pede novo código" }, 400);
+      if (!row) return json({ error: "code expired, request a new one · código expirado, pede outro" }, 400);
+      if (row.attempts >= 5) return json({ error: "too many tries, request a new code · demasiadas tentativas, pede um novo" }, 400);
       if (row.code !== code) {
         await env.DB.prepare(`UPDATE login_codes SET attempts = attempts + 1 WHERE email = ?1`).bind(email).run();
         const left = 5 - (row.attempts + 1);
-        return json({ error: left > 0 ? `wrong code · código errado (${left} ${left === 1 ? "try" : "tries"} left)` : "too many tries — request a new code · demasiadas tentativas, pede novo código" }, 400);
+        return json({ error: left > 0 ? `wrong code (${left} left) · código errado (restam ${left})` : "too many tries, request a new code · demasiadas tentativas, pede um novo" }, 400);
       }
       await env.DB.prepare(`DELETE FROM login_codes WHERE email = ?1`).bind(email).run();
       const created = await env.DB.prepare(`INSERT OR IGNORE INTO customers (email) VALUES (?1)`).bind(email).run();
