@@ -12,8 +12,6 @@
          place: "campo de ourique · lisboa", url: "" },
   ───────────────────────────────────────────── */
   const EVENTS = [
-    { date: "2026-07-30", name: { en: "burrito pop-up · 18h–21h30", pt: "pop-up de burritos · 18h–21h30" },
-      place: "mercearia moderna portuguesa · graça, lisboa", url: "" },
   ];
 
   /* ───────── i18n ───────── */
@@ -291,9 +289,10 @@
     const cart = readCart();
     const skus = Object.keys(cart).filter((s) => CATALOG[s] && cart[s] > 0);
     const st = window.__miraStatus || {};
+    const emailMode = !!window.__miraEmailOrder;
     const closed = st.open === false;
-    const remainingOf = (sku) => (st.remaining && typeof st.remaining[sku] === "number") ? st.remaining[sku] : null;
-    let total = 0, blocked = closed;
+    const remainingOf = (sku) => (emailMode || !(st.remaining && typeof st.remaining[sku] === "number")) ? null : st.remaining[sku];
+    let total = 0, blocked = closed && !emailMode;
     list.innerHTML = skus.map((sku) => {
       const it = CATALOG[sku];
       const rem = remainingOf(sku);
@@ -316,11 +315,17 @@
     const co = document.getElementById("cartCheckout");
     co.style.display = skus.length ? "" : "none";
     co.classList.toggle("btn--dead", !!(skus.length && blocked));
+    const coSpan = co.querySelector('[data-i18n="cart_checkout"], [data-dyn-co]');
+    if (coSpan && emailMode) {
+      coSpan.removeAttribute("data-i18n");
+      coSpan.setAttribute("data-dyn-co", "1");
+      coSpan.textContent = lang === "pt" ? "encomendar por email" : "order by email";
+    }
     const pointsRow = document.getElementById("cartPoints");
     const cb = document.getElementById("usePoints");
     let discount = 0;
     if (pointsRow) {
-      const eligible = window.__miraMe && window.__miraMe.loggedIn &&
+      const eligible = !emailMode && window.__miraMe && window.__miraMe.loggedIn &&
         window.__miraMe.customer.points >= 100 && total >= 8;
       pointsRow.hidden = !eligible;
       if (!eligible && cb) cb.checked = false;
@@ -335,6 +340,23 @@
     const clearBtn = document.getElementById("cartClear");
     if (clearBtn) clearBtn.hidden = !count;
   }
+
+  /* email-order mode: the cart writes the order email for the customer */
+  window.__miraOrderMailto = function () {
+    const cart = readCart();
+    const skus = Object.keys(cart).filter((s) => CATALOG[s] && cart[s] > 0);
+    let total = 0;
+    const lines = skus.map((sku) => {
+      const it = CATALOG[sku];
+      total += it.eur * cart[sku];
+      return `- ${cart[sku]}× ${I18N[lang][it.nameKey]} ${it.pack} · €${it.eur * cart[sku]}`;
+    }).join("\n");
+    const body = lang === "pt"
+      ? `olá mira!\n\nquero encomendar:\n\n${lines}\n\ntotal: €${total}\n\nnome:\ntelemóvel:\n\n(recolha na Graça, combinamos o dia)`
+      : `olá mira!\n\nI'd like to order:\n\n${lines}\n\ntotal: €${total}\n\nname:\nphone:\n\n(pickup in Graça, we'll sort the day)`;
+    const subject = lang === "pt" ? "Encomenda · mira tortillas" : "Order · mira tortillas";
+    return `mailto:ola@miratortillas.pt?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+  };
 
   function addToCart(sku, qty) {
     const cart = readCart();
@@ -481,16 +503,10 @@
       window.__miraEmailOrder = true;
       const pay = document.querySelector(".sizes__pay");
       if (pay) pay.style.display = "none"; /* don't advertise live stripe checkout while off */
-      /* label survives PT/EN toggles: applyLang calls __miraRelabelBuy again.
-         buttons just say "order"; how-to-order is stated ONCE in a caption under the cards. */
+      /* caption survives PT/EN toggles: applyLang calls __miraRelabelBuy again.
+         buy buttons keep their normal add-to-cart labels — the cart composes the
+         order email at the end, so the shopping flow is identical in both modes. */
       window.__miraRelabelBuy = () => {
-        const btnLabel = lang === "pt" ? "encomendar" : "order";
-        document.querySelectorAll("[data-buy]").forEach((a) => {
-          const span = a.querySelector("[data-i18n], [data-dyn]") || a;
-          span.removeAttribute("data-i18n");
-          span.setAttribute("data-dyn", "buy");
-          span.textContent = btnLabel;
-        });
         const grid = document.getElementById("escolher");
         if (grid) {
           let note = document.getElementById("orderNote");
@@ -562,7 +578,6 @@
     window.__miraAddedToast = addedToast;
     document.querySelectorAll("[data-buy]").forEach((a) => {
       a.addEventListener("click", (e) => {
-        if (window.__miraEmailOrder) return; /* store off: let the mailto open */
         e.preventDefault();
         if (window.__miraBlocked.has(a.dataset.buy)) {
           showToast(lang === "pt" ? "esgotado, há mais em breve! 🌮" : "sold out, back soon! 🌮");
@@ -582,13 +597,7 @@
     /* nav order button: opens the cart when the store is live, otherwise sends
        people to the size cards where the email-to-order buttons live */
     document.getElementById("navOrder").addEventListener("click", (e) => {
-      e.preventDefault();
-      if (window.__miraEmailOrder) {
-        const grid = document.getElementById("escolher");
-        if (grid) grid.scrollIntoView({ behavior: "smooth", block: "start" });
-        return;
-      }
-      openCart();
+      e.preventDefault(); openCart();
     });
     /* footer CTA: shop instead of the mailto (no inbox until the domain email exists) */
     const footCta = document.querySelector(".footer__cta");
@@ -621,6 +630,10 @@
       const items = Object.keys(cart)
         .filter((s) => CATALOG[s] && cart[s] > 0)
         .map((s) => ({ price: CATALOG[s].price, quantity: cart[s] }));
+      if (window.__miraEmailOrder) {
+        if (items.length) location.href = window.__miraOrderMailto();
+        return;
+      }
       if (items.length) {
         const cb = document.getElementById("usePoints");
         startCheckout(items, !!(cb && cb.checked && !document.getElementById("cartPoints").hidden));
@@ -634,20 +647,14 @@
     const b = document.querySelector("[data-quick-all]");
     if (!b) return;
     b.addEventListener("click", () => {
-      if (window.__miraEmailOrder) { scrollToCards(); return; } /* store off → the cards */
       if (!document.body.classList.contains("cart-mode") || b.classList.contains("btn--dead")) return;
       const blocked = window.__miraBlocked || new Set();
       ["small", "medium", "large"].forEach((k) => { if (!blocked.has(k)) addToCart(k, 1); });
       openCart();
     });
   })();
-  function scrollToCards() {
-    const grid = document.getElementById("escolher");
-    if (grid) grid.scrollIntoView({ behavior: "smooth", block: "start" });
-  }
   document.querySelectorAll("[data-quick]").forEach((b) => {
     b.addEventListener("click", () => {
-      if (window.__miraEmailOrder) { scrollToCards(); return; } /* store off → the cards */
       if (document.body.classList.contains("cart-mode")) {
         if (window.__miraBlocked && window.__miraBlocked.has(b.dataset.quick)) return;
         addToCart(b.dataset.quick, 1);
