@@ -248,7 +248,21 @@
                 ${field("line2", "address 2 (optional)", c.address.line2, 'autocomplete="address-line2"')}
                 ${field("postal", "postal code / código postal", c.address.postal_code, 'autocomplete="postal-code"')}
                 ${field("city", "city / cidade", c.address.city, 'autocomplete="address-level2"')}
-                ${field("birthday", "birthday / aniversário 🎁", c.birthday, 'type="date"')}
+                ${(() => {
+                  /* day+month only: two taps beats scrolling a calendar back 30 years,
+                     and the birthday treat never needed the year anyway */
+                  const bd = String(c.birthday || "");
+                  const m = bd.match(/^(?:\d{4}-)?(\d{2})-(\d{2})$/); /* accepts legacy YYYY-MM-DD too */
+                  const selMonth = m ? m[1] : "", selDay = m ? m[2] : "";
+                  const months = ["jan", "fev", "mar", "abr", "mai", "jun", "jul", "ago", "set", "out", "nov", "dez"];
+                  const selStyle = 'style="font-family:var(--font-mono);font-size:.9rem;padding:.6rem .8rem;border:3px solid var(--ink);border-radius:12px;background:#fff;width:100%;text-transform:none;letter-spacing:0"';
+                  return `<label style="display:grid;gap:.25rem;font-family:var(--font-mono);font-size:.68rem;text-transform:uppercase;letter-spacing:.1em;opacity:.85">birthday / aniversário 🎁
+                    <span style="display:grid;grid-template-columns:1fr 1.4fr;gap:.5rem">
+                      <select id="pf_bday_d" ${selStyle}><option value="">dia</option>${Array.from({ length: 31 }, (_, i) => { const d = String(i + 1).padStart(2, "0"); return `<option value="${d}" ${d === selDay ? "selected" : ""}>${i + 1}</option>`; }).join("")}</select>
+                      <select id="pf_bday_m" ${selStyle}><option value="">mês</option>${months.map((mo, i) => { const v2 = String(i + 1).padStart(2, "0"); return `<option value="${v2}" ${v2 === selMonth ? "selected" : ""}>${mo}</option>`; }).join("")}</select>
+                    </span>
+                  </label>`;
+                })()}
               </div>
               <p class="acct__empty" style="margin-top:.6rem">birthday = a little something from us · no teu aniversário há mimo</p>
               <label style="display:flex;align-items:center;gap:.55rem;margin-top:.8rem;font-family:var(--font-mono);font-size:.78rem;cursor:pointer">
@@ -301,7 +315,8 @@
       try {
         const r = await fetch("/api/profile", { method: "POST", headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ name: v("name"), phone: v("phone"), line1: v("line1"), line2: v("line2"),
-            postal_code: v("postal"), city: v("city"), birthday: v("birthday"),
+            postal_code: v("postal"), city: v("city"),
+            birthday: (v("bday_m") && v("bday_d")) ? `${v("bday_m")}-${v("bday_d")}` : "",
             newsletter: !!document.getElementById("pf_news")?.checked }) });
         const d = await r.json();
         msg.textContent = d.ok ? "saved ✓ / guardado ✓" : (d.error || "something went wrong");

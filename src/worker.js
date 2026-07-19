@@ -659,8 +659,15 @@ export default {
       let b;
       try { b = await request.json(); } catch { return json({ error: "bad json" }, 400); }
       const clean = (v, max) => (typeof v === "string" && v.trim() ? v.trim().slice(0, max) : null);
+      /* birthday is day+month only (MM-DD) — the treat never needed a year.
+         Legacy YYYY-MM-DD values from the old date picker stay accepted. */
       const birthday = clean(b.birthday, 10);
-      if (birthday && !/^\d{4}-\d{2}-\d{2}$/.test(birthday)) return json({ error: "birthday must be YYYY-MM-DD" }, 400);
+      if (birthday) {
+        const m = birthday.match(/^(?:\d{4}-)?(\d{2})-(\d{2})$/);
+        const mo = m && parseInt(m[1], 10), dy = m && parseInt(m[2], 10);
+        if (!m || mo < 1 || mo > 12 || dy < 1 || dy > 31)
+          return json({ error: "birthday must be MM-DD" }, 400);
+      }
       /* newsletter is a customer right (GDPR): honor an explicit true/false, both directions */
       const news = b.newsletter === true ? 1 : b.newsletter === false ? 0 : null;
       await env.DB.prepare(
