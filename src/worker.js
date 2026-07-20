@@ -143,19 +143,31 @@ async function stripePost(env, path, params) {
 }
 
 /* transactional email via Brevo (BREVO_API_KEY + MAIL_FROM env) */
-async function sendEmail(env, to, subject, text) {
+async function sendEmail(env, to, subject, text, attachments) {
   if (!env.BREVO_API_KEY) return false;
+  const payload = {
+    sender: { name: "mira tortillas", email: env.MAIL_FROM || "ola@miratortillas.pt" },
+    to: [{ email: to }],
+    subject,
+    textContent: text,
+  };
+  if (attachments && attachments.length) payload.attachment = attachments; /* [{content: base64, name}] */
   const res = await fetch("https://api.brevo.com/v3/smtp/email", {
     method: "POST",
     headers: { "api-key": env.BREVO_API_KEY, "Content-Type": "application/json" },
-    body: JSON.stringify({
-      sender: { name: "mira tortillas", email: env.MAIL_FROM || "ola@miratortillas.pt" },
-      to: [{ email: to }],
-      subject,
-      textContent: text,
-    }),
+    body: JSON.stringify(payload),
   });
   return res.ok;
+}
+
+/* base64-encode a UTF-8 string (chunked, so accents in names/addresses survive
+   and large backups don't blow the call stack) — for email CSV attachments */
+function b64utf8(str) {
+  const bytes = new TextEncoder().encode(str);
+  let bin = "";
+  const CHUNK = 0x8000;
+  for (let i = 0; i < bytes.length; i += CHUNK) bin += String.fromCharCode.apply(null, bytes.subarray(i, i + CHUNK));
+  return btoa(bin);
 }
 
 /* owner SMS via Brevo transactional SMS (same API key; needs SMS credits +
@@ -342,9 +354,30 @@ export default {
           : "(empty)";
         const cust = (await env.DB.prepare(`SELECT * FROM customers`).all()).results || [];
         const ord = (await env.DB.prepare(`SELECT * FROM orders`).all()).results || [];
+        const eur = (c) => "€" + ((c || 0) / 100).toFixed(2).replace(".00", "");
+        const weekAgo = Date.now() - 7 * 864e5;
+        const newThisWeek = cust.filter((c) => Date.parse(String(c.created_at || "").replace(" ", "T") + "Z") >= weekAgo).length;
+        const newsletter = cust.filter((c) => Number(c.marketing_ok) === 1).length;
+        const points = cust.reduce((n, c) => n + (Number(c.points) || 0), 0);
+        const revenue = ord.reduce((n, o) => n + ((Number(o.amount_total) || 0) - (Number(o.refunded_cents) || 0)), 0);
+        /* human summary on top; raw CSV still below AND attached, so it's readable + fully restorable */
+        const summary =
+          `automatic Monday backup — your safety net. the CSVs are attached (open in Sheets/Excel); keep this email.\n\n` +
+          `THIS WEEK\n` +
+          `· customers: ${cust.length} total${newThisWeek ? ` (${newThisWeek} new this week)` : ""}\n` +
+          `· on the newsletter: ${newsletter}\n` +
+          `· orders: ${ord.length}  ·  revenue: ${eur(revenue)}\n` +
+          `· points outstanding: ${points}\n\n` +
+          `— raw data below (also attached) — this is the restore copy —\n\n` +
+          `CUSTOMERS\n${csv(cust)}\n\nORDERS\n${csv(ord)}`;
+        const stamp = new Date().toISOString().slice(0, 10);
         await sendEmail(env, "ola@miratortillas.pt",
           `📦 mira weekly backup — ${cust.length} customers · ${ord.length} orders`,
-          `automatic Monday backup (keep these emails!)\n\nCUSTOMERS\n${csv(cust)}\n\nORDERS\n${csv(ord)}`);
+          summary,
+          [
+            { content: b64utf8(csv(cust)), name: `mira-customers-${stamp}.csv` },
+            { content: b64utf8(csv(ord)), name: `mira-orders-${stamp}.csv` },
+          ]);
       }
     })());
   },
