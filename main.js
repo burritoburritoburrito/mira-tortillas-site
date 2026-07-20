@@ -342,7 +342,9 @@
   }
 
   /* email-order mode: the cart writes the order email for the customer */
-  window.__miraOrderMailto = function () {
+  const ORDER_EMAIL = "ola@miratortillas.pt";
+  /* compose the order as plain text + a mailto — used by the order panel below */
+  function composeOrder() {
     const cart = readCart();
     const skus = Object.keys(cart).filter((s) => CATALOG[s] && cart[s] > 0);
     let total = 0;
@@ -352,10 +354,42 @@
       return `- ${cart[sku]}× ${I18N[lang][it.nameKey]} ${it.pack} · €${it.eur * cart[sku]}`;
     }).join("\n");
     const body = lang === "pt"
-      ? `olá mira!\n\nquero encomendar:\n\n${lines}\n\ntotal: €${total}\n\nnome:\ntelemóvel:\n\n(recolha na Graça, combinamos o dia)`
-      : `olá mira!\n\nI'd like to order:\n\n${lines}\n\ntotal: €${total}\n\nname:\nphone:\n\n(pickup in Graça, we'll sort the day)`;
+      ? `olá mira!\n\nquero encomendar:\n\n${lines}\n\ntotal: €${total}\n\nnome:\ntelemóvel:\n\n(respondemos para combinar tudo)`
+      : `olá mira!\n\nI'd like to order:\n\n${lines}\n\ntotal: €${total}\n\nname:\nphone:\n\n(we'll reply to sort everything out)`;
     const subject = lang === "pt" ? "Encomenda · mira tortillas" : "Order · mira tortillas";
-    return `mailto:ola@miratortillas.pt?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+    return { body, total, mailto: `mailto:${ORDER_EMAIL}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}` };
+  }
+
+  /* the order panel: shows the written order + open-mail AND copy, so it works even
+     when a device has no mail app configured (mailto: alone silently fails on those) */
+  window.__miraShowOrderPanel = function () {
+    const { body, mailto } = composeOrder();
+    document.getElementById("miraOrderPanel")?.remove();
+    const wrap = document.createElement("div");
+    wrap.id = "miraOrderPanel";
+    wrap.style.cssText = "position:fixed;inset:0;z-index:200;background:rgba(20,20,18,.55);display:grid;place-items:center;padding:1.2rem";
+    const t = (pt, en) => (lang === "pt" ? pt : en);
+    wrap.innerHTML =
+      '<div style="background:var(--cream);color:var(--ink);border:3px solid var(--ink);border-radius:18px;max-width:min(440px,94vw);width:100%;padding:1.3rem 1.4rem;box-shadow:8px 9px 0 rgba(20,20,18,.3);font-family:var(--font-mono)">' +
+      '<div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:.4rem"><b style="font-family:var(--font-display);font-size:1.15rem">' + t("a tua encomenda", "your order") + '</b><button id="ordX" style="background:none;border:0;font-size:1.4rem;line-height:1;cursor:pointer;color:var(--ink)">×</button></div>' +
+      '<p style="font-size:.76rem;opacity:.7;margin-bottom:.7rem">' + t("enviado para", "sent to") + ' <b>' + ORDER_EMAIL + '</b>' + t(". abre o teu email ou copia a encomenda.", ". open your email app, or copy the order.") + '</p>' +
+      '<pre style="white-space:pre-wrap;font-family:var(--font-mono);font-size:.78rem;background:#fff;border:2px solid var(--cream-dim);border-radius:10px;padding:.7rem .8rem;margin-bottom:.8rem;max-height:34vh;overflow:auto">' + body.replace(/[&<>]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c])) + '</pre>' +
+      '<div style="display:grid;gap:.55rem">' +
+      '<a href="' + mailto + '" id="ordMail" class="btn btn--ink" style="justify-content:center;text-decoration:none">' + t("abrir no email", "open in email app") + '</a>' +
+      '<button id="ordCopy" class="btn" style="justify-content:center;background:none">' + t("copiar encomenda", "copy order") + '</button>' +
+      '</div></div>';
+    document.body.appendChild(wrap);
+    const close = () => wrap.remove();
+    wrap.addEventListener("click", (e) => { if (e.target === wrap) close(); });
+    wrap.querySelector("#ordX").addEventListener("click", close);
+    wrap.querySelector("#ordMail").addEventListener("click", () => setTimeout(close, 400));
+    wrap.querySelector("#ordCopy").addEventListener("click", async (e) => {
+      const full = body + "\n\n→ " + ORDER_EMAIL;
+      let ok = false;
+      try { await navigator.clipboard.writeText(full); ok = true; }
+      catch (err) { const ta = document.createElement("textarea"); ta.value = full; ta.style.position = "fixed"; ta.style.opacity = "0"; document.body.appendChild(ta); ta.select(); try { ok = document.execCommand("copy"); } catch (e2) {} ta.remove(); }
+      e.target.textContent = ok ? t("copiado ✓ envia para " + ORDER_EMAIL, "copied ✓ send to " + ORDER_EMAIL) : (ORDER_EMAIL);
+    });
   };
 
   function addToCart(sku, qty) {
@@ -503,6 +537,8 @@
       window.__miraEmailOrder = true;
       const pay = document.querySelector(".sizes__pay");
       if (pay) pay.style.display = "none"; /* don't advertise live stripe checkout while off */
+      const ship = document.querySelector(".cart__shipnote");
+      if (ship) ship.style.display = "none"; /* don't commit to pickup wording yet — email sorts it */
       /* caption survives PT/EN toggles: applyLang calls __miraRelabelBuy again.
          buy buttons keep their normal add-to-cart labels — the cart composes the
          order email at the end, so the shopping flow is identical in both modes. */
@@ -631,7 +667,7 @@
         .filter((s) => CATALOG[s] && cart[s] > 0)
         .map((s) => ({ price: CATALOG[s].price, quantity: cart[s] }));
       if (window.__miraEmailOrder) {
-        if (items.length) location.href = window.__miraOrderMailto();
+        if (items.length) window.__miraShowOrderPanel();
         return;
       }
       if (items.length) {
