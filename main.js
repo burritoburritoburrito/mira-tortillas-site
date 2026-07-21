@@ -375,7 +375,7 @@
     wrap.innerHTML =
       '<div id="ordCard" style="background:var(--cream);color:var(--ink);border:3px solid var(--ink);border-radius:18px;max-width:min(440px,94vw);width:100%;padding:1.3rem 1.4rem;box-shadow:8px 9px 0 rgba(20,20,18,.3);font-family:var(--font-mono)">' +
         '<div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:.4rem"><b style="font-family:var(--font-display);font-size:1.15rem">' + t("a tua encomenda", "your order") + '</b><button id="ordX" type="button" style="background:none;border:0;font-size:1.4rem;line-height:1;cursor:pointer;color:var(--ink)">×</button></div>' +
-        '<p style="font-size:.76rem;opacity:.7;margin-bottom:.7rem">' + t("deixa o teu nome e telemóvel — respondemos para combinar a recolha.", "leave your name & phone — we'll reply to sort out pickup.") + '</p>' +
+        '<p style="font-size:.76rem;opacity:.7;margin-bottom:.7rem">' + t("deixa os teus dados — respondemos por email para combinar a recolha.", "leave your details — we'll email you to sort out pickup.") + '</p>' +
         '<div style="background:#fff;border:2px solid var(--cream-dim);border-radius:10px;padding:.7rem .8rem;margin-bottom:.9rem;font-size:.82rem;line-height:1.5">' +
           lines.map((l) => "· " + esc(l)).join("<br>") +
           '<div style="border-top:1px solid var(--cream-dim);margin-top:.5rem;padding-top:.4rem;display:flex;justify-content:space-between"><span>total</span><b>€' + total + '</b></div>' +
@@ -383,7 +383,8 @@
         '<form id="ordForm" autocomplete="on" style="display:grid;gap:.6rem">' +
           '<input id="ordHp" name="hp_field" autocomplete="off" tabindex="-1" aria-hidden="true" style="position:absolute;left:-9999px;top:-9999px;width:1px;height:1px;opacity:0;pointer-events:none">' +
           '<input id="ordName" name="name" autocomplete="name" placeholder="' + t("nome", "name") + '" style="' + inputCss + '">' +
-          '<input id="ordPhone" name="phone" type="tel" autocomplete="tel" placeholder="' + t("telemóvel", "phone") + '" style="' + inputCss + '">' +
+          '<input id="ordEmail" name="email" type="email" autocomplete="email" placeholder="email" style="' + inputCss + '">' +
+          '<input id="ordPhone" name="phone" type="tel" autocomplete="tel" placeholder="' + t("telemóvel (opcional)", "phone (optional)") + '" style="' + inputCss + '">' +
           '<div id="ordErr" style="display:none;color:var(--oxblood);font-size:.76rem"></div>' +
           '<button id="ordSend" type="submit" class="btn btn--ink" style="justify-content:center;margin-top:.1rem">' + t("enviar encomenda", "send order") + '</button>' +
         '</form>' +
@@ -393,6 +394,7 @@
     wrap.addEventListener("click", (e) => { if (e.target === wrap) close(); });
     wrap.querySelector("#ordX").addEventListener("click", close);
     const nameEl = wrap.querySelector("#ordName");
+    const emailEl = wrap.querySelector("#ordEmail");
     const phoneEl = wrap.querySelector("#ordPhone");
     const errEl = wrap.querySelector("#ordErr");
     const sendBtn = wrap.querySelector("#ordSend");
@@ -402,10 +404,12 @@
     wrap.querySelector("#ordForm").addEventListener("submit", async (e) => {
       e.preventDefault();
       const name = nameEl.value.trim();
+      const email = emailEl.value.trim();
       const phone = phoneEl.value.trim();
       const hp = wrap.querySelector("#ordHp").value; /* honeypot — empty for real users */
       if (name.length < 2) return showErr(t("escreve o teu nome", "please add your name"));
-      if (phone.replace(/[^0-9]/g, "").length < 6) return showErr(t("escreve um telemóvel válido", "please add a valid phone"));
+      if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return showErr(t("escreve um email válido", "please add a valid email"));
+      if (phone && phone.replace(/[^0-9]/g, "").length < 6) return showErr(t("telemóvel inválido", "invalid phone number"));
       errEl.style.display = "none";
       sendBtn.disabled = true;
       sendBtn.textContent = t("a enviar…", "sending…");
@@ -413,7 +417,7 @@
         const r = await fetch("/api/order-request", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ items, name, phone, lang, hp }),
+          body: JSON.stringify({ items, name, email, phone, lang, hp }),
         });
         const d = await r.json().catch(() => ({}));
         if (!r.ok || !d.ok) throw new Error(d.error || "");

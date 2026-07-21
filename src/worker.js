@@ -1184,10 +1184,13 @@ export default {
       const items = Array.isArray(body.items) ? body.items : [];
       if (!items.length || items.length > 10) return json({ error: "bad cart" }, 400);
       const name = String(body.name || "").trim().slice(0, 80);
+      const email = String(body.email || "").trim().slice(0, 120).toLowerCase();
       const phone = String(body.phone || "").trim().slice(0, 40);
       const note = String(body.note || "").trim().slice(0, 500);
       if (name.length < 2) return json({ error: lang === "pt" ? "falta o nome" : "name required" }, 400);
-      if (phone.replace(/[^0-9]/g, "").length < 6) return json({ error: lang === "pt" ? "falta o telemóvel" : "phone required" }, 400);
+      if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return json({ error: lang === "pt" ? "email inválido" : "valid email required" }, 400);
+      /* phone is optional (email is the required contact) — but if given, it must be real */
+      if (phone && phone.replace(/[^0-9]/g, "").length < 6) return json({ error: lang === "pt" ? "telemóvel inválido" : "invalid phone" }, 400);
 
       let total = 0;
       const lines = [];
@@ -1223,16 +1226,20 @@ export default {
       try {
         const ipN = (await env.DB.prepare(`SELECT COUNT(*) n FROM order_requests WHERE ip = ?1 AND created_at >= datetime('now','-10 minutes')`).bind(ip).first())?.n || 0;
         if (ipN >= 5) return json({ error: tooMany }, 429);
-        const phN = (await env.DB.prepare(`SELECT COUNT(*) n FROM order_requests WHERE phone = ?1 AND created_at >= datetime('now','-60 minutes')`).bind(phone).first())?.n || 0;
-        if (phN >= 4) return json({ error: tooMany }, 429);
+        const emN = (await env.DB.prepare(`SELECT COUNT(*) n FROM order_requests WHERE email = ?1 AND created_at >= datetime('now','-60 minutes')`).bind(email).first())?.n || 0;
+        if (emN >= 4) return json({ error: tooMany }, 429);
+        if (phone) {
+          const phN = (await env.DB.prepare(`SELECT COUNT(*) n FROM order_requests WHERE phone = ?1 AND created_at >= datetime('now','-60 minutes')`).bind(phone).first())?.n || 0;
+          if (phN >= 4) return json({ error: tooMany }, 429);
+        }
         const dayN = (await env.DB.prepare(`SELECT COUNT(*) n FROM order_requests WHERE created_at >= datetime('now','-24 hours')`).first())?.n || 0;
         if (dayN >= 100) return json({ error: lang === "pt" ? "estamos cheios hoje — escreve-nos a ola@miratortillas.pt" : "we're full today — email us at ola@miratortillas.pt" }, 429);
       } catch {}
 
       try {
         await env.DB.prepare(
-          `INSERT INTO order_requests (name, phone, note, items, total_cents, lang, ip) VALUES (?1,?2,?3,?4,?5,?6,?7)`
-        ).bind(name, phone, note, JSON.stringify(items), total, lang, ip).run();
+          `INSERT INTO order_requests (name, email, phone, note, items, total_cents, lang, ip) VALUES (?1,?2,?3,?4,?5,?6,?7,?8)`
+        ).bind(name, email, phone, note, JSON.stringify(items), total, lang, ip).run();
       } catch {}
 
       /* email only — NO SMS here on purpose (email-order mode, paused store: this is a
@@ -1242,7 +1249,8 @@ export default {
         `🌯 new order request — ${name} · ${eur(total)}`,
         `New order request from the website (email-order mode).\n\n` +
         lines.map((l) => "· " + l).join("\n") +
-        `\n\ntotal: ${eur(total)}\n\nname: ${name}\nphone: ${phone}` +
+        `\n\ntotal: ${eur(total)}\n\nname: ${name}\nemail: ${email}` +
+        (phone ? `\nphone: ${phone}` : "") +
         (note ? `\nnote: ${note}` : "") +
         `\n\nReply to confirm the Graça pickup.`);
       return json({ ok: true });
