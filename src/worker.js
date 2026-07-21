@@ -190,6 +190,15 @@ async function sendSMS(env, text) {
   return ok;
 }
 
+/* ROUTINE owner SMS (per-order / per-renewal pings) — OFF by default to save SMS
+   credits; the email twin always fires. Set worker var OWNER_SMS=1 to turn these on
+   (e.g. at launch). URGENT alerts — disputes, failed renewals, oversold — call
+   sendSMS directly and always send, regardless of this flag. */
+async function smsRoutine(env, text) {
+  if (env.OWNER_SMS !== "1") return false;
+  return sendSMS(env, text);
+}
+
 const POINTS_COUPON = "MIRA-POINTS-800"; // 100 points → €8 off
 
 /* upsert customer + (if paid) record order & settle points. Idempotent per session. */
@@ -285,7 +294,7 @@ async function processSession(env, session) {
         const fulfil = addrLines ? `\nmorada / address:\n${addrLines}` : `\nlevantamento / pickup: Graça (envia dia + local)`;
         await sendEmail(env, "ola@miratortillas.pt", `🌯 nova encomenda — €${total}`,
           `nova encomenda / new order\n\n${itemsTxt}\n\ntotal: €${total} · ${session.mode}\n\n${cd.name || "?"} · ${email}${cd.phone ? " · ☎ " + cd.phone : ""}${fulfil}\n\nstripe: https://dashboard.stripe.com/payments\ndashboard: https://miratortillas.pt/admin`);
-        await sendSMS(env, `mira: nova encomenda €${total} — ${cd.name || email} (${packs || "?"} packs) · Graça pickup`);
+        await smsRoutine(env, `mira: nova encomenda €${total} — ${cd.name || email} (${packs || "?"} packs) · Graça pickup`);
       } catch (e) { /* notification failure must never fail an order */ }
     }
   }
@@ -325,7 +334,7 @@ async function processInvoice(env, invoiceId) {
     await sendEmail(env, "ola@miratortillas.pt", `🔁 renovação de assinatura — €${total}`,
       `subscription renewal / renovação\n\n${itemsTxt}\n\ntotal: €${total}\n\n${customer.name || "?"} · ${email}${customer.phone ? " · " + customer.phone : ""}\n${[customer.address_line1, [customer.postal_code, customer.city].filter(Boolean).join(" ")].filter(Boolean).join("\n")}\n\ndashboard: https://miratortillas.pt/admin`);
     const packs = lines.filter((l) => PRICE_SKU[(l.price && l.price.id) || ""]).map((l) => l.quantity || 1).reduce((a, b) => a + b, 0);
-    await sendSMS(env, `mira: renovação €${total} — ${customer.name || email} (${packs || "?"} packs)`);
+    await smsRoutine(env, `mira: renovação €${total} — ${customer.name || email} (${packs || "?"} packs)`);
   } catch (e) { /* never block */ }
 }
 
@@ -1220,20 +1229,14 @@ export default {
         if (dayN >= 100) return json({ error: lang === "pt" ? "estamos cheios hoje — escreve-nos a ola@miratortillas.pt" : "we're full today — email us at ola@miratortillas.pt" }, 429);
       } catch {}
 
-      /* SMS throttle: only text the owner if NO other order came in the last 10 min, so
-         a burst can't turn the phone into a firehose. Email still logs every order (free)
-         and everything lands in D1 + /admin regardless. */
-      let smsThrottled = true;
-      try {
-        smsThrottled = ((await env.DB.prepare(`SELECT COUNT(*) n FROM order_requests WHERE created_at >= datetime('now','-10 minutes')`).first())?.n || 0) > 0;
-      } catch {}
-
       try {
         await env.DB.prepare(
           `INSERT INTO order_requests (name, phone, note, items, total_cents, lang, ip) VALUES (?1,?2,?3,?4,?5,?6,?7)`
         ).bind(name, phone, note, JSON.stringify(items), total, lang, ip).run();
       } catch {}
 
+      /* email only — NO SMS here on purpose (email-order mode, paused store: this is a
+         record, never urgent; saves SMS credits and can't be weaponised into a text flood) */
       const eur = (c) => "€" + (c / 100).toFixed(2).replace(".00", "");
       await sendEmail(env, env.MAIL_FROM || "ola@miratortillas.pt",
         `🌯 new order request — ${name} · ${eur(total)}`,
@@ -1242,7 +1245,6 @@ export default {
         `\n\ntotal: ${eur(total)}\n\nname: ${name}\nphone: ${phone}` +
         (note ? `\nnote: ${note}` : "") +
         `\n\nReply to confirm the Graça pickup.`);
-      if (!smsThrottled) await sendSMS(env, `mira order: ${name} ${eur(total)} — ${phone}`);
       return json({ ok: true });
     }
 
