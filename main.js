@@ -381,6 +381,7 @@
           '<div style="border-top:1px solid var(--cream-dim);margin-top:.5rem;padding-top:.4rem;display:flex;justify-content:space-between"><span>total</span><b>€' + total + '</b></div>' +
         '</div>' +
         '<form id="ordForm" autocomplete="on" style="display:grid;gap:.6rem">' +
+          '<input id="ordHp" name="hp_field" autocomplete="off" tabindex="-1" aria-hidden="true" style="position:absolute;left:-9999px;top:-9999px;width:1px;height:1px;opacity:0;pointer-events:none">' +
           '<input id="ordName" name="name" autocomplete="name" placeholder="' + t("nome", "name") + '" style="' + inputCss + '">' +
           '<input id="ordPhone" name="phone" type="tel" autocomplete="tel" placeholder="' + t("telemóvel", "phone") + '" style="' + inputCss + '">' +
           '<div id="ordErr" style="display:none;color:var(--oxblood);font-size:.76rem"></div>' +
@@ -402,6 +403,7 @@
       e.preventDefault();
       const name = nameEl.value.trim();
       const phone = phoneEl.value.trim();
+      const hp = wrap.querySelector("#ordHp").value; /* honeypot — empty for real users */
       if (name.length < 2) return showErr(t("escreve o teu nome", "please add your name"));
       if (phone.replace(/[^0-9]/g, "").length < 6) return showErr(t("escreve um telemóvel válido", "please add a valid phone"));
       errEl.style.display = "none";
@@ -411,7 +413,7 @@
         const r = await fetch("/api/order-request", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ items, name, phone, lang }),
+          body: JSON.stringify({ items, name, phone, lang, hp }),
         });
         const d = await r.json().catch(() => ({}));
         if (!r.ok || !d.ok) throw new Error(d.error || "");

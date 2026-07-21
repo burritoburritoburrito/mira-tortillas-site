@@ -1164,12 +1164,19 @@ export default {
     if (url.pathname === "/api/order-request" && request.method === "POST") {
       let body;
       try { body = await request.json(); } catch { return json({ error: "bad json" }, 400); }
+      const ip = request.headers.get("CF-Connecting-IP") || "";
+      const lang = body.lang === "pt" ? "pt" : "en";
+      const tooMany = lang === "pt" ? "demasiados pedidos, tenta daqui a pouco" : "too many requests, try again shortly";
+
+      /* honeypot: a hidden field real users never see. Bots fill it → fake a 200 so
+         they don't retry, but store & notify nothing. */
+      if (String(body.hp || "").trim() !== "") return json({ ok: true });
+
       const items = Array.isArray(body.items) ? body.items : [];
       if (!items.length || items.length > 10) return json({ error: "bad cart" }, 400);
       const name = String(body.name || "").trim().slice(0, 80);
       const phone = String(body.phone || "").trim().slice(0, 40);
       const note = String(body.note || "").trim().slice(0, 500);
-      const lang = body.lang === "pt" ? "pt" : "en";
       if (name.length < 2) return json({ error: lang === "pt" ? "falta o nome" : "name required" }, 400);
       if (phone.replace(/[^0-9]/g, "").length < 6) return json({ error: lang === "pt" ? "falta o telemóvel" : "phone required" }, 400);
 
@@ -1184,13 +1191,41 @@ export default {
         lines.push(`${qty}× ${PRICE_SKU[it.price]} · €${(known.amount * qty) / 100}`);
       }
 
-      /* light anti-spam: max 5 requests / 10 min per IP (site isn't announced, low risk) */
-      const ip = request.headers.get("CF-Connecting-IP") || "";
+      /* Cloudflare Turnstile — INERT until TURNSTILE_SECRET is set. Once it is, the
+         form must send a valid token in body.ts; this stops scripted/bot spam cold. */
+      if (env.TURNSTILE_SECRET) {
+        let human = false;
+        const tok = String(body.ts || "");
+        if (tok) {
+          try {
+            const fd = new URLSearchParams({ secret: env.TURNSTILE_SECRET, response: tok });
+            if (ip) fd.set("remoteip", ip);
+            const vr = await fetch("https://challenges.cloudflare.com/turnstile/v0/siteverify", { method: "POST", body: fd });
+            human = !!(await vr.json()).success;
+          } catch {}
+        }
+        if (!human) return json({ error: lang === "pt" ? "verificação falhou, recarrega a página" : "verification failed, please reload" }, 403);
+      }
+
+      /* rate limits, all read off the order_requests log:
+         · per IP   — 5 / 10 min
+         · per phone — 4 / hour (one number can't hammer it)
+         · site-wide — 100 / day (hard backstop so nothing runs up the SMS/email bill) */
       try {
-        const recent = await env.DB.prepare(
-          `SELECT COUNT(*) n FROM order_requests WHERE ip = ?1 AND created_at >= datetime('now','-10 minutes')`
-        ).bind(ip).first();
-        if (recent && recent.n >= 5) return json({ error: lang === "pt" ? "demasiados pedidos, tenta daqui a pouco" : "too many requests, try again shortly" }, 429);
+        const ipN = (await env.DB.prepare(`SELECT COUNT(*) n FROM order_requests WHERE ip = ?1 AND created_at >= datetime('now','-10 minutes')`).bind(ip).first())?.n || 0;
+        if (ipN >= 5) return json({ error: tooMany }, 429);
+        const phN = (await env.DB.prepare(`SELECT COUNT(*) n FROM order_requests WHERE phone = ?1 AND created_at >= datetime('now','-60 minutes')`).bind(phone).first())?.n || 0;
+        if (phN >= 4) return json({ error: tooMany }, 429);
+        const dayN = (await env.DB.prepare(`SELECT COUNT(*) n FROM order_requests WHERE created_at >= datetime('now','-24 hours')`).first())?.n || 0;
+        if (dayN >= 100) return json({ error: lang === "pt" ? "estamos cheios hoje — escreve-nos a ola@miratortillas.pt" : "we're full today — email us at ola@miratortillas.pt" }, 429);
+      } catch {}
+
+      /* SMS throttle: only text the owner if NO other order came in the last 10 min, so
+         a burst can't turn the phone into a firehose. Email still logs every order (free)
+         and everything lands in D1 + /admin regardless. */
+      let smsThrottled = true;
+      try {
+        smsThrottled = ((await env.DB.prepare(`SELECT COUNT(*) n FROM order_requests WHERE created_at >= datetime('now','-10 minutes')`).first())?.n || 0) > 0;
       } catch {}
 
       try {
@@ -1207,7 +1242,7 @@ export default {
         `\n\ntotal: ${eur(total)}\n\nname: ${name}\nphone: ${phone}` +
         (note ? `\nnote: ${note}` : "") +
         `\n\nReply to confirm the Graça pickup.`);
-      await sendSMS(env, `mira order: ${name} ${eur(total)} — ${phone}`);
+      if (!smsThrottled) await sendSMS(env, `mira order: ${name} ${eur(total)} — ${phone}`);
       return json({ ok: true });
     }
 
