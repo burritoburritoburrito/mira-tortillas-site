@@ -48,6 +48,7 @@
       sub_meta_m: "12 tortillas · €10 per box",
       sub_meta_l: "6 tortillas · €9 per box",
       nav_events: "find us",
+      nav_contact: "contact",
       nav_account: "account",
       ev_kicker: "05 — find us",
       ev_title: "upcoming<br>drops &amp; markets.",
@@ -117,6 +118,7 @@
       sub_meta_m: "12 tortillas · €10 por caixa",
       sub_meta_l: "6 tortillas · €9 por caixa",
       nav_events: "onde estamos",
+      nav_contact: "contacto",
       nav_account: "conta",
       ev_kicker: "05 — onde estamos",
       ev_title: "próximos<br>drops &amp; mercados.",
@@ -385,6 +387,7 @@
           '<input id="ordName" name="name" autocomplete="name" placeholder="' + t("nome", "name") + '" style="' + inputCss + '">' +
           '<input id="ordEmail" name="email" type="email" autocomplete="email" placeholder="email" style="' + inputCss + '">' +
           '<input id="ordPhone" name="phone" type="tel" autocomplete="tel" placeholder="' + t("telemóvel (opcional)", "phone (optional)") + '" style="' + inputCss + '">' +
+          '<textarea id="ordAddr" name="address" autocomplete="street-address" rows="2" placeholder="' + t("morada (opcional, para entregas futuras)", "address (optional, for future delivery)") + '" style="' + inputCss + ';resize:vertical"></textarea>' +
           '<div id="ordErr" style="display:none;color:var(--oxblood);font-size:.76rem"></div>' +
           '<button id="ordSend" type="submit" class="btn btn--ink" style="justify-content:center;margin-top:.1rem">' + t("enviar encomenda", "send order") + '</button>' +
         '</form>' +
@@ -406,6 +409,7 @@
       const name = nameEl.value.trim();
       const email = emailEl.value.trim();
       const phone = phoneEl.value.trim();
+      const address = wrap.querySelector("#ordAddr").value.trim();
       const hp = wrap.querySelector("#ordHp").value; /* honeypot — empty for real users */
       if (name.length < 2) return showErr(t("escreve o teu nome", "please add your name"));
       if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return showErr(t("escreve um email válido", "please add a valid email"));
@@ -417,7 +421,7 @@
         const r = await fetch("/api/order-request", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ items, name, email, phone, lang, hp }),
+          body: JSON.stringify({ items, name, email, phone, address, lang, hp }),
         });
         const d = await r.json().catch(() => ({}));
         if (!r.ok || !d.ok) throw new Error(d.error || "");

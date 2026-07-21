@@ -1186,6 +1186,7 @@ export default {
       const name = String(body.name || "").trim().slice(0, 80);
       const email = String(body.email || "").trim().slice(0, 120).toLowerCase();
       const phone = String(body.phone || "").trim().slice(0, 40);
+      const address = String(body.address || "").trim().slice(0, 300); /* optional — for future delivery */
       const note = String(body.note || "").trim().slice(0, 500);
       if (name.length < 2) return json({ error: lang === "pt" ? "falta o nome" : "name required" }, 400);
       if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return json({ error: lang === "pt" ? "email inválido" : "valid email required" }, 400);
@@ -1238,8 +1239,8 @@ export default {
 
       try {
         await env.DB.prepare(
-          `INSERT INTO order_requests (name, email, phone, note, items, total_cents, lang, ip) VALUES (?1,?2,?3,?4,?5,?6,?7,?8)`
-        ).bind(name, email, phone, note, JSON.stringify(items), total, lang, ip).run();
+          `INSERT INTO order_requests (name, email, phone, address, note, items, total_cents, lang, ip) VALUES (?1,?2,?3,?4,?5,?6,?7,?8,?9)`
+        ).bind(name, email, phone, address, note, JSON.stringify(items), total, lang, ip).run();
       } catch {}
 
       /* email only — NO SMS here on purpose (email-order mode, paused store: this is a
@@ -1251,6 +1252,7 @@ export default {
         lines.map((l) => "· " + l).join("\n") +
         `\n\ntotal: ${eur(total)}\n\nname: ${name}\nemail: ${email}` +
         (phone ? `\nphone: ${phone}` : "") +
+        (address ? `\naddress: ${address}` : "") +
         (note ? `\nnote: ${note}` : "") +
         `\n\nReply to confirm the Graça pickup.`);
       return json({ ok: true });
