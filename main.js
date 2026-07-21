@@ -502,6 +502,7 @@
       wrap.hidden = false;
       wrap.scrollTop = 0;
       document.body.style.overflow = "hidden";
+      if (lenis) lenis.stop(); /* freeze the smooth-scrolled page behind the checkout overlay */
       embedded.mount("#scMount");
     } catch (e) {
       showToast((lang === "pt" ? "erro no checkout — tenta de novo. " : "checkout error — try again. ") + (e.message || ""));
@@ -514,6 +515,7 @@
     if (embedded) { embedded.destroy(); embedded = null; }
     document.getElementById("scWrap").hidden = true;
     document.body.style.overflow = "";
+    if (lenis) lenis.start(); /* resume smooth scroll after the overlay closes */
   }
 
   let toastTimer = null;
