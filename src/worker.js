@@ -1158,6 +1158,59 @@ export default {
     }
 
     /* newsletter opt-in — used by the post-checkout confirmation (signed-in only) */
+    /* email-order mode (store paused, no live Stripe): the cart posts the order + the
+       customer's name & phone straight here, so it works with no mail app. We store it
+       in D1 (durable — the order survives even if the email doesn't) and ping the owner. */
+    if (url.pathname === "/api/order-request" && request.method === "POST") {
+      let body;
+      try { body = await request.json(); } catch { return json({ error: "bad json" }, 400); }
+      const items = Array.isArray(body.items) ? body.items : [];
+      if (!items.length || items.length > 10) return json({ error: "bad cart" }, 400);
+      const name = String(body.name || "").trim().slice(0, 80);
+      const phone = String(body.phone || "").trim().slice(0, 40);
+      const note = String(body.note || "").trim().slice(0, 500);
+      const lang = body.lang === "pt" ? "pt" : "en";
+      if (name.length < 2) return json({ error: lang === "pt" ? "falta o nome" : "name required" }, 400);
+      if (phone.replace(/[^0-9]/g, "").length < 6) return json({ error: lang === "pt" ? "falta o telemóvel" : "phone required" }, 400);
+
+      let total = 0;
+      const lines = [];
+      for (const it of items) {
+        const known = PRICES[it.price];
+        const qty = Number(it.quantity);
+        if (!known || known.mode !== "payment" || !Number.isInteger(qty) || qty < 1 || qty > 20)
+          return json({ error: "bad item" }, 400);
+        total += known.amount * qty;
+        lines.push(`${qty}× ${PRICE_SKU[it.price]} · €${(known.amount * qty) / 100}`);
+      }
+
+      /* light anti-spam: max 5 requests / 10 min per IP (site isn't announced, low risk) */
+      const ip = request.headers.get("CF-Connecting-IP") || "";
+      try {
+        const recent = await env.DB.prepare(
+          `SELECT COUNT(*) n FROM order_requests WHERE ip = ?1 AND created_at >= datetime('now','-10 minutes')`
+        ).bind(ip).first();
+        if (recent && recent.n >= 5) return json({ error: lang === "pt" ? "demasiados pedidos, tenta daqui a pouco" : "too many requests, try again shortly" }, 429);
+      } catch {}
+
+      try {
+        await env.DB.prepare(
+          `INSERT INTO order_requests (name, phone, note, items, total_cents, lang, ip) VALUES (?1,?2,?3,?4,?5,?6,?7)`
+        ).bind(name, phone, note, JSON.stringify(items), total, lang, ip).run();
+      } catch {}
+
+      const eur = (c) => "€" + (c / 100).toFixed(2).replace(".00", "");
+      await sendEmail(env, env.MAIL_FROM || "ola@miratortillas.pt",
+        `🌯 new order request — ${name} · ${eur(total)}`,
+        `New order request from the website (email-order mode).\n\n` +
+        lines.map((l) => "· " + l).join("\n") +
+        `\n\ntotal: ${eur(total)}\n\nname: ${name}\nphone: ${phone}` +
+        (note ? `\nnote: ${note}` : "") +
+        `\n\nReply to confirm the Graça pickup.`);
+      await sendSMS(env, `mira order: ${name} ${eur(total)} — ${phone}`);
+      return json({ ok: true });
+    }
+
     if (url.pathname === "/api/newsletter-optin" && request.method === "POST") {
       const c = await currentCustomer(env, request);
       if (!c) return json({ error: "not signed in" }, 401);

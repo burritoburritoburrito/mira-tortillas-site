@@ -343,52 +343,93 @@
 
   /* email-order mode: the cart writes the order email for the customer */
   const ORDER_EMAIL = "ola@miratortillas.pt";
-  /* compose the order as plain text + a mailto — used by the order panel below */
+  /* read the cart into display lines + the {price,quantity} items the API needs */
   function composeOrder() {
     const cart = readCart();
     const skus = Object.keys(cart).filter((s) => CATALOG[s] && cart[s] > 0);
     let total = 0;
+    const items = [];
     const lines = skus.map((sku) => {
       const it = CATALOG[sku];
-      total += it.eur * cart[sku];
-      return `- ${cart[sku]}× ${I18N[lang][it.nameKey]} ${it.pack} · €${it.eur * cart[sku]}`;
-    }).join("\n");
-    const body = lang === "pt"
-      ? `olá mira!\n\nquero encomendar:\n\n${lines}\n\ntotal: €${total}\n\nnome:\ntelemóvel:\n\n(respondemos para combinar tudo)`
-      : `olá mira!\n\nI'd like to order:\n\n${lines}\n\ntotal: €${total}\n\nname:\nphone:\n\n(we'll reply to sort everything out)`;
-    const subject = lang === "pt" ? "Encomenda · mira tortillas" : "Order · mira tortillas";
-    return { body, total, mailto: `mailto:${ORDER_EMAIL}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}` };
+      const sub = it.eur * cart[sku];
+      total += sub;
+      items.push({ price: it.price, quantity: cart[sku] });
+      return `${cart[sku]}× ${I18N[lang][it.nameKey]} ${it.pack} · €${sub}`;
+    });
+    return { lines, total, items };
   }
 
-  /* the order panel: shows the written order + open-mail AND copy, so it works even
-     when a device has no mail app configured (mailto: alone silently fails on those) */
+  /* the order panel: a real little form. Name + phone are typed here and the order
+     posts straight to us (no mail app needed — mailto: silently failed on devices
+     without one). Copy is kept only as a fallback if the request can't go through. */
   window.__miraShowOrderPanel = function () {
-    const { body, mailto } = composeOrder();
+    const { lines, total, items } = composeOrder();
+    if (!items.length) return;
     document.getElementById("miraOrderPanel")?.remove();
+    const t = (pt, en) => (lang === "pt" ? pt : en);
+    const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
     const wrap = document.createElement("div");
     wrap.id = "miraOrderPanel";
     wrap.style.cssText = "position:fixed;inset:0;z-index:200;background:rgba(20,20,18,.55);display:grid;place-items:center;padding:1.2rem";
-    const t = (pt, en) => (lang === "pt" ? pt : en);
+    const inputCss = "width:100%;border:2px solid var(--cream-dim);border-radius:10px;padding:.6rem .7rem;font-family:var(--font-mono);font-size:.9rem;background:#fff;color:var(--ink);box-sizing:border-box";
     wrap.innerHTML =
-      '<div style="background:var(--cream);color:var(--ink);border:3px solid var(--ink);border-radius:18px;max-width:min(440px,94vw);width:100%;padding:1.3rem 1.4rem;box-shadow:8px 9px 0 rgba(20,20,18,.3);font-family:var(--font-mono)">' +
-      '<div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:.4rem"><b style="font-family:var(--font-display);font-size:1.15rem">' + t("a tua encomenda", "your order") + '</b><button id="ordX" style="background:none;border:0;font-size:1.4rem;line-height:1;cursor:pointer;color:var(--ink)">×</button></div>' +
-      '<p style="font-size:.76rem;opacity:.7;margin-bottom:.7rem">' + t("enviado para", "sent to") + ' <b>' + ORDER_EMAIL + '</b>' + t(". abre o teu email ou copia a encomenda.", ". open your email app, or copy the order.") + '</p>' +
-      '<pre style="white-space:pre-wrap;font-family:var(--font-mono);font-size:.78rem;background:#fff;border:2px solid var(--cream-dim);border-radius:10px;padding:.7rem .8rem;margin-bottom:.8rem;max-height:34vh;overflow:auto">' + body.replace(/[&<>]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c])) + '</pre>' +
-      '<div style="display:grid;gap:.55rem">' +
-      '<a href="' + mailto + '" id="ordMail" class="btn btn--ink" style="justify-content:center;text-decoration:none">' + t("abrir no email", "open in email app") + '</a>' +
-      '<button id="ordCopy" class="btn" style="justify-content:center;background:none">' + t("copiar encomenda", "copy order") + '</button>' +
-      '</div></div>';
+      '<div id="ordCard" style="background:var(--cream);color:var(--ink);border:3px solid var(--ink);border-radius:18px;max-width:min(440px,94vw);width:100%;padding:1.3rem 1.4rem;box-shadow:8px 9px 0 rgba(20,20,18,.3);font-family:var(--font-mono)">' +
+        '<div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:.4rem"><b style="font-family:var(--font-display);font-size:1.15rem">' + t("a tua encomenda", "your order") + '</b><button id="ordX" type="button" style="background:none;border:0;font-size:1.4rem;line-height:1;cursor:pointer;color:var(--ink)">×</button></div>' +
+        '<p style="font-size:.76rem;opacity:.7;margin-bottom:.7rem">' + t("deixa o teu nome e telemóvel — respondemos para combinar a recolha.", "leave your name & phone — we'll reply to sort out pickup.") + '</p>' +
+        '<div style="background:#fff;border:2px solid var(--cream-dim);border-radius:10px;padding:.7rem .8rem;margin-bottom:.9rem;font-size:.82rem;line-height:1.5">' +
+          lines.map((l) => "· " + esc(l)).join("<br>") +
+          '<div style="border-top:1px solid var(--cream-dim);margin-top:.5rem;padding-top:.4rem;display:flex;justify-content:space-between"><span>total</span><b>€' + total + '</b></div>' +
+        '</div>' +
+        '<form id="ordForm" autocomplete="on" style="display:grid;gap:.6rem">' +
+          '<input id="ordName" name="name" autocomplete="name" placeholder="' + t("nome", "name") + '" style="' + inputCss + '">' +
+          '<input id="ordPhone" name="phone" type="tel" autocomplete="tel" placeholder="' + t("telemóvel", "phone") + '" style="' + inputCss + '">' +
+          '<div id="ordErr" style="display:none;color:var(--oxblood);font-size:.76rem"></div>' +
+          '<button id="ordSend" type="submit" class="btn btn--ink" style="justify-content:center;margin-top:.1rem">' + t("enviar encomenda", "send order") + '</button>' +
+        '</form>' +
+      '</div>';
     document.body.appendChild(wrap);
     const close = () => wrap.remove();
     wrap.addEventListener("click", (e) => { if (e.target === wrap) close(); });
     wrap.querySelector("#ordX").addEventListener("click", close);
-    wrap.querySelector("#ordMail").addEventListener("click", () => setTimeout(close, 400));
-    wrap.querySelector("#ordCopy").addEventListener("click", async (e) => {
-      const full = body + "\n\n→ " + ORDER_EMAIL;
-      let ok = false;
-      try { await navigator.clipboard.writeText(full); ok = true; }
-      catch (err) { const ta = document.createElement("textarea"); ta.value = full; ta.style.position = "fixed"; ta.style.opacity = "0"; document.body.appendChild(ta); ta.select(); try { ok = document.execCommand("copy"); } catch (e2) {} ta.remove(); }
-      e.target.textContent = ok ? t("copiado ✓ envia para " + ORDER_EMAIL, "copied ✓ send to " + ORDER_EMAIL) : (ORDER_EMAIL);
+    const nameEl = wrap.querySelector("#ordName");
+    const phoneEl = wrap.querySelector("#ordPhone");
+    const errEl = wrap.querySelector("#ordErr");
+    const sendBtn = wrap.querySelector("#ordSend");
+    setTimeout(() => nameEl.focus(), 60);
+    const showErr = (m) => { errEl.textContent = m; errEl.style.display = "block"; };
+
+    wrap.querySelector("#ordForm").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const name = nameEl.value.trim();
+      const phone = phoneEl.value.trim();
+      if (name.length < 2) return showErr(t("escreve o teu nome", "please add your name"));
+      if (phone.replace(/[^0-9]/g, "").length < 6) return showErr(t("escreve um telemóvel válido", "please add a valid phone"));
+      errEl.style.display = "none";
+      sendBtn.disabled = true;
+      sendBtn.textContent = t("a enviar…", "sending…");
+      try {
+        const r = await fetch("/api/order-request", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ items, name, phone, lang }),
+        });
+        const d = await r.json().catch(() => ({}));
+        if (!r.ok || !d.ok) throw new Error(d.error || "");
+        /* success: clear cart, confirm */
+        writeCart({});
+        renderCart();
+        wrap.querySelector("#ordCard").innerHTML =
+          '<div style="text-align:center;padding:.6rem 0">' +
+          '<div style="font-family:var(--font-display);font-size:1.35rem;margin-bottom:.5rem">' + t("recebido! 🌯", "got it! 🌯") + '</div>' +
+          '<p style="font-size:.86rem;line-height:1.5;opacity:.8">' + t("enviamos-te mensagem para combinar o dia e o local da recolha na Graça.", "we'll message you to sort out the day & spot for pickup in Graça.") + '</p>' +
+          '<button id="ordDone" class="btn btn--ink" style="justify-content:center;margin-top:1rem;width:100%">' + t("fechar", "close") + '</button></div>';
+        wrap.querySelector("#ordDone").addEventListener("click", close);
+        closeCart();
+      } catch (err) {
+        sendBtn.disabled = false;
+        sendBtn.textContent = t("enviar encomenda", "send order");
+        showErr(t("não deu para enviar — escreve-nos a ", "couldn't send — email us at ") + ORDER_EMAIL);
+      }
     });
   };
 
