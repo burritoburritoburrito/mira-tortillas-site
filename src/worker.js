@@ -296,6 +296,25 @@ async function processSession(env, session) {
           `nova encomenda / new order\n\n${itemsTxt}\n\ntotal: €${total} · ${session.mode}\n\n${cd.name || "?"} · ${email}${cd.phone ? " · ☎ " + cd.phone : ""}${fulfil}\n\nstripe: https://dashboard.stripe.com/payments\ndashboard: https://miratortillas.pt/admin`);
         await smsRoutine(env, `mira: nova encomenda €${total} — ${cd.name || email} (${packs || "?"} packs) · Graça pickup`);
       } catch (e) { /* notification failure must never fail an order */ }
+
+      /* customer confirmation — the ONE email that tells them HOW they get their tortillas
+         (pickup in Graça, or their own courier). Warm, early-stage-honest, PT + EN. */
+      try {
+        const totalC = ((session.amount_total || 0) / 100).toFixed(2);
+        const hi = cd.name ? " " + cd.name.split(" ")[0] : "";
+        await sendEmail(env, email, "obrigado! a tua encomenda mira · your mira order 🌯",
+          `Olá${hi}!\n\n` +
+          `Obrigado pela tua encomenda 🌯 Está tudo recebido (€${totalC}).\n\n` +
+          `Somos uma operação pequena e nova, por isso tratamos de cada encomenda pessoalmente. Vamos responder-te em breve por email para combinar o dia e o local do levantamento na Graça — ou, se preferires, envia o teu próprio estafeta (Bolt/Glovo) para o levantar.\n\n` +
+          `São tortillas frescas, meia-cozedura — a tostadela final é contigo, em casa.\n\n` +
+          `Qualquer dúvida, responde a este email.\n— mira\n\n` +
+          `— — — — —\n\n` +
+          `Hi${hi}!\n\n` +
+          `Thanks for your order 🌯 We've got it (€${totalC}).\n\n` +
+          `We're a small, new operation, so every order gets a personal touch. We'll email you back soon to arrange the day and spot for pickup in Graça — or, if you'd rather, send your own courier (Bolt/Glovo) to grab it.\n\n` +
+          `They're fresh, par-cooked tortillas — the final toast is yours, at home.\n\n` +
+          `Questions? Just reply to this email.\n— mira`);
+      } catch (e) { /* customer email is best-effort — never blocks the order */ }
     }
   }
   return customer;
@@ -464,6 +483,14 @@ export default {
       const p = new URLSearchParams();
       p.set("ui_mode", "embedded_page");
       p.set("mode", mode);
+      /* only the payment methods that matter for Lisbon — otherwise Stripe auto-shows
+         Bancontact/Satispay/EPS etc. from other countries. Multibanco + MB WAY are
+         one-off only, so subscriptions fall back to card. */
+      if (mode === "subscription") {
+        p.set("payment_method_types[0]", "card");
+      } else {
+        ["card", "multibanco", "mbway", "revolut_pay"].forEach((m, i) => p.set(`payment_method_types[${i}]`, m));
+      }
       /* newsletter opt-in from our own cart checkbox (Stripe's consent_collection
          isn't available for PT accounts) */
       if (body.newsletter === true) p.set("metadata[newsletter]", "1");
