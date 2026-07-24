@@ -489,7 +489,8 @@ export default {
       if (mode === "subscription") {
         p.set("payment_method_types[0]", "card");
       } else {
-        ["card", "multibanco", "mbway", "revolut_pay"].forEach((m, i) => p.set(`payment_method_types[${i}]`, m));
+        /* NB: Stripe's MB WAY id is "mb_way" (underscore) — "mbway" is rejected */
+        ["card", "multibanco", "mb_way", "revolut_pay"].forEach((m, i) => p.set(`payment_method_types[${i}]`, m));
       }
       /* newsletter opt-in from our own cart checkbox (Stripe's consent_collection
          isn't available for PT accounts) */
