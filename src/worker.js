@@ -505,6 +505,13 @@ export default {
         /* Stripe's native promo-code box in checkout (can't combine with discounts) */
         p.set("allow_promotion_codes", "true");
       }
+      /* pickup agreement, shown right above the Pay button — clicking Pay IS the
+         agreement ("by paying you agree..."). Also set the checkout language. */
+      const ptLang = body.lang === "pt";
+      p.set("locale", ptLang ? "pt" : "en");
+      p.set("custom_text[submit][message]", ptLang
+        ? "Ao pagar, concordas em levantar a encomenda na Graça dentro de 15 dias — combinamos o dia por email."
+        : "By paying, you agree to collect your order in Graça within 15 days — we'll email you to arrange the day.");
       /* 30-min session expiry: shrinks the window where a checkout opened
          before a pause/sell-out could still complete (default is 24h) */
       p.set("expires_at", String(Math.floor(Date.now() / 1000) + 1800));
