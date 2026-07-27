@@ -292,27 +292,32 @@ async function processSession(env, session) {
         const packs = lis.filter((li) => PRICE_SKU[(li.price && li.price.id) || ""]).map((li) => li.quantity).reduce((a, b) => a + b, 0);
         const addrLines = [addr.line1, addr.line2, [addr.postal_code, addr.city].filter(Boolean).join(" ")].filter(Boolean).join("\n");
         const fulfil = addrLines ? `\nmorada / address:\n${addrLines}` : `\nlevantamento / pickup: Graça (envia dia + local)`;
+        const ivaOwner = (((session.amount_total || 0) - Math.round((session.amount_total || 0) / 1.06)) / 100).toFixed(2);
         await sendEmail(env, "ola@miratortillas.pt", `🌯 nova encomenda — €${total}`,
-          `nova encomenda / new order\n\n${itemsTxt}\n\ntotal: €${total} · ${session.mode}\n\n${cd.name || "?"} · ${email}${cd.phone ? " · ☎ " + cd.phone : ""}${fulfil}\n\nstripe: https://dashboard.stripe.com/payments\ndashboard: https://miratortillas.pt/admin`);
+          `nova encomenda / new order\n\n${itemsTxt}\n\ntotal: €${total} · ${session.mode} · IVA 6% incl. €${ivaOwner} (p/ fatura)\n\n${cd.name || "?"} · ${email}${cd.phone ? " · ☎ " + cd.phone : ""}${fulfil}\n\nstripe: https://dashboard.stripe.com/payments\ndashboard: https://miratortillas.pt/admin`);
         await smsRoutine(env, `mira: nova encomenda €${total} — ${cd.name || email} (${packs || "?"} packs) · Graça pickup`);
       } catch (e) { /* notification failure must never fail an order */ }
 
       /* customer confirmation — the ONE email that tells them HOW they get their tortillas
          (pickup in Graça, or their own courier). Warm, early-stage-honest, PT + EN. */
       try {
-        const totalC = ((session.amount_total || 0) / 100).toFixed(2);
+        const cents = session.amount_total || 0;
+        const totalC = (cents / 100).toFixed(2);
+        const ivaC = ((cents - Math.round(cents / 1.06)) / 100).toFixed(2); /* 6% inclusive */
         const hi = cd.name ? " " + cd.name.split(" ")[0] : "";
         await sendEmail(env, email, "obrigado! a tua encomenda mira · your mira order 🌯",
           `Olá${hi}!\n\n` +
-          `Obrigado pela tua encomenda 🌯 Está tudo recebido (€${totalC}).\n\n` +
+          `Obrigado pela tua encomenda 🌯 Está tudo recebido — €${totalC} (IVA 6% incluído: €${ivaC}).\n\n` +
           `Somos uma operação pequena e nova, por isso tratamos de cada encomenda pessoalmente. Vamos responder-te em breve por email para combinar o dia e o local do levantamento na Graça — ou, se preferires, envia o teu próprio estafeta (Bolt/Glovo) para o levantar.\n\n` +
           `São tortillas frescas, meia-cozedura — a tostadela final é contigo, em casa.\n\n` +
+          `Esta encomenda soma ${points} pontos (100 pontos = €8 de desconto). A tua conta já está criada — entra só com o teu email em miratortillas.pt/account.\n\n` +
           `Qualquer dúvida, responde a este email.\n— mira\n\n` +
           `— — — — —\n\n` +
           `Hi${hi}!\n\n` +
-          `Thanks for your order 🌯 We've got it (€${totalC}).\n\n` +
+          `Thanks for your order 🌯 We've got it — €${totalC} (includes 6% VAT: €${ivaC}).\n\n` +
           `We're a small, new operation, so every order gets a personal touch. We'll email you back soon to arrange the day and spot for pickup in Graça — or, if you'd rather, send your own courier (Bolt/Glovo) to grab it.\n\n` +
           `They're fresh, par-cooked tortillas — the final toast is yours, at home.\n\n` +
+          `This order earned you ${points} points (100 points = €8 off). Your account already exists — sign in with just your email at miratortillas.pt/account.\n\n` +
           `Questions? Just reply to this email.\n— mira`);
       } catch (e) { /* customer email is best-effort — never blocks the order */ }
     }
@@ -519,9 +524,30 @@ export default {
       /* pickup model: no delivery address needed — just a phone so we can send the
          customer the weekly Graça pickup day & spot (email is collected by Stripe) */
       p.set("phone_number_collection[enabled]", "true");
+      /* IVA 6% (taxa de pão, AT ruling) as an INCLUSIVE Stripe tax rate — totals stay
+         exactly the same (€8 stays €8), but checkout + receipts show the IVA split.
+         Created once in Stripe, cached in settings. Cosmetic: never blocks a payment. */
+      let taxRate = null;
+      try {
+        const row = await env.DB.prepare(`SELECT v FROM settings WHERE k = 'stripe_tax_rate6'`).first();
+        if (row && row.v) taxRate = row.v;
+        else {
+          const tr = await fetch("https://api.stripe.com/v1/tax_rates", {
+            method: "POST",
+            headers: { Authorization: `Bearer ${env.STRIPE_SECRET_KEY}`, "Content-Type": "application/x-www-form-urlencoded" },
+            body: new URLSearchParams({ display_name: "IVA", percentage: "6.0", inclusive: "true", country: "PT" }),
+          });
+          const tj = await tr.json();
+          if (tr.ok && tj.id) {
+            taxRate = tj.id;
+            await env.DB.prepare(`INSERT OR REPLACE INTO settings (k, v) VALUES ('stripe_tax_rate6', ?1)`).bind(taxRate).run();
+          }
+        }
+      } catch (e) { /* no tax annotation is better than no checkout */ }
       items.forEach((it, i) => {
         p.set(`line_items[${i}][price]`, it.price);
         p.set(`line_items[${i}][quantity]`, String(it.quantity));
+        if (taxRate) p.set(`line_items[${i}][tax_rates][0]`, taxRate);
       });
 
       /* NO delivery fees for now (owner call, 2026-07-12): shipping logistics
