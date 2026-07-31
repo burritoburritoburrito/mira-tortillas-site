@@ -367,17 +367,29 @@ export default {
      Mondays also email a full customers+orders CSV backup — the data IS the business */
   async scheduled(event, env, ctx) {
     ctx.waitUntil((async () => {
-      let alert = "";
-      try {
-        const s = await fetch("https://miratortillas.pt/api/status");
-        const sd = await s.json().catch(() => ({}));
-        if (!s.ok || typeof sd.open !== "boolean") alert += `/api/status broken (${s.status})\n`;
-        const c = await fetch("https://miratortillas.pt/api/checkout", {
-          method: "POST", headers: { "Content-Type": "application/json" }, body: "{}",
-        });
-        const cd = await c.json().catch(() => ({}));
-        if (!cd.error) alert += `/api/checkout unexpected (${c.status})\n`;
-      } catch (e) { alert += "self-check fetch failed: " + e.message + "\n"; }
+      /* one self-check pass; returns "" when healthy, else what failed */
+      const selfCheck = async () => {
+        let a = "";
+        try {
+          const s = await fetch("https://miratortillas.pt/api/status");
+          const sd = await s.json().catch(() => ({}));
+          if (!s.ok || typeof sd.open !== "boolean") a += `/api/status broken (${s.status})\n`;
+          const c = await fetch("https://miratortillas.pt/api/checkout", {
+            method: "POST", headers: { "Content-Type": "application/json" }, body: "{}",
+          });
+          const cd = await c.json().catch(() => ({}));
+          if (!cd.error) a += `/api/checkout unexpected (${c.status})\n`;
+        } catch (e) { a += "self-check fetch failed: " + e.message + "\n"; }
+        return a;
+      };
+      /* a single failed pass is usually an edge blip (saw a false 522 alarm 2026-07-22) —
+         confirm the outage ~60s later and alert only if BOTH passes fail */
+      let alert = await selfCheck();
+      if (alert) {
+        await new Promise((r) => setTimeout(r, 60000));
+        const second = await selfCheck();
+        alert = second ? `${second}\n(confirmed by 2 checks 60s apart; first: ${alert.trim()})` : "";
+      }
       if (alert)
         await sendEmail(env, "ola@miratortillas.pt", "⚠️ mira self-check FAILED", alert + "\ncheck: https://dash.cloudflare.com → mira-shop");
       if (new Date().getUTCDay() === 1) {
