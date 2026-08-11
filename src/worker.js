@@ -293,8 +293,18 @@ async function processSession(env, session) {
         const addrLines = [addr.line1, addr.line2, [addr.postal_code, addr.city].filter(Boolean).join(" ")].filter(Boolean).join("\n");
         const fulfil = addrLines ? `\nmorada / address:\n${addrLines}` : `\nlevantamento / pickup: Graça (envia dia + local)`;
         const ivaOwner = (((session.amount_total || 0) - Math.round((session.amount_total || 0) / 1.06)) / 100).toFixed(2);
-        await sendEmail(env, "ola@miratortillas.pt", `🌯 nova encomenda — €${total}`,
-          `nova encomenda / new order\n\n${itemsTxt}\n\ntotal: €${total} · ${session.mode} · IVA 6% incl. €${ivaOwner} (p/ fatura)\n\n${cd.name || "?"} · ${email}${cd.phone ? " · ☎ " + cd.phone : ""}${fulfil}\n\nstripe: https://dashboard.stripe.com/payments\ndashboard: https://miratortillas.pt/admin`);
+        /* tortilla club perk: a member's FIRST paid order gets a free pack — flag it
+           loudly so it's packed at pickup (count==1 = the order we just inserted) */
+        let clubLine = "";
+        try {
+          const member = await env.DB.prepare(`SELECT id FROM club_members WHERE email = ?1`).bind(email).first();
+          if (member) {
+            const nOrders = (await env.DB.prepare(`SELECT COUNT(*) n FROM orders WHERE customer_id = ?1`).bind(customer.id).first())?.n || 0;
+            if (nOrders === 1) clubLine = `\n\n*** TORTILLA CLUB — PRIMEIRA ENCOMENDA ***\njuntar 1 pack grátis no levantamento`;
+          }
+        } catch (e) { /* flag only */ }
+        await sendEmail(env, "ola@miratortillas.pt", `🌯 nova encomenda — €${total}${clubLine ? " · CLUB +pack" : ""}`,
+          `nova encomenda / new order\n\n${itemsTxt}\n\ntotal: €${total} · ${session.mode} · IVA 6% incl. €${ivaOwner} (p/ fatura)\n\n${cd.name || "?"} · ${email}${cd.phone ? " · ☎ " + cd.phone : ""}${fulfil}${clubLine}\n\nstripe: https://dashboard.stripe.com/payments\ndashboard: https://miratortillas.pt/admin`);
         await smsRoutine(env, `mira: nova encomenda €${total} — ${cd.name || email} (${packs || "?"} packs) · Graça pickup`);
       } catch (e) { /* notification failure must never fail an order */ }
 
@@ -407,9 +417,13 @@ export default {
           : "(empty)";
         const cust = (await env.DB.prepare(`SELECT * FROM customers`).all()).results || [];
         const ord = (await env.DB.prepare(`SELECT * FROM orders`).all()).results || [];
+        let club = [];
+        try { club = (await env.DB.prepare(`SELECT * FROM club_members`).all()).results || []; } catch (e) {}
         const eur = (c) => "€" + ((c || 0) / 100).toFixed(2).replace(".00", "");
         const weekAgo = Date.now() - 7 * 864e5;
-        const newThisWeek = cust.filter((c) => Date.parse(String(c.created_at || "").replace(" ", "T") + "Z") >= weekAgo).length;
+        const inWeek = (r) => Date.parse(String(r.created_at || "").replace(" ", "T") + "Z") >= weekAgo;
+        const newThisWeek = cust.filter(inWeek).length;
+        const clubNew = club.filter(inWeek).length;
         const newsletter = cust.filter((c) => Number(c.marketing_ok) === 1).length;
         const points = cust.reduce((n, c) => n + (Number(c.points) || 0), 0);
         const revenue = ord.reduce((n, o) => n + ((Number(o.amount_total) || 0) - (Number(o.refunded_cents) || 0)), 0);
@@ -418,18 +432,20 @@ export default {
           `automatic Monday backup — your safety net. the CSVs are attached (open in Sheets/Excel); keep this email.\n\n` +
           `THIS WEEK\n` +
           `· customers: ${cust.length} total${newThisWeek ? ` (${newThisWeek} new this week)` : ""}\n` +
+          `· tortilla club: ${club.length} members${clubNew ? ` (${clubNew} new this week)` : ""}\n` +
           `· on the newsletter: ${newsletter}\n` +
           `· orders: ${ord.length}  ·  revenue: ${eur(revenue)}\n` +
           `· points outstanding: ${points}\n\n` +
           `— raw data below (also attached) — this is the restore copy —\n\n` +
-          `CUSTOMERS\n${csv(cust)}\n\nORDERS\n${csv(ord)}`;
+          `CUSTOMERS\n${csv(cust)}\n\nORDERS\n${csv(ord)}\n\nCLUB\n${csv(club)}`;
         const stamp = new Date().toISOString().slice(0, 10);
         await sendEmail(env, "ola@miratortillas.pt",
-          `📦 mira weekly backup — ${cust.length} customers · ${ord.length} orders`,
+          `📦 mira weekly backup — ${cust.length} customers · ${ord.length} orders · ${club.length} club`,
           summary,
           [
             { content: b64utf8(csv(cust)), name: `mira-customers-${stamp}.csv` },
             { content: b64utf8(csv(ord)), name: `mira-orders-${stamp}.csv` },
+            { content: b64utf8(csv(club)), name: `mira-club-${stamp}.csv` },
           ]);
       }
     })());
@@ -1339,6 +1355,77 @@ export default {
         (note ? `\nnote: ${note}` : "") +
         `\n\nReply to confirm the Graça pickup.`);
       return json({ ok: true });
+    }
+
+    /* mira tortilla club — free membership signup (QR at pop-ups → /club page).
+       Stores into club_members; members get first pick on batches + a free pack
+       with their first order (flagged in the owner's order email). */
+    if (url.pathname === "/api/club-join" && request.method === "POST") {
+      let body;
+      try { body = await request.json(); } catch { return json({ error: "bad json" }, 400); }
+      const ip = request.headers.get("CF-Connecting-IP") || "";
+      const lang = body.lang === "pt" ? "pt" : "en";
+
+      /* honeypot: silent fake success, store nothing */
+      if (String(body.hp || "").trim() !== "") return json({ ok: true });
+
+      const name = String(body.name || "").trim().slice(0, 80);
+      const email = String(body.email || "").trim().slice(0, 120).toLowerCase();
+      const phone = String(body.phone || "").trim().slice(0, 40);
+      const src = String(body.src || "web").trim().slice(0, 20);
+      if (!email && !phone) return json({ error: lang === "pt" ? "deixa email ou telemóvel" : "leave an email or phone" }, 400);
+      if (email && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return json({ error: lang === "pt" ? "email inválido" : "invalid email" }, 400);
+      if (phone && phone.replace(/[^0-9]/g, "").length < 6) return json({ error: lang === "pt" ? "telemóvel inválido" : "invalid phone" }, 400);
+
+      /* pop-up reality: many phones share carrier CGNAT IPs, so keep the per-IP
+         limit LOOSE (30/10min) — dedupe + honeypot do the real work. Daily backstop
+         caps Brevo sends. */
+      try {
+        const ipN = (await env.DB.prepare(`SELECT COUNT(*) n FROM club_members WHERE ip = ?1 AND created_at >= datetime('now','-10 minutes')`).bind(ip).first())?.n || 0;
+        if (ipN >= 30) return json({ error: lang === "pt" ? "demasiados pedidos, tenta já a seguir" : "too many requests, try again shortly" }, 429);
+        const dayN = (await env.DB.prepare(`SELECT COUNT(*) n FROM club_members WHERE created_at >= datetime('now','-24 hours')`).first())?.n || 0;
+        if (dayN >= 500) return json({ error: "club is full for today — email ola@miratortillas.pt" }, 429);
+      } catch {}
+
+      /* already a member? welcome them back with their number (idempotent) */
+      try {
+        let existing = null;
+        if (email) existing = await env.DB.prepare(`SELECT id FROM club_members WHERE email = ?1`).bind(email).first();
+        if (!existing && phone) existing = await env.DB.prepare(`SELECT id FROM club_members WHERE phone = ?1`).bind(phone).first();
+        if (existing) {
+          const rank = (await env.DB.prepare(`SELECT COUNT(*) n FROM club_members WHERE id <= ?1`).bind(existing.id).first())?.n || null;
+          return json({ ok: true, n: rank, again: true });
+        }
+      } catch {}
+
+      const ins = await env.DB.prepare(
+        `INSERT INTO club_members (name, email, phone, lang, src, ip) VALUES (?1,?2,?3,?4,?5,?6)`
+      ).bind(name || null, email || null, phone || null, lang, src, ip).run();
+      const memberNo = (await env.DB.prepare(`SELECT COUNT(*) n FROM club_members`).first())?.n || null;
+
+      /* welcome email (best-effort) — also marks marketing consent on any existing account */
+      if (email) {
+        try {
+          await env.DB.prepare(`UPDATE customers SET marketing_ok = 1 WHERE email = ?1`).bind(email).run();
+          const hi = name ? " " + name.split(" ")[0] : "";
+          await sendEmail(env, email, "estás no mira tortilla club 🌯",
+            `Olá${hi}!\n\n` +
+            `Bem-vindo ao mira tortilla club — és o membro #${memberNo}.\n\n` +
+            `O que isso significa:\n` +
+            `· primeira escolha em cada fornada (avisamos-te antes de abrir a loja)\n` +
+            `· pack grátis com a tua primeira encomenda — entregamos no levantamento\n` +
+            `· zero spam, só tortillas\n\n` +
+            `— — — — —\n\n` +
+            `Hi${hi}!\n\n` +
+            `Welcome to the mira tortilla club — you're member #${memberNo}.\n\n` +
+            `What that means:\n` +
+            `· first pick on every batch (we ping you before the shop opens)\n` +
+            `· a free pack with your first order — we add it at pickup\n` +
+            `· zero spam, just tortillas\n\n` +
+            `miratortillas.pt · Graça, Lisboa\n— mira`);
+        } catch (e) { /* never block a signup */ }
+      }
+      return json({ ok: true, n: memberNo });
     }
 
     if (url.pathname === "/api/newsletter-optin" && request.method === "POST") {

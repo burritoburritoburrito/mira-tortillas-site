@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>mira tortilla club</title>
+  <meta name="description" content="Junta-te ao mira tortilla club — primeira escolha em cada fornada, pack grátis com a primeira encomenda. Join free.">
+  <meta name="robots" content="index,follow">
+  <meta name="theme-color" content="#b9cfe4">
+  <link rel="icon" type="image/png" href="/assets/favicon.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500&family=Archivo+Black&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --ink: #141412; --cream: #f4eee1; --cream-dim: #e9e0cc;
+      --oxblood: #6e2f2f; --sky: #b9cfe4; --masa: #ecd9af;
+      --font-display: "Space Grotesk", system-ui, sans-serif;
+      --font-mono: "IBM Plex Mono", ui-monospace, monospace;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: var(--font-display); background: var(--sky); color: var(--ink);
+      min-height: 100svh; display: grid; place-items: center; padding: 1.2rem;
+    }
+    .card {
+      background: var(--cream); border: 3px solid var(--ink); border-radius: 20px;
+      box-shadow: 8px 9px 0 rgba(20,20,18,.3); max-width: 430px; width: 100%;
+      padding: 1.8rem 1.5rem 1.5rem;
+    }
+    .wordmark { height: 34px; display: block; margin: 0 auto .35rem; }
+    .club-kicker {
+      font-family: var(--font-mono); font-size: .72rem; letter-spacing: .16em;
+      text-transform: uppercase; text-align: center; opacity: .65; margin-bottom: 1.1rem;
+    }
+    h1 {
+      font-family: "Archivo Black", var(--font-display); font-size: clamp(1.7rem, 7vw, 2.2rem);
+      line-height: 1.02; text-align: center; text-transform: lowercase; margin-bottom: 1.1rem;
+    }
+    h1 .club { color: var(--oxblood); }
+    .perks { list-style: none; margin-bottom: 1.3rem; }
+    .perks li {
+      font-size: .92rem; line-height: 1.35; padding: .55rem .1rem;
+      border-top: 2px solid var(--cream-dim); display: flex; gap: .6rem; align-items: baseline;
+    }
+    .perks li:last-child { border-bottom: 2px solid var(--cream-dim); }
+    .perks .en { display: block; font-size: .74rem; opacity: .55; font-family: var(--font-mono); }
+    .perks .dot { color: var(--oxblood); font-weight: 700; }
+    form { display: grid; gap: .6rem; }
+    input, .btn {
+      width: 100%; font-size: 1rem; border-radius: 12px; padding: .8rem .9rem;
+      font-family: var(--font-mono); box-sizing: border-box;
+    }
+    input { border: 2px solid var(--ink); background: #fff; color: var(--ink); }
+    input::placeholder { color: #8a8577; }
+    input:focus { outline: 3px solid var(--sky); }
+    .hint { font-size: .7rem; font-family: var(--font-mono); opacity: .6; margin-top: -.2rem; }
+    .btn {
+      background: var(--ink); color: var(--cream); border: 2px solid var(--ink);
+      font-weight: 700; letter-spacing: .04em; text-transform: uppercase; cursor: pointer;
+      margin-top: .3rem; transition: transform .08s;
+    }
+    .btn:active { transform: translate(2px, 2px); }
+    .btn[disabled] { opacity: .6; }
+    .err { display: none; color: var(--oxblood); font-family: var(--font-mono); font-size: .78rem; }
+    .legal {
+      font-size: .64rem; font-family: var(--font-mono); opacity: .55; line-height: 1.5;
+      margin-top: 1rem; text-align: center;
+    }
+    .legal a { color: inherit; }
+    /* success state */
+    .done { display: none; text-align: center; padding: .6rem 0 .3rem; }
+    .done .num {
+      font-family: "Archivo Black", var(--font-display); font-size: 3.2rem; line-height: 1;
+      color: var(--oxblood); margin: .4rem 0 .2rem;
+    }
+    .done .lbl { font-family: var(--font-mono); font-size: .72rem; letter-spacing: .14em; text-transform: uppercase; opacity: .65; }
+    .done h2 { font-family: "Archivo Black", var(--font-display); font-size: 1.5rem; text-transform: lowercase; margin-bottom: .2rem; }
+    .done p { font-size: .9rem; line-height: 1.45; margin-top: .7rem; }
+    .done .en { font-size: .76rem; opacity: .6; font-family: var(--font-mono); margin-top: .5rem; }
+    .site-link { display: inline-block; margin-top: 1.1rem; font-family: var(--font-mono); font-size: .8rem; color: var(--ink); }
+  </style>
+</head>
+<body>
+  <main class="card">
+    <img class="wordmark" src="assets/mira-wordmark.png" alt="mira">
+    <p class="club-kicker">tortilla club · graça, lisboa</p>
+
+    <div id="joinView">
+      <h1>entra no <span class="club">tortilla club</span></h1>
+      <ul class="perks">
+        <li><span class="dot">01</span><span>primeira escolha em cada fornada<span class="en">first pick on every batch</span></span></li>
+        <li><span class="dot">02</span><span>pack grátis com a primeira encomenda<span class="en">free pack with your first order</span></span></li>
+        <li><span class="dot">03</span><span>zero spam — só tortillas<span class="en">zero spam — just tortillas</span></span></li>
+      </ul>
+      <form id="clubForm" autocomplete="on">
+        <input id="cHp" name="website" tabindex="-1" aria-hidden="true" autocomplete="off"
+               style="position:absolute;left:-9999px;top:-9999px;width:1px;height:1px;opacity:0;pointer-events:none">
+        <input id="cName" name="name" autocomplete="name" placeholder="nome · name">
+        <input id="cEmail" name="email" type="email" autocomplete="email" placeholder="email">
+        <input id="cPhone" name="phone" type="tel" autocomplete="tel" placeholder="telemóvel · phone (WhatsApp)">
+        <p class="hint">email ou telemóvel — basta um · email or phone, either works</p>
+        <div class="err" id="cErr"></div>
+        <button class="btn" id="cBtn" type="submit">entrar no clube · join</button>
+      </form>
+      <p class="legal">
+        grátis, sem compromisso. ao entrares aceitas receber novidades das fornadas por email/WhatsApp.
+        free to join — batch news by email/WhatsApp. <a href="/privacy">privacidade</a>
+      </p>
+    </div>
+
+    <div class="done" id="doneView">
+      <h2>estás dentro 🌯</h2>
+      <p class="lbl">membro · member</p>
+      <div class="num" id="memberNum">#—</div>
+      <p>avisamos-te quando a próxima fornada abrir — e o teu primeiro pack grátis fica à tua espera.</p>
+      <p class="en">we'll ping you when the next batch opens — your free first-order pack is waiting.</p>
+      <a class="site-link" href="/">miratortillas.pt →</a>
+    </div>
+  </main>
+
+  <script>
+    (function () {
+      var form = document.getElementById("clubForm");
+      var err = document.getElementById("cErr");
+      var btn = document.getElementById("cBtn");
+      var src = new URLSearchParams(location.search).get("s") || "web";
+      function showErr(m) { err.textContent = m; err.style.display = "block"; }
+      form.addEventListener("submit", function (e) {
+        e.preventDefault();
+        var name = document.getElementById("cName").value.trim();
+        var email = document.getElementById("cEmail").value.trim();
+        var phone = document.getElementById("cPhone").value.trim();
+        var hp = document.getElementById("cHp").value;
+        if (!email && !phone) return showErr("deixa email ou telemóvel · leave an email or phone");
+        if (email && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return showErr("email inválido · invalid email");
+        if (phone && phone.replace(/[^0-9]/g, "").length < 6) return showErr("telemóvel inválido · invalid phone");
+        err.style.display = "none";
+        btn.disabled = true; btn.textContent = "a entrar…";
+        fetch("/api/club-join", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ name: name, email: email, phone: phone, src: src, hp: hp,
+            lang: (navigator.language || "").toLowerCase().indexOf("pt") === 0 ? "pt" : "en" }),
+        }).then(function (r) { return r.json().catch(function () { return {}; }).then(function (d) { return { r: r, d: d }; }); })
+          .then(function (x) {
+            if (!x.r.ok || !x.d.ok) throw new Error(x.d.error || "");
+            document.getElementById("joinView").style.display = "none";
+            document.getElementById("memberNum").textContent = x.d.n ? "#" + x.d.n : "🌯";
+            document.getElementById("doneView").style.display = "block";
+          })
+          .catch(function (e2) {
+            btn.disabled = false; btn.textContent = "entrar no clube · join";
+            showErr((e2 && e2.message) || "não deu — tenta outra vez · didn't work, try again");
+          });
+      });
+    })();
+  </script>
+</body>
+</html>
