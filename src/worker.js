@@ -1411,18 +1411,16 @@ export default {
           await sendEmail(env, email, "estás no mira tortilla club 🌯",
             `Olá${hi}!\n\n` +
             `Bem-vindo ao mira tortilla club — és o membro #${memberNo}.\n\n` +
-            `O que isso significa:\n` +
-            `· primeira escolha em cada fornada (avisamos-te antes de abrir a loja)\n` +
+            `Fazemos tortillas em lotes pequenos, por isso não há sempre stock. O clube é a maneira de as apanhares: avisamos-te quando abre cada lote e encomendas antes de esgotar.\n\n` +
             `· 1 pack médio grátis com a tua primeira encomenda — juntamos no levantamento (um por pessoa)\n` +
-            `· zero spam, só tortillas\n\n` +
+            `· levantamento na Graça, combinado por email\n\n` +
             `— — — — —\n\n` +
             `Hi${hi}!\n\n` +
             `Welcome to the mira tortilla club — you're member #${memberNo}.\n\n` +
-            `What that means:\n` +
-            `· first pick on every batch (we ping you before the shop opens)\n` +
+            `We bake in small batches, so there isn't always stock. The club is how you get them: we let you know when each batch opens and you pre-order before it's gone.\n\n` +
             `· 1 free medium pack with your first order — we add it at pickup (one per person)\n` +
-            `· zero spam, just tortillas\n\n` +
-            `miratortillas.pt · Graça, Lisboa\n— mira`);
+            `· pickup in Graça, arranged by email\n\n` +
+            `miratortillas.pt\n— mira`);
         } catch (e) { /* never block a signup */ }
       }
       return json({ ok: true, n: memberNo });
