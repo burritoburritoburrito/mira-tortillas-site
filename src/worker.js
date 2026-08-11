@@ -367,19 +367,27 @@ export default {
      Mondays also email a full customers+orders CSV backup — the data IS the business */
   async scheduled(event, env, ctx) {
     ctx.waitUntil((async () => {
-      /* one self-check pass; returns "" when healthy, else what failed */
+      /* one self-check pass; returns "" when healthy, else what failed.
+         NB: do NOT fetch our own public URL here — a Worker fetching the zone it
+         serves gets edge-refused (522) unpredictably; every 06:00 run false-alarmed.
+         Test the real components directly instead (public-edge reachability is a
+         job for an outside monitor like UptimeRobot, not for us). */
       const selfCheck = async () => {
         let a = "";
         try {
-          const s = await fetch("https://miratortillas.pt/api/status");
-          const sd = await s.json().catch(() => ({}));
-          if (!s.ok || typeof sd.open !== "boolean") a += `/api/status broken (${s.status})\n`;
-          const c = await fetch("https://miratortillas.pt/api/checkout", {
-            method: "POST", headers: { "Content-Type": "application/json" }, body: "{}",
+          const row = await env.DB.prepare(`SELECT v FROM settings WHERE k = 'store_open'`).first();
+          if (!row || (row.v !== "0" && row.v !== "1")) a += `D1 broken: store_open=${row && row.v}\n`;
+        } catch (e) { a += "D1 query failed: " + e.message + "\n"; }
+        try {
+          const h = await env.ASSETS.fetch(new Request("https://miratortillas.pt/"));
+          if (!h.ok) a += `static assets broken (${h.status})\n`;
+        } catch (e) { a += "assets fetch failed: " + e.message + "\n"; }
+        try {
+          const st = await fetch("https://api.stripe.com/v1/balance", {
+            headers: { Authorization: `Bearer ${env.STRIPE_SECRET_KEY}` },
           });
-          const cd = await c.json().catch(() => ({}));
-          if (!cd.error) a += `/api/checkout unexpected (${c.status})\n`;
-        } catch (e) { a += "self-check fetch failed: " + e.message + "\n"; }
+          if (!st.ok) a += `Stripe auth broken (${st.status})\n`;
+        } catch (e) { a += "Stripe unreachable: " + e.message + "\n"; }
         return a;
       };
       /* a single failed pass is usually an edge blip (saw a false 522 alarm 2026-07-22) —
