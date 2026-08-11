@@ -113,17 +113,15 @@
 <body>
   <main class="card">
     <div class="stick stick--1" aria-hidden="true">free<br>pack</div>
-    <div class="stick stick--2" aria-hidden="true">graça</div>
     <img class="wordmark" src="assets/mira-wordmark.png" alt="mira">
-    <p class="club-kicker">tortilla club · graça, lisboa</p>
+    <p class="club-kicker">tortilla club</p>
 
     <div id="joinView">
       <h1>join the <span class="club">tortilla club</span></h1>
-      <p class="h1-pt">entra no tortilla club — grátis</p>
+      <p class="h1-pt">tortilla drops &amp; events, straight to you · grátis</p>
       <ul class="perks">
-        <li><span class="dot">01</span><span>first pick on every batch<span class="pt">primeira escolha em cada fornada</span></span></li>
-        <li><span class="dot">02</span><span>free pack with your first order<span class="pt">pack grátis com a primeira encomenda</span></span></li>
-        <li><span class="dot">03</span><span>zero spam — just tortillas<span class="pt">zero spam — só tortillas</span></span></li>
+        <li><span class="dot">01</span><span>first pick on every batch</span></li>
+        <li><span class="dot">02</span><span>free pack with your first order</span></li>
       </ul>
       <form id="clubForm" autocomplete="on">
         <input id="cHp" name="website" tabindex="-1" aria-hidden="true" autocomplete="off"
@@ -131,14 +129,12 @@
         <input id="cName" name="name" autocomplete="name" placeholder="name · nome">
         <input id="cEmail" name="email" type="email" autocomplete="email" placeholder="email">
         <input id="cPhone" name="phone" type="tel" autocomplete="tel" placeholder="phone (optional)">
-        <p class="hint">email or phone — either works · email ou telemóvel, basta um</p>
+        <p class="hint">email or phone — either works</p>
         <div class="err" id="cErr"></div>
-        <button class="btn" id="cBtn" type="submit">join the club · entrar</button>
+        <button class="btn" id="cBtn" type="submit">join the club</button>
       </form>
       <p class="legal">
-        free to join, no strings — batch news by email/WhatsApp.
-        grátis e sem compromisso — novidades das fornadas por email/WhatsApp.
-        <a href="/privacy">privacy · privacidade</a>
+        batch news by email or WhatsApp · <a href="/privacy">privacy</a>
       </p>
     </div>
 
@@ -146,8 +142,7 @@
       <h2>you're in 🌯</h2>
       <p class="lbl">member · membro</p>
       <div class="num" id="memberNum">#—</div>
-      <p>we'll ping you when the next batch opens — and your free first-order pack is waiting.</p>
-      <p class="pt">avisamos-te quando a próxima fornada abrir — o teu primeiro pack grátis fica à espera.</p>
+      <p>we'll ping you when the next batch drops — your free pack is waiting.</p>
       <a class="site-link" href="/">miratortillas.pt →</a>
     </div>
   </main>
@@ -218,7 +213,7 @@
             confetti();
           })
           .catch(function (e2) {
-            btn.disabled = false; btn.textContent = "join the club · entrar";
+            btn.disabled = false; btn.textContent = "join the club";
             showErr((e2 && e2.message) || "didn't work — try again · não deu, tenta outra vez");
           });
       });
