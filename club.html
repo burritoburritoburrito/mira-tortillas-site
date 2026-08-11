@@ -1,10 +1,10 @@
 <!DOCTYPE html>
-<html lang="pt">
+<html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>mira tortilla club</title>
-  <meta name="description" content="Junta-te ao mira tortilla club — primeira escolha em cada fornada, pack grátis com a primeira encomenda. Join free.">
+  <meta name="description" content="Join the mira tortilla club — first pick on every batch, free pack with your first order. Grátis, sem compromisso.">
   <meta name="robots" content="index,follow">
   <meta name="theme-color" content="#b9cfe4">
   <link rel="icon" type="image/png" href="/assets/favicon.png">
@@ -14,7 +14,7 @@
   <style>
     :root {
       --ink: #141412; --cream: #f4eee1; --cream-dim: #e9e0cc;
-      --oxblood: #6e2f2f; --sky: #b9cfe4; --masa: #ecd9af;
+      --oxblood: #6e2f2f; --sky: #b9cfe4; --masa: #ecd9af; --toast: #b98a4e;
       --font-display: "Space Grotesk", system-ui, sans-serif;
       --font-mono: "IBM Plex Mono", ui-monospace, monospace;
     }
@@ -22,44 +22,66 @@
     body {
       font-family: var(--font-display); background: var(--sky); color: var(--ink);
       min-height: 100svh; display: grid; place-items: center; padding: 1.2rem;
+      overflow-x: hidden;
     }
     .card {
       background: var(--cream); border: 3px solid var(--ink); border-radius: 20px;
       box-shadow: 8px 9px 0 rgba(20,20,18,.3); max-width: 430px; width: 100%;
-      padding: 1.8rem 1.5rem 1.5rem;
+      padding: 1.8rem 1.5rem 1.5rem; position: relative;
+      animation: cardIn .5s cubic-bezier(.2, 1.4, .4, 1) both;
     }
-    .wordmark { height: 34px; display: block; margin: 0 auto .35rem; }
+    @keyframes cardIn { from { opacity: 0; transform: scale(.92) translateY(14px); } }
+    /* floating sticker dots, like the hero's €8! stickers */
+    .stick {
+      position: absolute; font-family: "Archivo Black", var(--font-display);
+      display: grid; place-items: center; border-radius: 50%; border: 3px solid var(--ink);
+      box-shadow: 3px 4px 0 rgba(20,20,18,.28); transform: rotate(-9deg);
+      animation: bob 3.4s ease-in-out infinite;
+    }
+    .stick--1 { width: 62px; height: 62px; background: var(--oxblood); color: var(--cream); font-size: .8rem; top: -20px; right: -12px; }
+    .stick--2 { width: 48px; height: 48px; background: var(--masa); color: var(--ink); font-size: .62rem; bottom: 34px; left: -14px; transform: rotate(8deg); animation-delay: 1.1s; }
+    @keyframes bob { 50% { translate: 0 -6px; } }
+    .wordmark { height: 34px; display: block; margin: 0 auto .35rem; animation: wob .5s .15s cubic-bezier(.2,1.6,.4,1) both; }
+    @keyframes wob { from { opacity: 0; transform: rotate(-5deg) scale(.7); } }
     .club-kicker {
       font-family: var(--font-mono); font-size: .72rem; letter-spacing: .16em;
       text-transform: uppercase; text-align: center; opacity: .65; margin-bottom: 1.1rem;
     }
     h1 {
       font-family: "Archivo Black", var(--font-display); font-size: clamp(1.7rem, 7vw, 2.2rem);
-      line-height: 1.02; text-align: center; text-transform: lowercase; margin-bottom: 1.1rem;
+      line-height: 1.02; text-align: center; text-transform: lowercase; margin-bottom: .25rem;
     }
     h1 .club { color: var(--oxblood); }
+    .h1-pt { font-family: var(--font-mono); text-align: center; font-size: .74rem; opacity: .55; margin-bottom: 1.1rem; }
     .perks { list-style: none; margin-bottom: 1.3rem; }
     .perks li {
       font-size: .92rem; line-height: 1.35; padding: .55rem .1rem;
       border-top: 2px solid var(--cream-dim); display: flex; gap: .6rem; align-items: baseline;
+      animation: rowIn .45s both;
     }
+    .perks li:nth-child(1) { animation-delay: .18s; }
+    .perks li:nth-child(2) { animation-delay: .30s; }
+    .perks li:nth-child(3) { animation-delay: .42s; }
+    @keyframes rowIn { from { opacity: 0; transform: translateX(-14px); } }
     .perks li:last-child { border-bottom: 2px solid var(--cream-dim); }
-    .perks .en { display: block; font-size: .74rem; opacity: .55; font-family: var(--font-mono); }
-    .perks .dot { color: var(--oxblood); font-weight: 700; }
+    .perks .pt { display: block; font-size: .74rem; opacity: .55; font-family: var(--font-mono); }
+    .perks .dot { color: var(--oxblood); font-weight: 700; font-family: var(--font-mono); }
     form { display: grid; gap: .6rem; }
     input, .btn {
       width: 100%; font-size: 1rem; border-radius: 12px; padding: .8rem .9rem;
       font-family: var(--font-mono); box-sizing: border-box;
     }
-    input { border: 2px solid var(--ink); background: #fff; color: var(--ink); }
+    input { border: 2px solid var(--ink); background: #fff; color: var(--ink); transition: transform .12s; }
     input::placeholder { color: #8a8577; }
-    input:focus { outline: 3px solid var(--sky); }
+    input:focus { outline: 3px solid var(--oxblood); transform: rotate(-.4deg) scale(1.01); }
     .hint { font-size: .7rem; font-family: var(--font-mono); opacity: .6; margin-top: -.2rem; }
     .btn {
       background: var(--ink); color: var(--cream); border: 2px solid var(--ink);
       font-weight: 700; letter-spacing: .04em; text-transform: uppercase; cursor: pointer;
       margin-top: .3rem; transition: transform .08s;
     }
+    .btn:hover { animation: jiggle .35s; }
+    @keyframes jiggle { 25% { transform: rotate(-1.2deg); } 75% { transform: rotate(1.2deg); } }
     .btn:active { transform: translate(2px, 2px); }
     .btn[disabled] { opacity: .6; }
     .err { display: none; color: var(--oxblood); font-family: var(--font-mono); font-size: .78rem; }
@@ -70,51 +92,62 @@
     .legal a { color: inherit; }
     /* success state */
     .done { display: none; text-align: center; padding: .6rem 0 .3rem; }
+    .done.on { display: block; animation: cardIn .45s cubic-bezier(.2, 1.4, .4, 1) both; }
     .done .num {
-      font-family: "Archivo Black", var(--font-display); font-size: 3.2rem; line-height: 1;
+      font-family: "Archivo Black", var(--font-display); font-size: 3.4rem; line-height: 1;
       color: var(--oxblood); margin: .4rem 0 .2rem;
     }
     .done .lbl { font-family: var(--font-mono); font-size: .72rem; letter-spacing: .14em; text-transform: uppercase; opacity: .65; }
-    .done h2 { font-family: "Archivo Black", var(--font-display); font-size: 1.5rem; text-transform: lowercase; margin-bottom: .2rem; }
+    .done h2 { font-family: "Archivo Black", var(--font-display); font-size: 1.6rem; text-transform: lowercase; margin-bottom: .2rem; }
     .done p { font-size: .9rem; line-height: 1.45; margin-top: .7rem; }
-    .done .en { font-size: .76rem; opacity: .6; font-family: var(--font-mono); margin-top: .5rem; }
+    .done .pt { font-size: .76rem; opacity: .6; font-family: var(--font-mono); margin-top: .5rem; }
     .site-link { display: inline-block; margin-top: 1.1rem; font-family: var(--font-mono); font-size: .8rem; color: var(--ink); }
+    /* confetti */
+    .cf {
+      position: fixed; top: -20px; border-radius: 50%; pointer-events: none; z-index: 50;
+      animation: fall linear forwards;
+    }
+    @keyframes fall { to { transform: translateY(110vh) rotate(540deg); } }
   </style>
 </head>
 <body>
   <main class="card">
+    <div class="stick stick--1" aria-hidden="true">free<br>pack</div>
+    <div class="stick stick--2" aria-hidden="true">graça</div>
     <img class="wordmark" src="assets/mira-wordmark.png" alt="mira">
     <p class="club-kicker">tortilla club · graça, lisboa</p>
 
     <div id="joinView">
-      <h1>entra no <span class="club">tortilla club</span></h1>
+      <h1>join the <span class="club">tortilla club</span></h1>
+      <p class="h1-pt">entra no tortilla club — grátis</p>
       <ul class="perks">
-        <li><span class="dot">01</span><span>primeira escolha em cada fornada<span class="en">first pick on every batch</span></span></li>
-        <li><span class="dot">02</span><span>pack grátis com a primeira encomenda<span class="en">free pack with your first order</span></span></li>
-        <li><span class="dot">03</span><span>zero spam — só tortillas<span class="en">zero spam — just tortillas</span></span></li>
+        <li><span class="dot">01</span><span>first pick on every batch<span class="pt">primeira escolha em cada fornada</span></span></li>
+        <li><span class="dot">02</span><span>free pack with your first order<span class="pt">pack grátis com a primeira encomenda</span></span></li>
+        <li><span class="dot">03</span><span>zero spam — just tortillas<span class="pt">zero spam — só tortillas</span></span></li>
       </ul>
       <form id="clubForm" autocomplete="on">
         <input id="cHp" name="website" tabindex="-1" aria-hidden="true" autocomplete="off"
                style="position:absolute;left:-9999px;top:-9999px;width:1px;height:1px;opacity:0;pointer-events:none">
-        <input id="cName" name="name" autocomplete="name" placeholder="nome · name">
+        <input id="cName" name="name" autocomplete="name" placeholder="name · nome">
         <input id="cEmail" name="email" type="email" autocomplete="email" placeholder="email">
-        <input id="cPhone" name="phone" type="tel" autocomplete="tel" placeholder="telemóvel · phone (WhatsApp)">
-        <p class="hint">email ou telemóvel — basta um · email or phone, either works</p>
+        <input id="cPhone" name="phone" type="tel" autocomplete="tel" placeholder="phone (optional)">
+        <p class="hint">email or phone — either works · email ou telemóvel, basta um</p>
         <div class="err" id="cErr"></div>
-        <button class="btn" id="cBtn" type="submit">entrar no clube · join</button>
+        <button class="btn" id="cBtn" type="submit">join the club · entrar</button>
       </form>
       <p class="legal">
-        grátis, sem compromisso. ao entrares aceitas receber novidades das fornadas por email/WhatsApp.
-        free to join — batch news by email/WhatsApp. <a href="/privacy">privacidade</a>
+        free to join, no strings — batch news by email/WhatsApp.
+        grátis e sem compromisso — novidades das fornadas por email/WhatsApp.
+        <a href="/privacy">privacy · privacidade</a>
       </p>
     </div>
 
     <div class="done" id="doneView">
-      <h2>estás dentro 🌯</h2>
-      <p class="lbl">membro · member</p>
+      <h2>you're in 🌯</h2>
+      <p class="lbl">member · membro</p>
       <div class="num" id="memberNum">#—</div>
-      <p>avisamos-te quando a próxima fornada abrir — e o teu primeiro pack grátis fica à tua espera.</p>
-      <p class="en">we'll ping you when the next batch opens — your free first-order pack is waiting.</p>
+      <p>we'll ping you when the next batch opens — and your free first-order pack is waiting.</p>
+      <p class="pt">avisamos-te quando a próxima fornada abrir — o teu primeiro pack grátis fica à espera.</p>
       <a class="site-link" href="/">miratortillas.pt →</a>
     </div>
   </main>
@@ -126,17 +159,50 @@
       var btn = document.getElementById("cBtn");
       var src = new URLSearchParams(location.search).get("s") || "web";
       function showErr(m) { err.textContent = m; err.style.display = "block"; }
+
+      function confetti() {
+        var colors = ["#6e2f2f", "#ecd9af", "#141412", "#f4eee1", "#b98a4e"];
+        for (var i = 0; i < 42; i++) {
+          var d = document.createElement("div");
+          d.className = "cf";
+          var s = 6 + Math.random() * 9;
+          d.style.width = d.style.height = s + "px";
+          d.style.left = Math.random() * 100 + "vw";
+          d.style.background = colors[i % colors.length];
+          d.style.animationDuration = 1.6 + Math.random() * 1.8 + "s";
+          d.style.animationDelay = Math.random() * 0.5 + "s";
+          if (i % 3 === 0) d.style.borderRadius = "2px"; /* mix squares in */
+          document.body.appendChild(d);
+          setTimeout(function (el) { return function () { el.remove(); }; }(d), 4200);
+        }
+      }
+
+      function countUp(n) {
+        var el = document.getElementById("memberNum");
+        if (!n) { el.textContent = "🌯"; return; }
+        var t0 = null, dur = Math.min(900, 220 + n * 28);
+        function step(ts) {
+          if (!t0) t0 = ts;
+          var p = Math.min(1, (ts - t0) / dur);
+          el.textContent = "#" + Math.max(1, Math.round(n * (1 - Math.pow(1 - p, 3))));
+          if (p < 1) requestAnimationFrame(step);
+        }
+        requestAnimationFrame(step);
+        /* rAF is throttled/paused in some in-app browsers — guarantee the final number */
+        setTimeout(function () { el.textContent = "#" + n; }, dur + 150);
+      }
+
       form.addEventListener("submit", function (e) {
         e.preventDefault();
         var name = document.getElementById("cName").value.trim();
         var email = document.getElementById("cEmail").value.trim();
         var phone = document.getElementById("cPhone").value.trim();
         var hp = document.getElementById("cHp").value;
-        if (!email && !phone) return showErr("deixa email ou telemóvel · leave an email or phone");
-        if (email && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return showErr("email inválido · invalid email");
-        if (phone && phone.replace(/[^0-9]/g, "").length < 6) return showErr("telemóvel inválido · invalid phone");
+        if (!email && !phone) return showErr("leave an email or phone · deixa email ou telemóvel");
+        if (email && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return showErr("invalid email · email inválido");
+        if (phone && phone.replace(/[^0-9]/g, "").length < 6) return showErr("invalid phone · telemóvel inválido");
         err.style.display = "none";
-        btn.disabled = true; btn.textContent = "a entrar…";
+        btn.disabled = true; btn.textContent = "joining…";
         fetch("/api/club-join", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -146,12 +212,14 @@
           .then(function (x) {
             if (!x.r.ok || !x.d.ok) throw new Error(x.d.error || "");
             document.getElementById("joinView").style.display = "none";
-            document.getElementById("memberNum").textContent = x.d.n ? "#" + x.d.n : "🌯";
-            document.getElementById("doneView").style.display = "block";
+            var dv = document.getElementById("doneView");
+            dv.classList.add("on");
+            countUp(x.d.n);
+            confetti();
           })
           .catch(function (e2) {
-            btn.disabled = false; btn.textContent = "entrar no clube · join";
-            showErr((e2 && e2.message) || "não deu — tenta outra vez · didn't work, try again");
+            btn.disabled = false; btn.textContent = "join the club · entrar";
+            showErr((e2 && e2.message) || "didn't work — try again · não deu, tenta outra vez");
           });
       });
     })();
