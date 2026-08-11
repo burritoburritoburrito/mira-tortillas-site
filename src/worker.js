@@ -297,10 +297,10 @@ async function processSession(env, session) {
            loudly so it's packed at pickup (count==1 = the order we just inserted) */
         let clubLine = "";
         try {
-          const member = await env.DB.prepare(`SELECT id FROM club_members WHERE email = ?1`).bind(email).first();
+          const member = await env.DB.prepare(`SELECT id, created_at FROM club_members WHERE email = ?1`).bind(email).first();
           if (member) {
             const nOrders = (await env.DB.prepare(`SELECT COUNT(*) n FROM orders WHERE customer_id = ?1`).bind(customer.id).first())?.n || 0;
-            if (nOrders === 1) clubLine = `\n\n*** TORTILLA CLUB — PRIMEIRA ENCOMENDA ***\njuntar 1 pack grátis no levantamento`;
+            if (nOrders === 1) clubLine = `\n\n*** TORTILLA CLUB — PRIMEIRA ENCOMENDA ***\njuntar 1 PACK MEDIO gratis no levantamento (membro desde ${String(member.created_at || "").slice(0, 10)})`;
           }
         } catch (e) { /* flag only */ }
         await sendEmail(env, "ola@miratortillas.pt", `🌯 nova encomenda — €${total}${clubLine ? " · CLUB +pack" : ""}`,
@@ -1413,14 +1413,14 @@ export default {
             `Bem-vindo ao mira tortilla club — és o membro #${memberNo}.\n\n` +
             `O que isso significa:\n` +
             `· primeira escolha em cada fornada (avisamos-te antes de abrir a loja)\n` +
-            `· pack grátis com a tua primeira encomenda — entregamos no levantamento\n` +
+            `· 1 pack médio grátis com a tua primeira encomenda — juntamos no levantamento (um por pessoa)\n` +
             `· zero spam, só tortillas\n\n` +
             `— — — — —\n\n` +
             `Hi${hi}!\n\n` +
             `Welcome to the mira tortilla club — you're member #${memberNo}.\n\n` +
             `What that means:\n` +
             `· first pick on every batch (we ping you before the shop opens)\n` +
-            `· a free pack with your first order — we add it at pickup\n` +
+            `· 1 free medium pack with your first order — we add it at pickup (one per person)\n` +
             `· zero spam, just tortillas\n\n` +
             `miratortillas.pt · Graça, Lisboa\n— mira`);
         } catch (e) { /* never block a signup */ }
