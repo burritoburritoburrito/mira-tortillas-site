@@ -49,6 +49,7 @@
       sub_meta_l: "6 tortillas · €9 per box",
       nav_events: "find us",
       nav_contact: "contact",
+      nav_club: "mira tortilla club",
       nav_account: "account",
       ev_kicker: "05 — find us",
       ev_title: "upcoming<br>drops &amp; markets.",
@@ -56,11 +57,11 @@
       sizes_kicker: "01 — the sizes",
       sizes_title: "pick your<br>size.",
       sizes_sub: "Taco night, burrito Sunday or snack quesadillas. There's a pack for that",
-      s_name: "small", s_desc: "15&nbsp;cm · tacos &amp; snacks", s_btn: "add to cart +",
-      m_name: "medium", m_desc: "21–23&nbsp;cm · wraps &amp; quesadillas", m_btn: "add to cart +",
-      l_name: "large", l_desc: "30&nbsp;cm · burritos", l_btn: "add to cart +",
+      s_name: "small", s_desc: "15&nbsp;cm · tacos &amp; snacks", s_btn: "reserve",
+      m_name: "medium", m_desc: "21–23&nbsp;cm · wraps &amp; quesadillas", m_btn: "reserve",
+      l_name: "large", l_desc: "30&nbsp;cm · burritos", l_btn: "reserve",
       marquee: "flour <i>·</i> water <i>·</i> avocado oil <i>·</i> salt <i>·</i>&nbsp;",
-      pay_note: "secure checkout by stripe · card · apple pay · google pay · mb way / multibanco",
+      pay_note: "not selling online yet · join the club and we'll be in touch",
       foot_kicker: "hungry? / fome?",
       foot_cta: "order<br>tortillas",
       foot_made: "made in lisboa 🇵🇹",
@@ -119,6 +120,7 @@
       sub_meta_l: "6 tortillas · €9 por caixa",
       nav_events: "onde estamos",
       nav_contact: "contacto",
+      nav_club: "mira tortilla club",
       nav_account: "conta",
       ev_kicker: "05 — onde estamos",
       ev_title: "próximos<br>drops &amp; mercados.",
@@ -126,11 +128,11 @@
       sizes_kicker: "01 — os tamanhos",
       sizes_title: "escolhe o<br>tamanho.",
       sizes_sub: "Noite de tacos, burrito ao domingo ou quesadillas para o lanche. Temos um pack para isso",
-      s_name: "pequenas", s_desc: "15&nbsp;cm · tacos e snacks", s_btn: "adicionar +",
-      m_name: "médias", m_desc: "21–23&nbsp;cm · wraps e quesadillas", m_btn: "adicionar +",
-      l_name: "grandes", l_desc: "30&nbsp;cm · burritos", l_btn: "adicionar +",
+      s_name: "pequenas", s_desc: "15&nbsp;cm · tacos e snacks", s_btn: "reservar",
+      m_name: "médias", m_desc: "21–23&nbsp;cm · wraps e quesadillas", m_btn: "reservar",
+      l_name: "grandes", l_desc: "30&nbsp;cm · burritos", l_btn: "reservar",
       marquee: "farinha <i>·</i> água <i>·</i> óleo de abacate <i>·</i> sal <i>·</i>&nbsp;",
-      pay_note: "pagamento seguro com stripe · cartão · apple pay · google pay · mb way / multibanco",
+      pay_note: "ainda não vendemos online · entra no clube e falamos contigo",
       foot_kicker: "fome? / hungry?",
       foot_cta: "encomenda<br>tortillas",
       foot_made: "feitas em lisboa 🇵🇹",
@@ -387,7 +389,11 @@
           '<input id="ordName" name="name" autocomplete="name" placeholder="' + t("nome", "name") + '" style="' + inputCss + '">' +
           '<input id="ordEmail" name="email" type="email" autocomplete="email" placeholder="email" style="' + inputCss + '">' +
           '<input id="ordPhone" name="phone" type="tel" autocomplete="tel" placeholder="' + t("telemóvel (opcional)", "phone (optional)") + '" style="' + inputCss + '">' +
-          '<textarea id="ordAddr" name="address" autocomplete="street-address" rows="2" placeholder="' + t("morada (opcional, para entregas futuras)", "address (optional, for future delivery)") + '" style="' + inputCss + ';resize:vertical"></textarea>' +
+          '<div id="ordFul" style="display:grid;grid-template-columns:1fr 1fr;gap:.5rem">' +
+            '<button type="button" data-ful="pickup" class="fulBtn is-on" style="' + fulCss + '">' + t("levantar", "pickup") + '</button>' +
+            '<button type="button" data-ful="delivery" class="fulBtn" style="' + fulCss + '">' + t("entrega", "delivery") + '</button>' +
+          '</div>' +
+          '<textarea id="ordAddr" name="address" autocomplete="street-address" rows="2" placeholder="' + t("morada de entrega", "delivery address") + '" style="' + inputCss + ';resize:vertical;display:none"></textarea>' +
           '<div id="ordErr" style="display:none;color:var(--oxblood);font-size:.76rem"></div>' +
           '<button id="ordSend" type="submit" class="btn btn--ink" style="justify-content:center;margin-top:.1rem">' + t("enviar encomenda", "send order") + '</button>' +
         '</form>' +
@@ -396,6 +402,18 @@
     const close = () => wrap.remove();
     wrap.addEventListener("click", (e) => { if (e.target === wrap) close(); });
     wrap.querySelector("#ordX").addEventListener("click", close);
+    let fulfilment = "pickup";
+    wrap.querySelectorAll(".fulBtn").forEach(function (b) {
+      b.addEventListener("click", function () {
+        fulfilment = b.dataset.ful;
+        wrap.querySelectorAll(".fulBtn").forEach(function (x) {
+          const on = x === b;
+          x.style.background = on ? "var(--ink)" : "#fff";
+          x.style.color = on ? "var(--cream)" : "var(--ink)";
+        });
+        wrap.querySelector("#ordAddr").style.display = fulfilment === "delivery" ? "" : "none";
+      });
+    });
     const nameEl = wrap.querySelector("#ordName");
     const emailEl = wrap.querySelector("#ordEmail");
     const phoneEl = wrap.querySelector("#ordPhone");
@@ -414,6 +432,7 @@
       if (name.length < 2) return showErr(t("escreve o teu nome", "please add your name"));
       if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return showErr(t("escreve um email válido", "please add a valid email"));
       if (phone && phone.replace(/[^0-9]/g, "").length < 6) return showErr(t("telemóvel inválido", "invalid phone number"));
+      if (fulfilment === "delivery" && address.length < 6) return showErr(t("escreve a morada de entrega", "add your delivery address"));
       errEl.style.display = "none";
       sendBtn.disabled = true;
       sendBtn.textContent = t("a enviar…", "sending…");
@@ -421,7 +440,7 @@
         const r = await fetch("/api/order-request", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ items, name, email, phone, address, lang, hp }),
+          body: JSON.stringify({ items, name, email, phone, address, fulfilment, lang, hp }),
         });
         const d = await r.json().catch(() => ({}));
         if (!r.ok || !d.ok) throw new Error(d.error || "");
@@ -645,6 +664,8 @@
         }
       });
       document.querySelectorAll("[data-quick]").forEach((b) => {
+      b.addEventListener("click", (e) => { e.preventDefault(); e.stopImmediatePropagation();
+        location.href = "/club?want=" + b.dataset.quick; }, true);
         if (window.__miraBlocked.has(b.dataset.quick)) b.classList.add("btn--dead");
       });
       const qa = document.querySelector("[data-quick-all]");

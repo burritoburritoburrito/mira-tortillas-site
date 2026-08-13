@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>mira tortilla club</title>
-  <meta name="description" content="We bake small batches — the mira tortilla club is how you get them. Pre-order every batch, free medium pack with your first order.">
+  <meta name="description" content="We press tortillas in small batches in Lisboa. Join the mira tortilla club and we'll be in touch when the next batch is ready.">
   <meta name="robots" content="index,follow">
   <meta name="theme-color" content="#b9cfe4">
   <link rel="icon" type="image/png" href="/assets/favicon.png">
@@ -41,7 +41,8 @@
     .stick--1 { width: 62px; height: 62px; background: var(--oxblood); color: var(--cream); font-size: .8rem; top: -20px; right: -12px; }
     .stick--2 { width: 48px; height: 48px; background: var(--masa); color: var(--ink); font-size: .62rem; bottom: 34px; left: -14px; transform: rotate(8deg); animation-delay: 1.1s; }
     @keyframes bob { 50% { translate: 0 -6px; } }
-    .wordmark { height: 34px; display: block; margin: 0 auto .35rem; animation: wob .5s .15s cubic-bezier(.2,1.6,.4,1) both; }
+    /* wordmark + h1 form one lockup: the script IS the "mira" in "mira tortilla club" */
+    .wordmark { height: 46px; display: block; margin: 0 auto .1rem; animation: wob .5s .15s cubic-bezier(.2,1.6,.4,1) both; }
     @keyframes wob { from { opacity: 0; transform: rotate(-5deg) scale(.7); } }
     .club-kicker {
       font-family: var(--font-mono); font-size: .72rem; letter-spacing: .16em;
@@ -53,6 +54,17 @@
     }
     h1 .club { color: var(--oxblood); }
     .h1-pt { font-family: var(--font-mono); text-align: center; font-size: .74rem; opacity: .55; margin-bottom: 1.1rem; }
+    .intro {
+      font-size: .88rem; line-height: 1.5; text-align: center; margin: .7rem 0 1rem;
+      animation: rowIn .45s .18s both;
+    }
+    .perk-hit {
+      font-family: var(--font-mono); font-size: .82rem; text-align: center;
+      background: var(--masa); border: 2px solid var(--ink); border-radius: 999px;
+      padding: .5rem .9rem; margin-bottom: 1.2rem;
+      animation: rowIn .45s .3s both;
+    }
+    .perk-hit span { font-weight: 500; color: var(--oxblood); }
     .perks { list-style: none; margin-bottom: 1.3rem; }
     .perks li {
       font-size: .92rem; line-height: 1.35; padding: .55rem .1rem;
@@ -74,7 +86,7 @@
     input { border: 2px solid var(--ink); background: #fff; color: var(--ink); transition: transform .12s; }
     input::placeholder { color: #8a8577; }
     input:focus { outline: 3px solid var(--oxblood); transform: rotate(-.4deg) scale(1.01); }
-    .hint { font-size: .7rem; font-family: var(--font-mono); opacity: .6; margin-top: -.2rem; }
+    .hint { font-size: .7rem; font-family: var(--font-mono); opacity: .6; text-align: center; margin: .1rem 0 -.1rem; }
     .btn {
       background: var(--ink); color: var(--cream); border: 2px solid var(--ink);
       font-weight: 700; letter-spacing: .04em; text-transform: uppercase; cursor: pointer;
@@ -86,8 +98,8 @@
     .btn[disabled] { opacity: .6; }
     .err { display: none; color: var(--oxblood); font-family: var(--font-mono); font-size: .78rem; }
     .legal {
-      font-size: .64rem; font-family: var(--font-mono); opacity: .55; line-height: 1.5;
-      margin-top: 1rem; text-align: center;
+      font-size: .6rem; font-family: var(--font-mono); opacity: .42; line-height: 1.5;
+      margin-top: 1.1rem; text-align: center;
     }
     .legal a { color: inherit; }
     /* success state */
@@ -102,6 +114,22 @@
     .done p { font-size: .9rem; line-height: 1.45; margin-top: .7rem; }
     .done .pt { font-size: .76rem; opacity: .6; font-family: var(--font-mono); margin-top: .5rem; }
     .site-link { display: inline-block; margin-top: 1.1rem; font-family: var(--font-mono); font-size: .8rem; color: var(--ink); }
+    .signin-line {
+      font-family: var(--font-mono); font-size: .74rem; text-align: center;
+      margin-top: .9rem; opacity: .7;
+    }
+    .signin-line a { color: var(--oxblood); text-underline-offset: .2em; }
+    .foot-note {
+      font-family: var(--font-mono); font-size: .66rem; text-align: center;
+      opacity: .5; margin-top: .8rem; letter-spacing: .04em;
+    }
+    .langbtn {
+      position: absolute; top: .8rem; right: .9rem; z-index: 2;
+      font-family: var(--font-mono); font-size: .7rem; letter-spacing: .08em;
+      background: none; border: 2px solid var(--ink); border-radius: 999px;
+      padding: .25rem .6rem; cursor: pointer; color: var(--ink); opacity: .75;
+    }
+    .langbtn:hover { opacity: 1; }
     /* confetti */
     .cf {
       position: fixed; top: -20px; border-radius: 50%; pointer-events: none; z-index: 50;
@@ -112,43 +140,104 @@
 </head>
 <body>
   <main class="card">
-    <div class="stick stick--1" aria-hidden="true">free<br>pack</div>
+    <button class="langbtn mono" id="langBtn" type="button" aria-label="mudar idioma">PT</button>
     <img class="wordmark" src="assets/mira-wordmark.png" alt="mira">
-    <p class="club-kicker">tortilla club</p>
-
     <div id="joinView">
-      <h1>join the <span class="club">tortilla club</span></h1>
-      <p class="h1-pt">we bake small batches — the club is how you get them</p>
-      <ul class="perks">
-        <li><span class="dot">01</span><span>pre-order every batch</span></li>
-        <li><span class="dot">02</span><span>free medium pack with your first order</span></li>
-      </ul>
+      <h1>tortilla <span class="club">club</span></h1>
+      <p class="intro" data-t="intro">for people who want tortillas</p>
       <form id="clubForm" autocomplete="on">
         <input id="cHp" name="website" tabindex="-1" aria-hidden="true" autocomplete="off"
                style="position:absolute;left:-9999px;top:-9999px;width:1px;height:1px;opacity:0;pointer-events:none">
-        <input id="cName" name="name" autocomplete="name" placeholder="name · nome">
-        <input id="cEmail" name="email" type="email" autocomplete="email" placeholder="email">
-        <input id="cPhone" name="phone" type="tel" autocomplete="tel" placeholder="phone (optional)">
-        <p class="hint">email or phone — either works</p>
+        <input id="cName" name="name" autocomplete="name" placeholder="name" data-tp="name">
+        <input id="cEmail" name="email" type="email" autocomplete="email" placeholder="email" data-tp="email">
+        <input id="cPhone" name="phone" type="tel" autocomplete="tel" placeholder="phone" data-tp="phone">
+        <p class="hint" data-t="hint">no spam, just tortillas</p>
         <div class="err" id="cErr"></div>
-        <button class="btn" id="cBtn" type="submit">join the club</button>
+        <button class="btn" id="cBtn" type="submit" data-t="join">join</button>
       </form>
       <p class="legal">
-        batch news by email or WhatsApp · <a href="/privacy">privacy</a>
+        <span data-t="legal">email or WhatsApp</span> · <a href="/privacy" data-t="privacy">privacy</a>
       </p>
     </div>
 
+    <!-- already signed in: recognise them instead of asking them to join again -->
+    <div class="done" id="memberView">
+      <p class="club-kicker">mira tortilla club</p>
+      <h2>you're already in 🌯</h2>
+      <p class="lbl">member · <span id="mvName">—</span></p>
+      <div class="num" id="mvNum">#—</div>
+      <p data-t="touch">we'll be in touch when the next batch is ready.</p>
+      <a class="site-link" href="/account">your account &amp; points →</a>
+    </div>
+
     <div class="done" id="doneView">
-      <h2>you're in 🌯</h2>
-      <p class="lbl">member · membro</p>
+      <p class="club-kicker">mira tortilla club</p>
+      <h2 data-t="youin">you're in 🌯</h2>
+      <p class="lbl">member</p>
       <div class="num" id="memberNum">#—</div>
-      <p>we'll ping you when the next batch drops — your free medium pack is waiting.</p>
+      <p data-t="touch">we'll be in touch when the next batch is ready.</p>
       <a class="site-link" href="/">miratortillas.pt →</a>
     </div>
+
   </main>
 
   <script>
     (function () {
+      /* two languages, auto-picked from the phone, one tap to switch */
+      var T = {
+        en: {
+          intro: "for people who want tortillas",
+          name: "name", email: "email", phone: "phone",
+          hint: "no spam, just tortillas", join: "join",
+          legal: "we'll only write to you about tortillas", privacy: "privacy",
+          already: "already a member?", signin: "sign in",
+          youin: "you're in 🌯", touch: "we'll be in touch when the next batch is ready.",
+          back: "good to see you again.", other: "PT",
+        },
+        pt: {
+          intro: "para quem quer tortillas",
+          name: "nome", email: "email", phone: "telemóvel",
+          hint: "sem spam, só tortillas", join: "entrar",
+          legal: "só falamos contigo sobre tortillas", privacy: "privacidade",
+          already: "já és membro?", signin: "entrar",
+          youin: "estás dentro 🌯", touch: "falamos contigo quando houver tortillas.",
+          back: "que bom ver-te outra vez.", other: "EN",
+        },
+      };
+      var lang = (localStorage.getItem("mira-lang") ||
+                  ((navigator.language || "").toLowerCase().indexOf("pt") === 0 ? "pt" : "en"));
+      function apply() {
+        var d = T[lang];
+        document.querySelectorAll("[data-t]").forEach(function (el) {
+          var k = el.getAttribute("data-t"); if (d[k]) el.textContent = d[k];
+        });
+        document.querySelectorAll("[data-tp]").forEach(function (el) {
+          var k = el.getAttribute("data-tp"); if (d[k]) el.placeholder = d[k];
+        });
+        document.getElementById("langBtn").textContent = d.other;
+        document.documentElement.lang = lang;
+        window.__miraClubLang = lang;
+      }
+      document.getElementById("langBtn").addEventListener("click", function () {
+        lang = lang === "pt" ? "en" : "pt";
+        try { localStorage.setItem("mira-lang", lang); } catch (e) {}
+        apply();
+      });
+      apply();
+    })();
+    (function () {
+      /* ONBOARDING STATE 1: already signed in → recognise them, don't ask again */
+      fetch("/api/me", { credentials: "same-origin" })
+        .then(function (r) { return r.json(); })
+        .then(function (me) {
+          if (!me || !me.loggedIn || !me.customer || !me.customer.clubNo) return;
+          document.getElementById("joinView").style.display = "none";
+            document.getElementById("mvName").textContent = me.customer.name || me.customer.email;
+          document.getElementById("mvNum").textContent = "#" + me.customer.clubNo;
+          document.getElementById("memberView").classList.add("on");
+        })
+        .catch(function () { /* not signed in — join form stays */ });
+
       var form = document.getElementById("clubForm");
       var err = document.getElementById("cErr");
       var btn = document.getElementById("cBtn");
@@ -193,28 +282,34 @@
         var email = document.getElementById("cEmail").value.trim();
         var phone = document.getElementById("cPhone").value.trim();
         var hp = document.getElementById("cHp").value;
-        if (!email && !phone) return showErr("leave an email or phone · deixa email ou telemóvel");
-        if (email && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return showErr("invalid email · email inválido");
-        if (phone && phone.replace(/[^0-9]/g, "").length < 6) return showErr("invalid phone · telemóvel inválido");
+        if (!email) return showErr(window.__miraClubLang === "pt" ? "escreve o teu email" : "add your email");
+        if (email && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return showErr("invalid email");
+        if (phone && phone.replace(/[^0-9]/g, "").length < 6) return showErr("invalid phone");
         err.style.display = "none";
         btn.disabled = true; btn.textContent = "joining…";
         fetch("/api/club-join", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ name: name, email: email, phone: phone, src: src, hp: hp,
-            lang: (navigator.language || "").toLowerCase().indexOf("pt") === 0 ? "pt" : "en" }),
+            lang: window.__miraClubLang || "en" }),
         }).then(function (r) { return r.json().catch(function () { return {}; }).then(function (d) { return { r: r, d: d }; }); })
           .then(function (x) {
             if (!x.r.ok || !x.d.ok) throw new Error(x.d.error || "");
             document.getElementById("joinView").style.display = "none";
-            var dv = document.getElementById("doneView");
+                var dv = document.getElementById("doneView");
+            /* STATE 2: returning member → welcome back, don't pretend it's new */
+            if (x.d.again) {
+              dv.querySelector("h2").textContent = (window.__miraClubLang === "pt" ? "já estás dentro 🌯" : "you're already in 🌯");
+              dv.querySelector("p:not(.lbl)").textContent =
+                "good to see you again. we'll be in touch when the next batch is ready.";
+            }
             dv.classList.add("on");
             countUp(x.d.n);
-            confetti();
+            if (!x.d.again) confetti(); /* confetti is for actually joining */
           })
           .catch(function (e2) {
-            btn.disabled = false; btn.textContent = "join the club";
-            showErr((e2 && e2.message) || "didn't work — try again · não deu, tenta outra vez");
+            btn.disabled = false; btn.textContent = (window.__miraClubLang === "pt" ? "entrar" : "join");
+            showErr((e2 && e2.message) || "didn't work, try again");
           });
       });
     })();

@@ -86,6 +86,20 @@
       box.innerHTML = `
       <div class="adm__grid">
         <div class="adm__col">
+          <div class="box" id="batchBox">
+            <h2>next batch <small style="font-family:var(--font-mono);font-weight:400;font-size:.68rem;text-transform:uppercase;letter-spacing:.1em;opacity:.55">pre-orders → bake sheet</small></h2>
+            <div id="batchList"><p class="mono" style="font-size:.8rem;opacity:.6">loading…</p></div>
+          </div>
+          <div class="box" id="announceBox">
+            <h2>tell the club <small style="font-family:var(--font-mono);font-weight:400;font-size:.68rem;text-transform:uppercase;letter-spacing:.1em;opacity:.55">email every member</small></h2>
+            <input id="annSubject" placeholder="subject" style="width:100%;margin-bottom:.5rem;font-family:var(--font-mono);font-size:.85rem;padding:.6rem .7rem;border:2px solid var(--ink);border-radius:10px;background:#fff;box-sizing:border-box">
+            <textarea id="annBody" rows="5" placeholder="olá friends! we're prepping a batch of tortillas this week and taking pre-orders so we know how many to make. if you'd like some, order here: miratortillas.pt" style="width:100%;font-family:var(--font-mono);font-size:.85rem;padding:.6rem .7rem;border:2px solid var(--ink);border-radius:10px;background:#fff;box-sizing:border-box;resize:vertical"></textarea>
+            <div style="display:flex;gap:.5rem;margin-top:.6rem;flex-wrap:wrap">
+              <button class="btn" id="annTest" style="flex:1">send test to me</button>
+              <button class="btn btn--ink" id="annSend" style="flex:1">send to all members</button>
+            </div>
+            <p class="mono" id="annMsg" style="font-size:.75rem;opacity:.7;margin-top:.5rem;min-height:1.2em"></p>
+          </div>
           <div class="box" id="salesBox">
             <h2>sales</h2>
             <p class="mono" style="font-size:.8rem;opacity:.6">loading…</p>
@@ -185,8 +199,70 @@
       loadCustomers();
       loadOrders();
       loadSubs();
+      loadBatch();
       document.getElementById("pc_create").onclick = createPromo;
+      document.getElementById("annTest").onclick = () => announce(true);
+      document.getElementById("annSend").onclick = () => announce(false);
     };
+
+    /* ── the bake sheet: what to make, who's picking up, where to drive ── */
+    async function loadBatch() {
+      const el = document.getElementById("batchList");
+      try {
+        const d = await (await fetch("/api/admin/batch")).json();
+        if (d.error) { el.innerHTML = `<p class="mono" style="font-size:.8rem;opacity:.6">${d.error}</p>`; return; }
+        if (!d.count) {
+          el.innerHTML = `<p class="mono" style="font-size:.8rem;opacity:.6">no pre-orders yet. tell the club a batch is coming and they'll land here.</p>`;
+          return;
+        }
+        const eur = (c) => "€" + ((c || 0) / 100).toFixed(2).replace(".00", "");
+        const areaRows = d.areas.map((a) =>
+          `<div class="row"><span class="mono">${a.area}</span><span class="mono" style="font-weight:700">${a.count}</span></div>`).join("");
+        const peopleRows = d.people.map((p) => {
+          const sizes = Object.entries(p.sizes).map(([k, v]) => `${v}${k[0].toUpperCase()}`).join(" ") || "—";
+          const where = p.fulfilment === "delivery" ? (p.address || "(no address)") : "pickup";
+          return `<div class="row" style="align-items:flex-start">
+            <span class="mono" style="font-size:.75rem">${p.name || p.email || "?"}<br>
+              <span style="opacity:.6">${where}</span></span>
+            <span class="mono" style="font-weight:700;white-space:nowrap">${sizes}</span></div>`;
+        }).join("");
+        el.innerHTML = `
+          <div class="row"><span class="mono">MAKE</span><span class="mono" style="font-weight:700">
+            ${d.totals.small}S · ${d.totals.medium}M · ${d.totals.large}L</span></div>
+          <div class="row"><span class="mono">packs total</span><span class="mono" style="font-weight:700">${d.packs}</span></div>
+          <div class="row"><span class="mono">pre-orders</span><span class="mono" style="font-weight:700">${d.count} · ${eur(d.revenue)}</span></div>
+          <div class="row"><span class="mono">pickup / delivery</span><span class="mono" style="font-weight:700">${d.pickup} / ${d.delivery}</span></div>
+          ${d.areas.length ? `<p class="small" style="margin-top:.7rem">delivery areas</p>${areaRows}` : ""}
+          <p class="small" style="margin-top:.7rem">who</p>${peopleRows}
+          <button class="btn" id="batchClose" style="width:100%;margin-top:.8rem">batch done, clear list</button>`;
+        document.getElementById("batchClose").onclick = async (e) => {
+          if (!confirm("Clear these pre-orders? Do this after the batch is delivered.")) return;
+          e.target.disabled = true;
+          await fetch("/api/admin/batch-close", { method: "POST" });
+          loadBatch();
+        };
+      } catch (e) {
+        el.innerHTML = `<p class="mono" style="font-size:.8rem;opacity:.6">couldn't load</p>`;
+      }
+    }
+
+    async function announce(test) {
+      const msg = document.getElementById("annMsg");
+      const subject = document.getElementById("annSubject").value.trim();
+      const message = document.getElementById("annBody").value.trim();
+      if (subject.length < 3 || message.length < 10) { msg.textContent = "add a subject and a message first"; return; }
+      if (!test && !confirm("Send this to EVERY club member?")) return;
+      msg.textContent = test ? "sending test…" : "sending…";
+      try {
+        const r = await fetch("/api/admin/announce", {
+          method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ subject, message, test }),
+        });
+        const d = await r.json();
+        msg.textContent = d.error ? d.error
+          : (test ? `test sent to you (${d.sent})` : `sent to ${d.sent} members${d.failed ? `, ${d.failed} failed` : ""}`);
+      } catch (e) { msg.textContent = "network error"; }
+    }
 
     async function loadInventory() {
       const holder = document.getElementById("invSummary");

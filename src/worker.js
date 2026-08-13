@@ -201,6 +201,26 @@ async function smsRoutine(env, text) {
 
 const POINTS_COUPON = "MIRA-POINTS-800"; // 100 points → €8 off
 
+/* ONE identity: the mira tortilla club IS the customer account. Stamps the next
+   club number on a customer (idempotent — returns the existing number if already
+   a member). Called on club signup AND on a paid order, so every buyer is a member. */
+async function joinClub(env, email) {
+  if (!email) return null;
+  try {
+    const c = await env.DB.prepare(`SELECT id, club_no FROM customers WHERE email = ?1`).bind(email).first();
+    if (!c) return null;
+    if (c.club_no) return c.club_no;
+    const next = ((await env.DB.prepare(`SELECT MAX(club_no) m FROM customers`).first())?.m || 0) + 1;
+    /* conditional update: if two signups race, the loser re-reads the winner's row */
+    const res = await env.DB.prepare(
+      `UPDATE customers SET club_no = ?1, club_joined_at = datetime('now'), marketing_ok = 1
+       WHERE id = ?2 AND club_no IS NULL`
+    ).bind(next, c.id).run();
+    if (res.meta.changes === 1) return next;
+    return (await env.DB.prepare(`SELECT club_no FROM customers WHERE id = ?1`).bind(c.id).first())?.club_no || null;
+  } catch (e) { return null; }
+}
+
 /* upsert customer + (if paid) record order & settle points. Idempotent per session. */
 async function processSession(env, session) {
   const cd = session.customer_details || {};
@@ -297,13 +317,15 @@ async function processSession(env, session) {
            loudly so it's packed at pickup (count==1 = the order we just inserted) */
         let clubLine = "";
         try {
-          const member = await env.DB.prepare(`SELECT id, created_at FROM club_members WHERE email = ?1`).bind(email).first();
-          if (member) {
-            const nOrders = (await env.DB.prepare(`SELECT COUNT(*) n FROM orders WHERE customer_id = ?1`).bind(customer.id).first())?.n || 0;
-            if (nOrders === 1) clubLine = `\n\n*** TORTILLA CLUB — PRIMEIRA ENCOMENDA ***\njuntar 1 PACK MEDIO gratis no levantamento (membro desde ${String(member.created_at || "").slice(0, 10)})`;
+          /* buying IS joining — stamp membership, then flag the first-order free pack */
+          const wasMember = !!(await env.DB.prepare(`SELECT club_no FROM customers WHERE id = ?1`).bind(customer.id).first())?.club_no;
+          const clubNo = await joinClub(env, email);
+          const nOrders = (await env.DB.prepare(`SELECT COUNT(*) n FROM orders WHERE customer_id = ?1`).bind(customer.id).first())?.n || 0;
+          if (nOrders === 1) {
+            clubLine = clubNo ? `\n\nmira tortilla club: membro #${clubNo}${wasMember ? "" : " (novo, juntou-se nesta compra)"} · primeira encomenda` : "";
           }
         } catch (e) { /* flag only */ }
-        await sendEmail(env, "ola@miratortillas.pt", `🌯 nova encomenda — €${total}${clubLine ? " · CLUB +pack" : ""}`,
+        await sendEmail(env, "ola@miratortillas.pt", `🌯 nova encomenda · €${total}${clubLine ? " · club" : ""}`,
           `nova encomenda / new order\n\n${itemsTxt}\n\ntotal: €${total} · ${session.mode} · IVA 6% incl. €${ivaOwner} (p/ fatura)\n\n${cd.name || "?"} · ${email}${cd.phone ? " · ☎ " + cd.phone : ""}${fulfil}${clubLine}\n\nstripe: https://dashboard.stripe.com/payments\ndashboard: https://miratortillas.pt/admin`);
         await smsRoutine(env, `mira: nova encomenda €${total} — ${cd.name || email} (${packs || "?"} packs) · Graça pickup`);
       } catch (e) { /* notification failure must never fail an order */ }
@@ -317,14 +339,14 @@ async function processSession(env, session) {
         const hi = cd.name ? " " + cd.name.split(" ")[0] : "";
         await sendEmail(env, email, "obrigado! a tua encomenda mira · your mira order 🌯",
           `Olá${hi}!\n\n` +
-          `Obrigado pela tua encomenda 🌯 Está tudo recebido — €${totalC} (IVA 6% incluído: €${ivaC}).\n\n` +
+          `Obrigado pela tua encomenda 🌯 Está tudo recebido: €${totalC} (IVA 6% incluído: €${ivaC}).\n\n` +
           `Somos uma operação pequena e nova, por isso tratamos de cada encomenda pessoalmente. Vamos responder-te em breve por email para combinar o dia e o local do levantamento na Graça — ou, se preferires, envia o teu próprio estafeta (Bolt/Glovo) para o levantar.\n\n` +
           `São tortillas frescas, meia-cozedura — a tostadela final é contigo, em casa.\n\n` +
           `Esta encomenda soma ${points} pontos (100 pontos = €8 de desconto). A tua conta já está criada — entra só com o teu email em miratortillas.pt/account.\n\n` +
           `Qualquer dúvida, responde a este email.\n— mira\n\n` +
           `— — — — —\n\n` +
           `Hi${hi}!\n\n` +
-          `Thanks for your order 🌯 We've got it — €${totalC} (includes 6% VAT: €${ivaC}).\n\n` +
+          `Thanks for your order 🌯 We've got it: €${totalC} (includes 6% VAT: €${ivaC}).\n\n` +
           `We're a small, new operation, so every order gets a personal touch. We'll email you back soon to arrange the day and spot for pickup in Graça — or, if you'd rather, send your own courier (Bolt/Glovo) to grab it.\n\n` +
           `They're fresh, par-cooked tortillas — the final toast is yours, at home.\n\n` +
           `This order earned you ${points} points (100 points = €8 off). Your account already exists — sign in with just your email at miratortillas.pt/account.\n\n` +
@@ -785,6 +807,7 @@ export default {
         customer: {
           email: c.email, name: c.name, phone: c.phone, points: c.points, birthday: c.birthday,
           newsletter: c.marketing_ok === 1,
+          clubNo: c.club_no || null, clubJoined: c.club_joined_at || null,
           address: { line1: c.address_line1, line2: c.address_line2, postal_code: c.postal_code, city: c.city, country: c.country },
         },
         orders: orders.results || [],
@@ -1285,7 +1308,10 @@ export default {
       const name = String(body.name || "").trim().slice(0, 80);
       const email = String(body.email || "").trim().slice(0, 120).toLowerCase();
       const phone = String(body.phone || "").trim().slice(0, 40);
-      const address = String(body.address || "").trim().slice(0, 300); /* optional — for future delivery */
+      const address = String(body.address || "").trim().slice(0, 300);
+      const fulfilment = body.fulfilment === "delivery" ? "delivery" : "pickup";
+      if (fulfilment === "delivery" && address.length < 6)
+        return json({ error: lang === "pt" ? "falta a morada para entrega" : "address needed for delivery" }, 400);
       const note = String(body.note || "").trim().slice(0, 500);
       if (name.length < 2) return json({ error: lang === "pt" ? "falta o nome" : "name required" }, 400);
       if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return json({ error: lang === "pt" ? "email inválido" : "valid email required" }, 400);
@@ -1325,7 +1351,7 @@ export default {
          · site-wide — 100 / day (hard backstop so nothing runs up the SMS/email bill) */
       try {
         const ipN = (await env.DB.prepare(`SELECT COUNT(*) n FROM order_requests WHERE ip = ?1 AND created_at >= datetime('now','-10 minutes')`).bind(ip).first())?.n || 0;
-        if (ipN >= 5) return json({ error: tooMany }, 429);
+        if (ipN >= 25) return json({ error: tooMany }, 429);
         const emN = (await env.DB.prepare(`SELECT COUNT(*) n FROM order_requests WHERE email = ?1 AND created_at >= datetime('now','-60 minutes')`).bind(email).first())?.n || 0;
         if (emN >= 4) return json({ error: tooMany }, 429);
         if (phone) {
@@ -1333,13 +1359,13 @@ export default {
           if (phN >= 4) return json({ error: tooMany }, 429);
         }
         const dayN = (await env.DB.prepare(`SELECT COUNT(*) n FROM order_requests WHERE created_at >= datetime('now','-24 hours')`).first())?.n || 0;
-        if (dayN >= 100) return json({ error: lang === "pt" ? "estamos cheios hoje — escreve-nos a ola@miratortillas.pt" : "we're full today — email us at ola@miratortillas.pt" }, 429);
+        if (dayN >= 600) return json({ error: lang === "pt" ? "estamos cheios hoje — escreve-nos a ola@miratortillas.pt" : "we're full today — email us at ola@miratortillas.pt" }, 429);
       } catch {}
 
       try {
         await env.DB.prepare(
-          `INSERT INTO order_requests (name, email, phone, address, note, items, total_cents, lang, ip) VALUES (?1,?2,?3,?4,?5,?6,?7,?8,?9)`
-        ).bind(name, email, phone, address, note, JSON.stringify(items), total, lang, ip).run();
+          `INSERT INTO order_requests (name, email, phone, address, fulfilment, note, items, total_cents, lang, ip) VALUES (?1,?2,?3,?4,?5,?6,?7,?8,?9,?10)`
+        ).bind(name, email, phone, address, fulfilment, note, JSON.stringify(items), total, lang, ip).run();
       } catch {}
 
       /* email only — NO SMS here on purpose (email-order mode, paused store: this is a
@@ -1351,7 +1377,7 @@ export default {
         lines.map((l) => "· " + l).join("\n") +
         `\n\ntotal: ${eur(total)}\n\nname: ${name}\nemail: ${email}` +
         (phone ? `\nphone: ${phone}` : "") +
-        (address ? `\naddress: ${address}` : "") +
+        `\nfulfilment: ${fulfilment}` + (address ? `\naddress: ${address}` : "") +
         (note ? `\nnote: ${note}` : "") +
         `\n\nReply to confirm the Graça pickup.`);
       return json({ ok: true });
@@ -1373,57 +1399,159 @@ export default {
       const email = String(body.email || "").trim().slice(0, 120).toLowerCase();
       const phone = String(body.phone || "").trim().slice(0, 40);
       const src = String(body.src || "web").trim().slice(0, 20);
-      if (!email && !phone) return json({ error: lang === "pt" ? "deixa email ou telemóvel" : "leave an email or phone" }, 400);
+      if (!email) return json({ error: lang === "pt" ? "falta o email" : "email required" }, 400);
       if (email && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return json({ error: lang === "pt" ? "email inválido" : "invalid email" }, 400);
       if (phone && phone.replace(/[^0-9]/g, "").length < 6) return json({ error: lang === "pt" ? "telemóvel inválido" : "invalid phone" }, 400);
 
-      /* pop-up reality: many phones share carrier CGNAT IPs, so keep the per-IP
-         limit LOOSE (30/10min) — dedupe + honeypot do the real work. Daily backstop
-         caps Brevo sends. */
+      /* POP-UP REALITY: a whole event shares one café-WiFi IP, and mobile carriers
+         CGNAT many phones behind one address too. A tight per-IP cap would silently
+         turn away real people mid-event, so it is deliberately very loose and only
+         exists to stop a runaway script. Honeypot + dedupe do the real work. */
       try {
         const ipN = (await env.DB.prepare(`SELECT COUNT(*) n FROM club_members WHERE ip = ?1 AND created_at >= datetime('now','-10 minutes')`).bind(ip).first())?.n || 0;
-        if (ipN >= 30) return json({ error: lang === "pt" ? "demasiados pedidos, tenta já a seguir" : "too many requests, try again shortly" }, 429);
+        if (ipN >= 250) return json({ error: lang === "pt" ? "demasiados pedidos, tenta já a seguir" : "too many requests, try again shortly" }, 429);
         const dayN = (await env.DB.prepare(`SELECT COUNT(*) n FROM club_members WHERE created_at >= datetime('now','-24 hours')`).first())?.n || 0;
-        if (dayN >= 500) return json({ error: "club is full for today — email ola@miratortillas.pt" }, 429);
+        if (dayN >= 1500) return json({ error: "club is full for today — email ola@miratortillas.pt" }, 429);
       } catch {}
 
-      /* already a member? welcome them back with their number (idempotent) */
+      /* ONE identity: the club IS the account. A join creates/updates the customer
+         record and stamps a club number; buying does the same (see joinClub()).
+         Already a member → welcome them back with their existing number. */
+      const existing = email
+        ? await env.DB.prepare(`SELECT id, club_no, name FROM customers WHERE email = ?1`).bind(email).first()
+        : (phone ? await env.DB.prepare(`SELECT id, club_no, name FROM customers WHERE phone = ?1`).bind(phone).first() : null);
+
+      if (existing && existing.club_no) {
+        return json({ ok: true, n: existing.club_no, again: true, name: existing.name || name || null });
+      }
+
+      /* keep the signup log (source/ip analytics — who came from which QR) */
       try {
-        let existing = null;
-        if (email) existing = await env.DB.prepare(`SELECT id FROM club_members WHERE email = ?1`).bind(email).first();
-        if (!existing && phone) existing = await env.DB.prepare(`SELECT id FROM club_members WHERE phone = ?1`).bind(phone).first();
-        if (existing) {
-          const rank = (await env.DB.prepare(`SELECT COUNT(*) n FROM club_members WHERE id <= ?1`).bind(existing.id).first())?.n || null;
-          return json({ ok: true, n: rank, again: true });
-        }
+        await env.DB.prepare(
+          `INSERT INTO club_members (name, email, phone, lang, src, ip) VALUES (?1,?2,?3,?4,?5,?6)`
+        ).bind(name || null, email || null, phone || null, lang, src, ip).run();
       } catch {}
 
-      const ins = await env.DB.prepare(
-        `INSERT INTO club_members (name, email, phone, lang, src, ip) VALUES (?1,?2,?3,?4,?5,?6)`
-      ).bind(name || null, email || null, phone || null, lang, src, ip).run();
-      const memberNo = (await env.DB.prepare(`SELECT COUNT(*) n FROM club_members`).first())?.n || null;
+      let memberNo = null;
+      if (email) {
+        /* upsert the person, then stamp the club number */
+        await env.DB.prepare(
+          `INSERT INTO customers (email, name, phone, lang, marketing_ok)
+           VALUES (?1, ?2, ?3, ?4, 1)
+           ON CONFLICT(email) DO UPDATE SET
+             name = COALESCE(excluded.name, name),
+             phone = COALESCE(excluded.phone, phone),
+             marketing_ok = 1,
+             updated_at = datetime('now')`
+        ).bind(email, name || null, phone || null, lang).run();
+        memberNo = await joinClub(env, email);
+      }
 
-      /* welcome email (best-effort) — also marks marketing consent on any existing account */
+      /* welcome email (best-effort) */
       if (email) {
         try {
-          await env.DB.prepare(`UPDATE customers SET marketing_ok = 1 WHERE email = ?1`).bind(email).run();
           const hi = name ? " " + name.split(" ")[0] : "";
-          await sendEmail(env, email, "estás no mira tortilla club 🌯",
+          await sendEmail(env, email, "bem-vindo ao mira tortilla club 🌯",
             `Olá${hi}!\n\n` +
-            `Bem-vindo ao mira tortilla club — és o membro #${memberNo}.\n\n` +
-            `Fazemos tortillas em lotes pequenos, por isso não há sempre stock. O clube é a maneira de as apanhares: avisamos-te quando abre cada lote e encomendas antes de esgotar.\n\n` +
-            `· 1 pack médio grátis com a tua primeira encomenda — juntamos no levantamento (um por pessoa)\n` +
-            `· levantamento na Graça, combinado por email\n\n` +
+            `Bem-vindo ao mira tortilla club! És o membro #${memberNo}.\n\n` +
+            `Prensamos as tortillas em lotes pequenos. Avisamos-te quando o próximo estiver pronto, e também de pop-ups e eventos.\n\n` +
+            `Levantamento na Graça, combinado por email.\n\n` +
             `— — — — —\n\n` +
             `Hi${hi}!\n\n` +
-            `Welcome to the mira tortilla club — you're member #${memberNo}.\n\n` +
-            `We bake in small batches, so there isn't always stock. The club is how you get them: we let you know when each batch opens and you pre-order before it's gone.\n\n` +
-            `· 1 free medium pack with your first order — we add it at pickup (one per person)\n` +
-            `· pickup in Graça, arranged by email\n\n` +
+            `Welcome to the mira tortilla club! You're member #${memberNo}.\n\n` +
+            `We press our tortillas in small batches. We'll let you know when the next one is ready, plus pop-ups and events.\n\n` +
+            `Pickup in Graça, arranged by email.\n\n` +
             `miratortillas.pt\n— mira`);
         } catch (e) { /* never block a signup */ }
       }
       return json({ ok: true, n: memberNo });
+    }
+
+    /* ── BATCH PLANNER ──────────────────────────────────────────────
+       Everything needed to decide "how much do I make, and where does it go":
+       pre-orders totalled by size, split pickup vs delivery, deliveries grouped
+       by area so a route is obvious. Owner-only. */
+    if (url.pathname === "/api/admin/batch") {
+      if (!(await isAdmin(env, request))) return json({ error: "not admin" }, 403);
+      const rows = (await env.DB.prepare(
+        `SELECT id, created_at, name, email, phone, address, fulfilment, items, total_cents, note, status
+         FROM order_requests WHERE status = 'new' ORDER BY id`
+      ).all()).results || [];
+
+      const totals = { small: 0, medium: 0, large: 0 };
+      let revenue = 0;
+      const people = rows.map((r) => {
+        let items = [];
+        try { items = JSON.parse(r.items || "[]"); } catch {}
+        const bySku = {};
+        for (const it of items) {
+          const sku = PRICE_SKU[it.price];
+          const q = Number(it.quantity) || 0;
+          if (!sku) continue;
+          totals[sku] = (totals[sku] || 0) + q;
+          bySku[sku] = (bySku[sku] || 0) + q;
+        }
+        revenue += Number(r.total_cents) || 0;
+        /* area = first chunk of the address, good enough to cluster a route */
+        const addr = (r.address || "").trim();
+        const area = addr ? (addr.split(",").pop() || addr).trim().slice(0, 40) : "";
+        return {
+          id: r.id, at: r.created_at, name: r.name, email: r.email, phone: r.phone,
+          fulfilment: r.fulfilment || (addr ? "delivery" : "pickup"),
+          address: addr, area, note: r.note, total: r.total_cents, sizes: bySku,
+        };
+      });
+
+      const delivery = people.filter((p) => p.fulfilment === "delivery");
+      const pickup = people.filter((p) => p.fulfilment !== "delivery");
+      const areas = {};
+      for (const p of delivery) {
+        const k = p.area || "(no address)";
+        areas[k] = areas[k] || { count: 0, names: [] };
+        areas[k].count++; areas[k].names.push(p.name || p.email);
+      }
+      const packs = totals.small + totals.medium + totals.large;
+      return json({
+        count: people.length, packs, totals, revenue,
+        pickup: pickup.length, delivery: delivery.length,
+        areas: Object.entries(areas).map(([area, v]) => ({ area, ...v })).sort((a, b) => b.count - a.count),
+        people,
+      });
+    }
+
+    /* mark a batch as done: clears the current pre-order list */
+    if (url.pathname === "/api/admin/batch-close" && request.method === "POST") {
+      if (!(await isAdmin(env, request))) return json({ error: "not admin" }, 403);
+      const res = await env.DB.prepare(`UPDATE order_requests SET status = 'done' WHERE status = 'new'`).run();
+      return json({ ok: true, closed: res.meta.changes });
+    }
+
+    /* ── ANNOUNCE A BATCH ───────────────────────────────────────────
+       Write once, send to every club member. test:true sends only to the owner
+       so a typo can't reach 200 people. */
+    if (url.pathname === "/api/admin/announce" && request.method === "POST") {
+      if (!(await isAdmin(env, request))) return json({ error: "not admin" }, 403);
+      let body;
+      try { body = await request.json(); } catch { return json({ error: "bad json" }, 400); }
+      const subject = String(body.subject || "").trim().slice(0, 140);
+      const message = String(body.message || "").trim().slice(0, 4000);
+      const test = body.test === true;
+      if (subject.length < 3 || message.length < 10) return json({ error: "subject and message required" }, 400);
+
+      const owner = env.MAIL_FROM || "ola@miratortillas.pt";
+      const members = test ? [{ email: owner, name: "test" }] : ((await env.DB.prepare(
+        `SELECT email, name FROM customers WHERE club_no IS NOT NULL AND marketing_ok = 1 AND email IS NOT NULL`
+      ).all()).results || []);
+      if (!members.length) return json({ error: "no members to send to yet" }, 400);
+
+      let sent = 0, failed = 0;
+      for (const m of members) {
+        const hi = m.name ? " " + String(m.name).split(" ")[0] : "";
+        const ok = await sendEmail(env, m.email, subject,
+          `olá${hi}!\n\n${message}\n\n— mira\nmiratortillas.pt/club`);
+        ok ? sent++ : failed++;
+      }
+      return json({ ok: true, sent, failed, test, recipients: members.length });
     }
 
     if (url.pathname === "/api/newsletter-optin" && request.method === "POST") {

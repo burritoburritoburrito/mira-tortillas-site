@@ -28,6 +28,7 @@
       <img src="assets/mira-wordmark.png" alt="mira">
     </a>
     <nav class="nav__links mono" aria-label="Main">
+      <a href="/club" data-hover data-i18n="nav_club">mira tortilla club</a>
       <a href="#tamanhos" data-hover data-i18n="nav_sizes">sizes</a>
       <a href="#ingredientes" data-hover data-i18n="nav_ing">ingredients</a>
       <a href="#como" data-hover data-i18n="nav_heat">how-to</a>
@@ -62,7 +63,6 @@
           <button data-quick="small" data-hover>S · €8</button>
           <button data-quick="medium" data-hover>M · €10</button>
           <button data-quick="large" data-hover>L · €9</button>
-          <button data-quick-all data-hover data-i18n="quick_all">1 of each · €27</button>
         </div>
       </div>
 
@@ -94,7 +94,7 @@
           <p class="card__desc" data-i18n="s_desc">15&nbsp;cm · tacos &amp; snacks</p>
           <footer class="card__foot">
             <div class="card__price"><span class="card__eur">€8</span></div>
-            <a class="btn btn--ink card__btn" data-hover data-buy="small" href="mailto:ola@miratortillas.pt?subject=Order%20%E2%80%94%2012%20small%20tortillas%20(%E2%82%AC8)&body=Ol%C3%A1%20mira!%20I%27d%20like%20to%20order%2012%20small%20tortillas%20(%E2%82%AC8)."><span data-i18n="s_btn">buy small · €8</span><span class="btn__dot"></span></a>
+            <a class="btn btn--ink card__btn" data-hover data-want="small" href="/club?want=small"><span data-i18n="s_btn">reserve</span><span class="btn__dot"></span></a>
           </footer>
         </article>
 
@@ -107,7 +107,7 @@
           <p class="card__desc" data-i18n="m_desc">21–23&nbsp;cm · wraps &amp; quesadillas</p>
           <footer class="card__foot">
             <div class="card__price"><span class="card__eur">€10</span></div>
-            <a class="btn btn--cream card__btn" data-hover data-buy="medium" href="mailto:ola@miratortillas.pt?subject=Order%20%E2%80%94%2012%20medium%20tortillas%20(%E2%82%AC10)&body=Ol%C3%A1%20mira!%20I%27d%20like%20to%20order%2012%20medium%20tortillas%20(%E2%82%AC10)."><span data-i18n="m_btn">buy medium · €10</span><span class="btn__dot"></span></a>
+            <a class="btn btn--cream card__btn" data-hover data-want="medium" href="/club?want=medium"><span data-i18n="m_btn">reserve</span><span class="btn__dot"></span></a>
           </footer>
         </article>
 
@@ -120,7 +120,7 @@
           <p class="card__desc" data-i18n="l_desc">30&nbsp;cm · burritos</p>
           <footer class="card__foot">
             <div class="card__price"><span class="card__eur">€9</span></div>
-            <a class="btn btn--cream card__btn" data-hover data-buy="large" href="mailto:ola@miratortillas.pt?subject=Order%20%E2%80%94%206%20large%20tortillas%20(%E2%82%AC9)&body=Ol%C3%A1%20mira!%20I%27d%20like%20to%20order%206%20large%20tortillas%20(%E2%82%AC9)."><span data-i18n="l_btn">buy large · €9</span><span class="btn__dot"></span></a>
+            <a class="btn btn--cream card__btn" data-hover data-want="large" href="/club?want=large"><span data-i18n="l_btn">reserve</span><span class="btn__dot"></span></a>
           </footer>
         </article>
       </div>
@@ -332,6 +332,6 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.7/gsap.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.7/ScrollTrigger.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/lenis@1.1.20/dist/lenis.min.js"></script>
-  <script src="main.js?v=76"></script>
+  <script src="main.js?v=77"></script>
 </body>
 </html>
