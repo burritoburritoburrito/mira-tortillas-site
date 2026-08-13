@@ -163,18 +163,14 @@
     <!-- already signed in: recognise them instead of asking them to join again -->
     <div class="done" id="memberView">
       <p class="club-kicker">mira tortilla club</p>
-      <h2>you're already in 🌯</h2>
-      <p class="lbl">member · <span id="mvName">—</span></p>
-      <div class="num" id="mvNum">#—</div>
+      <h2 data-t="youin">obrigado! 🌯</h2>
       <p data-t="touch">we'll be in touch when the next batch is ready.</p>
       <a class="site-link" href="/account">your account &amp; points →</a>
     </div>
 
     <div class="done" id="doneView">
       <p class="club-kicker">mira tortilla club</p>
-      <h2 data-t="youin">you're in 🌯</h2>
-      <p class="lbl">member</p>
-      <div class="num" id="memberNum">#—</div>
+      <h2 data-t="youin">obrigado! 🌯</h2>
       <p data-t="touch">we'll be in touch when the next batch is ready.</p>
       <a class="site-link" href="/">miratortillas.pt →</a>
     </div>
@@ -191,8 +187,8 @@
           hint: "no spam, just tortillas", join: "join",
           legal: "we'll only write to you about tortillas", privacy: "privacy",
           already: "already a member?", signin: "sign in",
-          youin: "you're in 🌯", touch: "we'll be in touch when the next batch is ready.",
-          back: "good to see you again.", other: "PT",
+          youin: "obrigado! 🌯", touch: "before the next batch we'll message you to see what you'd like.",
+          back: "que bom ver-te outra vez.", other: "PT",
         },
         pt: {
           intro: "para quem quer tortillas",
@@ -200,7 +196,7 @@
           hint: "sem spam, só tortillas", join: "entrar",
           legal: "só falamos contigo sobre tortillas", privacy: "privacidade",
           already: "já és membro?", signin: "entrar",
-          youin: "estás dentro 🌯", touch: "falamos contigo quando houver tortillas.",
+          youin: "obrigado! 🌯", touch: "antes do próximo lote falamos contigo para saber o que queres.",
           back: "que bom ver-te outra vez.", other: "EN",
         },
       };
@@ -232,9 +228,7 @@
         .then(function (me) {
           if (!me || !me.loggedIn || !me.customer || !me.customer.clubNo) return;
           document.getElementById("joinView").style.display = "none";
-            document.getElementById("mvName").textContent = me.customer.name || me.customer.email;
-          document.getElementById("mvNum").textContent = "#" + me.customer.clubNo;
-          document.getElementById("memberView").classList.add("on");
+            document.getElementById("memberView").classList.add("on");
         })
         .catch(function () { /* not signed in — join form stays */ });
 
@@ -261,20 +255,6 @@
         }
       }
 
-      function countUp(n) {
-        var el = document.getElementById("memberNum");
-        if (!n) { el.textContent = "🌯"; return; }
-        var t0 = null, dur = Math.min(900, 220 + n * 28);
-        function step(ts) {
-          if (!t0) t0 = ts;
-          var p = Math.min(1, (ts - t0) / dur);
-          el.textContent = "#" + Math.max(1, Math.round(n * (1 - Math.pow(1 - p, 3))));
-          if (p < 1) requestAnimationFrame(step);
-        }
-        requestAnimationFrame(step);
-        /* rAF is throttled/paused in some in-app browsers — guarantee the final number */
-        setTimeout(function () { el.textContent = "#" + n; }, dur + 150);
-      }
 
       form.addEventListener("submit", function (e) {
         e.preventDefault();
@@ -299,12 +279,11 @@
                 var dv = document.getElementById("doneView");
             /* STATE 2: returning member → welcome back, don't pretend it's new */
             if (x.d.again) {
-              dv.querySelector("h2").textContent = (window.__miraClubLang === "pt" ? "já estás dentro 🌯" : "you're already in 🌯");
+              dv.querySelector("h2").textContent = "obrigado! 🌯";
               dv.querySelector("p:not(.lbl)").textContent =
                 "good to see you again. we'll be in touch when the next batch is ready.";
             }
             dv.classList.add("on");
-            countUp(x.d.n);
             if (!x.d.again) confetti(); /* confetti is for actually joining */
           })
           .catch(function (e2) {

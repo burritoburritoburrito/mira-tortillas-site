@@ -1144,6 +1144,7 @@ export default {
       const rows = (await env.DB.prepare(
         `SELECT c.id, c.email, c.name, c.phone, c.address_line1, c.postal_code, c.city,
                 c.points, c.marketing_ok, c.wholesale, c.company, c.created_at,
+                c.club_no, c.club_joined_at,
                 COUNT(o.id) orders, COALESCE(SUM(o.amount_total - COALESCE(o.refunded_cents,0)), 0) cents
          FROM customers c LEFT JOIN orders o ON o.customer_id = c.id
          GROUP BY c.id ORDER BY c.id DESC LIMIT 5000`).all()).results || [];
