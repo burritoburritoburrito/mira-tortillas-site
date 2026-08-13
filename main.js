@@ -14,6 +14,12 @@
   const EVENTS = [
   ];
 
+  /* ── SELLING SWITCH ──────────────────────────────────────────────
+     false = not taking online orders: no cart, no checkout. The size
+     cards say RESERVE and send people to the mira tortilla club.
+     Flip to true when you're ready to sell again and the cart returns. */
+  const SELLING = false;
+
   /* ───────── i18n ───────── */
   const I18N = {
     en: {
@@ -21,6 +27,7 @@
       nav_heat: "how-to",
       nav_sizes: "sizes",
       nav_order: "order",
+      nav_join: "join",
       hero_blurb: "Flour tortillas. Four ingredients, pressed &amp; par-cooked in small batches in Lisboa.<br>You give them the final toast at home",
       hero_cta: "pick your size",
       nav_sub: "subscribe",
@@ -92,6 +99,7 @@
       nav_heat: "como aquecer",
       nav_sizes: "tamanhos",
       nav_order: "encomendar",
+      nav_join: "entrar",
       hero_blurb: "Tortillas de trigo. Quatro ingredientes, prensadas e meio cozidas em pequenos lotes em Lisboa.<br>A tostadela final é contigo, em casa",
       hero_cta: "escolhe o tamanho",
       nav_sub: "assinar",
@@ -870,7 +878,10 @@
   fetch("/api/config")
     .then((r) => (r.ok ? r.json() : null))
     .then((cfg) => {
-      if (cfg && cfg.publishableKey) { publishableKey = cfg.publishableKey; initCart(); }
+      if (cfg && cfg.publishableKey) {
+        publishableKey = cfg.publishableKey;
+        if (SELLING) initCart();
+      }
     })
     .catch(() => {});
 
@@ -941,6 +952,14 @@
   }
 
   gsap.registerPlugin(ScrollTrigger);
+
+  /* not selling online: remove the cart furniture entirely */
+  if (!SELLING) {
+    ["cartDrawer", "cartShade", "cartCount", "scWrap"].forEach(function (id) {
+      const el = document.getElementById(id);
+      if (el) el.remove();
+    });
+  }
 
   /* ───────── smooth scroll (Lenis) ───────── */
   let lenis = null;

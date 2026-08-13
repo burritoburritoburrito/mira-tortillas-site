@@ -1447,23 +1447,20 @@ export default {
         memberNo = await joinClub(env, email);
       }
 
-      /* welcome email (best-effort) */
-      if (email) {
+      /* NO WELCOME EMAIL FOR NOW (owner call): we're collecting the list, not
+         running an email programme yet. The success screen is the confirmation.
+         When we do turn this back on it needs: mira logo as the sender avatar,
+         "mira tortillas" as the sender name, ONE language per person (we already
+         store their lang), and copy that sounds like a person. Flip WELCOME_EMAIL
+         to true and fill in the body below to re-enable. */
+      const WELCOME_EMAIL = false;
+      if (WELCOME_EMAIL && email) {
         try {
           const hi = name ? " " + name.split(" ")[0] : "";
-          await sendEmail(env, email, "bem-vindo ao mira tortilla club 🌯",
-            `Olá${hi}!\n\n` +
-            `Bem-vindo ao mira tortilla club! És o membro #${memberNo}.\n\n` +
-            `Prensamos as tortillas em lotes pequenos. Avisamos-te quando o próximo estiver pronto, e também de pop-ups e eventos.\n\n` +
-            `Levantamento na Graça, combinado por email.\n\n` +
-            `— — — — —\n\n` +
-            `Hi${hi}!\n\n` +
-            `Welcome to the mira tortilla club! You're member #${memberNo}.\n\n` +
-            `We press our tortillas in small batches. We'll let you know when the next one is ready, plus pop-ups and events.\n\n` +
-            `Pickup in Graça, arranged by email.\n\n` +
-            `miratortillas.pt\n— mira`);
+          await sendEmail(env, email, "mira tortilla club", `olá${hi}!\n\n— mira`);
         } catch (e) { /* never block a signup */ }
       }
+
       return json({ ok: true, n: memberNo });
     }
 
