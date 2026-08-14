@@ -160,14 +160,26 @@ async function brevoBackup(env, { email, name, phone, lang, clubNo, src }) {
         email,
         updateEnabled: true,
         listIds: [BREVO_CLUB_LIST],
-        attributes: {
-          FIRSTNAME: (name || "").trim().split(/\s+/)[0] || "",
-          FULLNAME: name || "",
-          SMS: phone ? (phone.startsWith("+") ? phone : "+351" + phone.replace(/\D/g, "")) : "",
-          LANG: lang || "en",
-          CLUB_NO: clubNo || "",
-          SOURCE: src || "",
-        },
+        /* NB: this Brevo account is PT-localised — the name fields are NOME /
+           SOBRENOME, not FIRSTNAME / LASTNAME. Brevo silently drops attributes
+           it doesn't recognise, so getting these names wrong loses the data
+           without any error. WHATSAPP is filled too, since that's how we reach
+           people; both it and SMS want full international format. */
+        attributes: (() => {
+          const parts = (name || "").trim().split(/\s+/).filter(Boolean);
+          const intl = phone
+            ? (phone.startsWith("+") ? phone : "+351" + phone.replace(/\D/g, ""))
+            : "";
+          return {
+            NOME: parts[0] || "",
+            SOBRENOME: parts.slice(1).join(" "),
+            SMS: intl,
+            WHATSAPP: intl,
+            LANG: lang || "en",
+            CLUB_NO: String(clubNo || ""),
+            SOURCE: src || "",
+          };
+        })(),
       }),
     });
     return r.ok;
