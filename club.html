@@ -301,7 +301,8 @@
         if (email && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return showErr("invalid email");
         if (phone && phone.replace(/[^0-9]/g, "").length < 6) return showErr("invalid phone");
         err.style.display = "none";
-        btn.disabled = true; btn.textContent = "joining…";
+        btn.disabled = true;
+        btn.textContent = window.__miraClubLang === "pt" ? "a entrar…" : "joining…";
         fetch("/api/club-join", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
