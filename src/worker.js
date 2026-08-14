@@ -1636,6 +1636,21 @@ export default {
 
     if (url.pathname.startsWith("/api/")) return json({ error: "not found" }, 404);
 
+    /* Owner-only pages are served to nobody else — not even a "sign in first" notice.
+       The old client-side gate still shipped the whole dashboard, which listed every
+       /api/admin/* route and told a stranger the login is a 6-digit code. The data was
+       never reachable (those endpoints check isAdmin server-side), but there is no
+       reason to hand out the map. Non-admins get the ordinary 404, byte for byte, so
+       the page's existence isn't confirmed either. */
+    const OWNER_PAGES = ["/admin", "/admin.html", "/inventory", "/inventory.html", "/lab", "/lab.html"];
+    if (OWNER_PAGES.includes(url.pathname) && !(await isAdmin(env, request))) {
+      const nf = await env.ASSETS.fetch(new Request(new URL("/404.html", url), { method: "GET" }));
+      return new Response(nf.body, {
+        status: 404,
+        headers: { "Content-Type": "text/html; charset=utf-8", "X-Robots-Tag": "noindex" },
+      });
+    }
+
     /* run_worker_first is on (for the canonical-host 301s) — everything else is a static asset.
        Add baseline security headers; deny framing on the owner-only pages (clickjacking). */
     const assetRes = await env.ASSETS.fetch(request);
