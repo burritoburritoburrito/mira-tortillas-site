@@ -112,6 +112,13 @@
     .done .lbl { font-family: var(--font-mono); font-size: .72rem; letter-spacing: .14em; text-transform: uppercase; opacity: .65; }
     .done h2 { font-family: "Archivo Black", var(--font-display); font-size: 1.6rem; text-transform: lowercase; margin-bottom: .2rem; }
     .done p { font-size: .9rem; line-height: 1.45; margin-top: .7rem; }
+    /* NB: must be `.done .hello` — a bare `.hello` loses to `.done p` on specificity. */
+    .done .hello {
+      font-family: "Archivo Black", var(--font-display); font-size: 1.15rem;
+      text-transform: lowercase; margin-top: .8rem; margin-bottom: -.35rem;
+    }
+    /* their name keeps its capital — it's the one word here that isn't brand copy */
+    .done .hello b { font-weight: inherit; text-transform: none; }
     .done .pt { font-size: .76rem; opacity: .6; font-family: var(--font-mono); margin-top: .5rem; }
     .site-link { display: inline-block; margin-top: 1.1rem; font-family: var(--font-mono); font-size: .8rem; color: var(--ink); }
     .signin-line {
@@ -163,12 +170,14 @@
     <!-- already signed in: recognise them instead of asking them to join again -->
     <div class="done" id="memberView">
       <p class="club-kicker">mira tortilla club</p>
+      <p class="hello" id="doneHello" hidden></p>
       <p data-t="touch">we'll email you before the next batch. that's the only time you'll hear from us.</p>
       <a class="site-link" href="/account">your account &amp; points →</a>
     </div>
 
     <div class="done" id="doneView">
       <p class="club-kicker">mira tortilla club</p>
+      <p class="hello" id="joinHello" hidden></p>
       <p data-t="touch">we'll email you before the next batch. that's the only time you'll hear from us.</p>
       <a class="site-link" href="https://instagram.com/miratortillas" target="_blank" rel="noopener" data-t="follow">follow @miratortillas →</a>
     </div>
@@ -185,7 +194,7 @@
           hint: "no spam, just tortillas", join: "join",
           legal: "we'll only write to you about tortillas", privacy: "privacy", follow: "follow @miratortillas →",
           already: "already a member?", signin: "sign in",
-          touch: "before the next batch we'll message you to see what you'd like.",
+          touch: "we'll email you before the next batch. that's the only time you'll hear from us.",
           back: "que bom ver-te outra vez.", other: "PT",
         },
         pt: {
@@ -194,7 +203,7 @@
           hint: "sem spam, só tortillas", join: "entrar",
           legal: "só falamos contigo sobre tortillas", privacidade: "privacidade", privacy: "privacidade", follow: "segue @miratortillas →",
           already: "já és membro?", signin: "entrar",
-          touch: "antes do próximo lote falamos contigo para saber o que queres.",
+          touch: "escrevemos-te antes do próximo lote. é a única altura em que te escrevemos.",
           back: "que bom ver-te outra vez.", other: "EN",
         },
       };
@@ -220,13 +229,32 @@
       apply();
     })();
     (function () {
+      /* First name, normalised: "ANA" and "ana" both come back "Ana", so we never
+         shout their name back at them. Escaped because it goes in via innerHTML. */
+      function firstName(n) {
+        var f = (n || "").trim().split(/\s+/)[0] || "";
+        return f ? f.charAt(0).toUpperCase() + f.slice(1).toLowerCase() : "";
+      }
+      function greet(el, greeting, name) {
+        var f = firstName(name);
+        if (!f) return;
+        el.innerHTML = greeting + "<b>" +
+          f.replace(/[&<>"]/g, function (c) {
+            return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c];
+          }) + "</b>";
+        el.hidden = false;
+      }
+
       /* ONBOARDING STATE 1: already signed in → recognise them, don't ask again */
       fetch("/api/me", { credentials: "same-origin" })
         .then(function (r) { return r.json(); })
         .then(function (me) {
           if (!me || !me.loggedIn || !me.customer || !me.customer.clubNo) return;
+          greet(document.getElementById("doneHello"),
+            window.__miraClubLang === "pt" ? "olá outra vez, " : "hey again, ",
+            me.customer.name);
           document.getElementById("joinView").style.display = "none";
-            document.getElementById("memberView").classList.add("on");
+          document.getElementById("memberView").classList.add("on");
         })
         .catch(function () { /* not signed in — join form stays */ });
 
@@ -274,12 +302,15 @@
           .then(function (x) {
             if (!x.r.ok || !x.d.ok) throw new Error(x.d.error || "");
             document.getElementById("joinView").style.display = "none";
-                var dv = document.getElementById("doneView");
-            /* STATE 2: returning member → welcome back, don't pretend it's new */
-            if (x.d.again) {
-                            dv.querySelector("p:not(.lbl)").textContent =
-                "good to see you again. we'll be in touch when the next batch is ready.";
-            }
+            var dv = document.getElementById("doneView");
+            /* STATE 2: returning member → greet them back, don't pretend it's new.
+               The difference lives in this one line; the body copy stays the same. */
+            var pt = window.__miraClubLang === "pt";
+            greet(document.getElementById("joinHello"),
+              x.d.again
+                ? (pt ? "bom ver-te outra vez, " : "good to see you again, ")
+                : (pt ? "até breve, " : "see you soon, "),
+              name);
             dv.classList.add("on");
             if (!x.d.again) confetti(); /* confetti is for actually joining */
           })
