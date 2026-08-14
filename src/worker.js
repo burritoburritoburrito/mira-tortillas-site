@@ -1316,8 +1316,10 @@ export default {
       const note = String(body.note || "").trim().slice(0, 500);
       if (name.length < 2) return json({ error: lang === "pt" ? "falta o nome" : "name required" }, 400);
       if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return json({ error: lang === "pt" ? "email inválido" : "valid email required" }, 400);
-      /* phone is optional (email is the required contact) — but if given, it must be real */
-      if (phone && phone.replace(/[^0-9]/g, "").length < 6) return json({ error: lang === "pt" ? "telemóvel inválido" : "invalid phone" }, 400);
+      /* an order needs a number: we have to reach them on the day for pickup/delivery.
+         (joining the club needs only an email — the number is asked for here instead.) */
+      if (phone.replace(/[^0-9]/g, "").length < 6)
+        return json({ error: lang === "pt" ? "precisamos do teu telemóvel para combinar a entrega" : "we need your phone to arrange pickup" }, 400);
 
       let total = 0;
       const lines = [];
@@ -1524,6 +1526,66 @@ export default {
       return json({ ok: true, closed: res.meta.changes });
     }
 
+
+    /* ── DRAFT A CLUB MESSAGE (Workers AI) ──────────────────────────
+       Returns text only. It can NEVER send: sending is a separate call the
+       owner triggers, with its own confirm. Knows how many members there are,
+       what was said last and when, so drafts don't repeat themselves. */
+    if (url.pathname === "/api/admin/draft" && request.method === "POST") {
+      if (!(await isAdmin(env, request))) return json({ error: "not admin" }, 403);
+      let body = {};
+      try { body = await request.json(); } catch {}
+      const about = String(body.about || "").trim().slice(0, 400);
+
+      const members = (await env.DB.prepare(
+        `SELECT COUNT(*) n FROM customers WHERE club_no IS NOT NULL`).first())?.n || 0;
+      let last = null;
+      try {
+        last = await env.DB.prepare(
+          `SELECT subject, message, sent_at FROM announcements WHERE test = 0 ORDER BY id DESC LIMIT 1`).first();
+      } catch {}
+
+      const context = [
+        `The club has ${members} member${members === 1 ? "" : "s"}.`,
+        last
+          ? `The last message was sent on ${String(last.sent_at).slice(0, 10)}, subject "${last.subject}". It said: ${String(last.message).slice(0, 400)}`
+          : `No message has ever been sent to the club before, so this is the first one.`,
+        about ? `What we want to say this time: ${about}` : `We are getting ready to make a batch and want to ask members what they'd like.`,
+      ].join("\n");
+
+      const system = [
+        "You write short messages for mira tortillas, a two-person tortilla maker in Lisbon.",
+        "Voice: plain, warm, honest, never salesy, never corporate. Lowercase feel. Short sentences.",
+        "Hard rules: do NOT use em dashes. Do NOT say 'ping'. Do NOT promise dates or stock you can't guarantee.",
+        "Do NOT use Portuguese words if writing English. No emoji unless it genuinely helps.",
+        "They press tortillas in small batches, they do not bake them. Pickup is in Graça, Lisbon.",
+        "Never invent prices, dates or quantities that were not given to you.",
+        "Reply with a subject line on the first line prefixed 'Subject: ', then a blank line, then the message body. Keep the body under 80 words.",
+      ].join(" ");
+
+      try {
+        const out = await env.AI.run("@cf/meta/llama-3.1-8b-instruct", {
+          messages: [
+            { role: "system", content: system },
+            { role: "user", content: context },
+          ],
+          max_tokens: 320,
+        });
+        const text = String((out && (out.response || out.result || "")) || "").trim();
+        if (!text) return json({ error: "the model returned nothing, try again" }, 502);
+        const m = text.match(/^\s*subject:\s*(.+?)\s*\n+([\s\S]+)$/i);
+        return json({
+          ok: true,
+          subject: m ? m[1].trim() : "",
+          message: m ? m[2].trim() : text,
+          members,
+          lastSentAt: last ? last.sent_at : null,
+        });
+      } catch (e) {
+        return json({ error: "draft failed: " + (e.message || "AI unavailable") }, 502);
+      }
+    }
+
     /* ── ANNOUNCE A BATCH ───────────────────────────────────────────
        Write once, send to every club member. test:true sends only to the owner
        so a typo can't reach 200 people. */
@@ -1549,6 +1611,11 @@ export default {
           `olá${hi}!\n\n${message}\n\n— mira\nmiratortillas.pt/club`);
         ok ? sent++ : failed++;
       }
+      try {
+        await env.DB.prepare(
+          `INSERT INTO announcements (subject, message, recipients, test) VALUES (?1,?2,?3,?4)`
+        ).bind(subject, message, sent, test ? 1 : 0).run();
+      } catch (e) { /* logging must never fail a send */ }
       return json({ ok: true, sent, failed, test, recipients: members.length });
     }
 

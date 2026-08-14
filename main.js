@@ -29,6 +29,7 @@
       nav_order: "order",
       nav_join: "join",
       hero_blurb: "Flour tortillas. Four ingredients, pressed &amp; par-cooked in small batches in Lisboa.<br>You give them the final toast at home",
+      hero_big: "flour<br>tortillas",
       hero_cta: "pick your size",
       nav_sub: "subscribe",
       sub_kicker: "02 — subscriptions",
@@ -68,7 +69,7 @@
       m_name: "medium", m_desc: "21–23&nbsp;cm · wraps &amp; quesadillas", m_btn: "reserve",
       l_name: "large", l_desc: "30&nbsp;cm · burritos", l_btn: "reserve",
       marquee: "flour <i>·</i> water <i>·</i> avocado oil <i>·</i> salt <i>·</i>&nbsp;",
-      pay_note: "not selling online yet · join the club and we'll be in touch",
+      pay_note: "join the club and we'll let you know when there's tortillas",
       foot_kicker: "hungry? / fome?",
       foot_cta: "order<br>tortillas",
       foot_made: "made in lisboa 🇵🇹",
@@ -101,6 +102,7 @@
       nav_order: "encomendar",
       nav_join: "entrar",
       hero_blurb: "Tortillas de trigo. Quatro ingredientes, prensadas e meio cozidas em pequenos lotes em Lisboa.<br>A tostadela final é contigo, em casa",
+      hero_big: "tortillas<br>de trigo",
       hero_cta: "escolhe o tamanho",
       nav_sub: "assinar",
       sub_kicker: "02 — assinaturas",
@@ -140,7 +142,7 @@
       m_name: "médias", m_desc: "21–23&nbsp;cm · wraps e quesadillas", m_btn: "reservar",
       l_name: "grandes", l_desc: "30&nbsp;cm · burritos", l_btn: "reservar",
       marquee: "farinha <i>·</i> água <i>·</i> óleo de abacate <i>·</i> sal <i>·</i>&nbsp;",
-      pay_note: "ainda não vendemos online · entra no clube e falamos contigo",
+      pay_note: "entra no clube e avisamos-te quando houver tortillas",
       foot_kicker: "fome? / hungry?",
       foot_cta: "encomenda<br>tortillas",
       foot_made: "feitas em lisboa 🇵🇹",
@@ -396,7 +398,7 @@
           '<input id="ordHp" name="hp_field" autocomplete="off" tabindex="-1" aria-hidden="true" style="position:absolute;left:-9999px;top:-9999px;width:1px;height:1px;opacity:0;pointer-events:none">' +
           '<input id="ordName" name="name" autocomplete="name" placeholder="' + t("nome", "name") + '" style="' + inputCss + '">' +
           '<input id="ordEmail" name="email" type="email" autocomplete="email" placeholder="email" style="' + inputCss + '">' +
-          '<input id="ordPhone" name="phone" type="tel" autocomplete="tel" placeholder="' + t("telemóvel (opcional)", "phone (optional)") + '" style="' + inputCss + '">' +
+          '<input id="ordPhone" name="phone" type="tel" autocomplete="tel" placeholder="' + t("telemóvel", "phone") + '" style="' + inputCss + '">' +
           '<div id="ordFul" style="display:grid;grid-template-columns:1fr 1fr;gap:.5rem">' +
             '<button type="button" data-ful="pickup" class="fulBtn is-on" style="' + fulCss + '">' + t("levantar", "pickup") + '</button>' +
             '<button type="button" data-ful="delivery" class="fulBtn" style="' + fulCss + '">' + t("entrega", "delivery") + '</button>' +
@@ -439,7 +441,7 @@
       const hp = wrap.querySelector("#ordHp").value; /* honeypot — empty for real users */
       if (name.length < 2) return showErr(t("escreve o teu nome", "please add your name"));
       if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return showErr(t("escreve um email válido", "please add a valid email"));
-      if (phone && phone.replace(/[^0-9]/g, "").length < 6) return showErr(t("telemóvel inválido", "invalid phone number"));
+      if (phone.replace(/[^0-9]/g, "").length < 6) return showErr(t("precisamos do teu telemóvel para combinar a entrega", "we need your phone to arrange pickup"));
       if (fulfilment === "delivery" && address.length < 6) return showErr(t("escreve a morada de entrega", "add your delivery address"));
       errEl.style.display = "none";
       sendBtn.disabled = true;
@@ -672,8 +674,6 @@
         }
       });
       document.querySelectorAll("[data-quick]").forEach((b) => {
-      b.addEventListener("click", (e) => { e.preventDefault(); e.stopImmediatePropagation();
-        location.href = "/club?want=" + b.dataset.quick; }, true);
         if (window.__miraBlocked.has(b.dataset.quick)) b.classList.add("btn--dead");
       });
       const qa = document.querySelector("[data-quick-all]");

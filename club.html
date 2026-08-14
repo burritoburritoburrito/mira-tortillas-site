@@ -163,14 +163,12 @@
     <!-- already signed in: recognise them instead of asking them to join again -->
     <div class="done" id="memberView">
       <p class="club-kicker">mira tortilla club</p>
-      <h2 data-t="youin">obrigado! 🌯</h2>
       <p data-t="touch">we'll be in touch when the next batch is ready.</p>
       <a class="site-link" href="/account">your account &amp; points →</a>
     </div>
 
     <div class="done" id="doneView">
       <p class="club-kicker">mira tortilla club</p>
-      <h2 data-t="youin">obrigado! 🌯</h2>
       <p data-t="touch">we'll be in touch when the next batch is ready.</p>
       <a class="site-link" href="/">miratortillas.pt →</a>
     </div>
@@ -187,7 +185,7 @@
           hint: "no spam, just tortillas", join: "join",
           legal: "we'll only write to you about tortillas", privacy: "privacy",
           already: "already a member?", signin: "sign in",
-          youin: "obrigado! 🌯", touch: "before the next batch we'll message you to see what you'd like.",
+          touch: "before the next batch we'll message you to see what you'd like.",
           back: "que bom ver-te outra vez.", other: "PT",
         },
         pt: {
@@ -196,7 +194,7 @@
           hint: "sem spam, só tortillas", join: "entrar",
           legal: "só falamos contigo sobre tortillas", privacy: "privacidade",
           already: "já és membro?", signin: "entrar",
-          youin: "obrigado! 🌯", touch: "antes do próximo lote falamos contigo para saber o que queres.",
+          touch: "antes do próximo lote falamos contigo para saber o que queres.",
           back: "que bom ver-te outra vez.", other: "EN",
         },
       };
@@ -279,8 +277,7 @@
                 var dv = document.getElementById("doneView");
             /* STATE 2: returning member → welcome back, don't pretend it's new */
             if (x.d.again) {
-              dv.querySelector("h2").textContent = "obrigado! 🌯";
-              dv.querySelector("p:not(.lbl)").textContent =
+                            dv.querySelector("p:not(.lbl)").textContent =
                 "good to see you again. we'll be in touch when the next batch is ready.";
             }
             dv.classList.add("on");

@@ -424,7 +424,7 @@ a { color: inherit; text-decoration: none; }
 @media (max-width: 900px) { .sizes__grid { grid-template-columns: 1fr; max-width: 540px; } }
 .sizes__pay {
   margin-top: clamp(1.5rem, 3vw, 2.5rem);
-  font-size: .75rem; letter-spacing: .08em; text-transform: uppercase;
+  font-size: .75rem; letter-spacing: .08em; text-transform: none;
   opacity: .65;
 }
 .sizes__ship {
@@ -519,15 +519,15 @@ a { color: inherit; text-decoration: none; }
 }
 
 /* ───────── hero quick-order chips ───────── */
-.hero__quick { display: flex; gap: .5rem; margin-top: .9rem; }
-.hero__quick button {
+.hero__quick { display: flex; gap: .5rem; margin-top: .9rem; flex-wrap: wrap; justify-content: center; }
+.hero__quick button, .hero__quick a {
   font-family: var(--font-mono); font-size: .78rem;
   border: 2px solid var(--ink); border-radius: 999px;
   background: transparent; color: var(--ink);
   padding: .45rem .95rem; cursor: pointer;
   transition: background .2s, color .2s, transform .2s;
 }
-.hero__quick button:hover { background: var(--ink); color: var(--cream); transform: translateY(-2px); }
+.hero__quick button:hover, .hero__quick a:hover { background: var(--ink); color: var(--cream); transform: translateY(-2px); }
 
 /* ───────── subscription picker ───────── */
 .subpick { max-width: 720px; }
@@ -1000,3 +1000,14 @@ html:not(.lenis) { overflow-y: auto; height: auto; }
   .nav__cta { padding: .7rem 1rem; }
   .nav__acct, .nav__lang { width: 2.5rem; height: 2.5rem; }
 }
+
+/* size cards are whole-card links while we're not selling online */
+/* NB: no `color` here — it would outrank .card--oxblood/.card--green and
+   turn their text the same shade as their own background (invisible). */
+a.card { display: block; text-decoration: none; cursor: pointer; }
+a.card:hover { transform: translateY(-3px); }
+.card__go {
+  display: block; text-align: right; font-size: 1.5rem; line-height: 1;
+  opacity: .45; transition: transform .18s, opacity .18s;
+}
+a.card:hover .card__go { transform: translateX(5px); opacity: .9; }

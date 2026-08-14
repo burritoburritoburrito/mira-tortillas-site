@@ -94,7 +94,12 @@
             <h2>tell the club <small style="font-family:var(--font-mono);font-weight:400;font-size:.68rem;text-transform:uppercase;letter-spacing:.1em;opacity:.55">email every member</small></h2>
             <input id="annSubject" placeholder="subject" style="width:100%;margin-bottom:.5rem;font-family:var(--font-mono);font-size:.85rem;padding:.6rem .7rem;border:2px solid var(--ink);border-radius:10px;background:#fff;box-sizing:border-box">
             <textarea id="annBody" rows="5" placeholder="olá friends! we're prepping a batch of tortillas this week and taking pre-orders so we know how many to make. if you'd like some, order here: miratortillas.pt" style="width:100%;font-family:var(--font-mono);font-size:.85rem;padding:.6rem .7rem;border:2px solid var(--ink);border-radius:10px;background:#fff;box-sizing:border-box;resize:vertical"></textarea>
-            <div style="display:flex;gap:.5rem;margin-top:.6rem;flex-wrap:wrap">
+            <div style="display:flex;gap:.5rem;margin-top:.6rem;flex-wrap:wrap;align-items:center">
+              <input id="annAbout" placeholder="what's it about? (optional) e.g. batch this saturday, taking pre-orders" style="flex:1;min-width:200px;font-family:var(--font-mono);font-size:.8rem;padding:.55rem .7rem;border:2px solid var(--cream-dim);border-radius:10px;background:#fff;box-sizing:border-box">
+              <button class="save ghost" id="annDraft">draft it for me</button>
+            </div>
+            <p class="small" id="annDraftMsg" style="min-height:1.1em"></p>
+            <div style="display:flex;gap:.5rem;margin-top:.4rem;flex-wrap:wrap">
               <button class="btn" id="annTest" style="flex:1">send test to me</button>
               <button class="btn btn--ink" id="annSend" style="flex:1">send to all members</button>
             </div>
@@ -111,10 +116,12 @@
         </div>
         <div class="adm__col">
           <div class="box" id="custBox">
-            <h2>customers <small style="font-family:var(--font-mono);font-weight:400;font-size:.68rem;text-transform:uppercase;letter-spacing:.1em;opacity:.55">the book</small></h2>
+            <h2>the club <small style="font-family:var(--font-mono);font-weight:400;font-size:.68rem;text-transform:uppercase;letter-spacing:.1em;opacity:.55">who signed up</small></h2>
             <div id="custRows"><p class="mono" style="font-size:.8rem;opacity:.6">loading…</p></div>
             <div class="row" style="margin-top:.6rem">
               <span class="small" id="custSummary" style="margin:0"></span>
+              <button class="save ghost" id="custEmails" style="margin-right:.4rem">copy emails</button>
+              <button class="save ghost" id="custPhones" style="margin-right:.4rem">copy numbers</button>
               <button class="save ghost" id="custCsv">export CSV</button>
             </div>
           </div>
@@ -201,6 +208,7 @@
       loadSubs();
       loadBatch();
       document.getElementById("pc_create").onclick = createPromo;
+      document.getElementById("annDraft").onclick = draftMessage;
       document.getElementById("annTest").onclick = () => announce(true);
       document.getElementById("annSend").onclick = () => announce(false);
     };
@@ -244,6 +252,25 @@
       } catch (e) {
         el.innerHTML = `<p class="mono" style="font-size:.8rem;opacity:.6">couldn't load</p>`;
       }
+    }
+
+    /* AI writes a draft into the boxes. It cannot send: that's a separate button. */
+    async function draftMessage() {
+      const btn = document.getElementById("annDraft");
+      const msg = document.getElementById("annDraftMsg");
+      btn.disabled = true; btn.textContent = "writing…"; msg.textContent = "";
+      try {
+        const r = await fetch("/api/admin/draft", {
+          method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ about: document.getElementById("annAbout").value.trim() }),
+        });
+        const d = await r.json();
+        if (d.error) { msg.textContent = d.error; return; }
+        if (d.subject) document.getElementById("annSubject").value = d.subject;
+        document.getElementById("annBody").value = d.message;
+        msg.textContent = `draft ready — read it, change anything, then send. ${d.lastSentAt ? "last message went out " + String(d.lastSentAt).slice(0,10) : "nothing sent to the club before"}`;
+      } catch (e) { msg.textContent = "couldn't reach the writer"; }
+      finally { btn.disabled = false; btn.textContent = "draft it for me"; }
     }
 
     async function announce(test) {
@@ -347,19 +374,51 @@
         if (d.error) { holder.innerHTML = `<p class="small">${d.error}</p>`; return; }
         CUSTOMERS = d.customers;
         const eur = (c) => "€" + (c / 100).toFixed(2).replace(".00", "");
-        holder.innerHTML = d.customers.length ? d.customers.slice(0, 40).map((c) => `
-          <div class="row" style="font-size:.82rem;gap:.6rem">
-            <span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${h(c.name || c.email)}${c.company ? " · " + h(c.company) : ""}${c.city ? ` <span class="mono" style="opacity:.5;font-size:.72rem">${h(c.city)}</span>` : ""}</span>
-            ${c.wholesale ? '<span class="kpi__chip kpi__chip--flat">B2B</span>' : ""}
-            ${c.marketing_ok ? '<span class="kpi__chip kpi__chip--up">📧</span>' : ""}
-            <span class="mono" style="opacity:.6;font-size:.75rem">${c.orders}×</span>
-            <span class="mono" style="font-weight:700;min-width:3.4rem;text-align:right">${eur(c.cents)}</span>
-          </div>`).join("") : `<p class="small">no customers yet — every signup and order lands here.</p>`;
-        const news = d.customers.filter((c) => c.marketing_ok).length;
-        document.getElementById("custSummary").textContent = `${d.customers.length} customers · ${news} on the mailing list${d.customers.length > 40 ? " · showing latest 40 (CSV has all)" : ""}`;
+        /* club first: who joined, how to reach them. spend is secondary until orders exist. */
+        const club = d.customers.filter((c) => c.club_no).sort((a, b) => b.club_no - a.club_no);
+        const rest = d.customers.filter((c) => !c.club_no);
+        const day = (t) => { try { return new Date(String(t).replace(" ","T")+"Z").toLocaleDateString("en-GB",{timeZone:"Europe/Lisbon",day:"2-digit",month:"short"}); } catch(e){ return (t||"").slice(5,10); } };
+        const line = (c) => `
+          <div class="row" style="font-size:.82rem;gap:.6rem;align-items:flex-start;border-top:1px solid var(--cream-dim)">
+            <span class="mono" style="opacity:.45;min-width:2.2rem">#${c.club_no || "—"}</span>
+            <span style="flex:1;min-width:0">
+              <strong>${h(c.name || "—")}</strong>
+              ${c.wholesale ? '<span class="kpi__chip kpi__chip--flat">B2B</span>' : ""}<br>
+              <span class="mono" style="font-size:.72rem;opacity:.7">${h(c.email || "")}</span>
+              ${c.phone ? `<br><span class="mono" style="font-size:.72rem;opacity:.7">${h(c.phone)}</span>` : ""}
+            </span>
+            <span class="mono" style="font-size:.7rem;opacity:.5;white-space:nowrap">${day(c.club_joined_at || c.created_at)}</span>
+            ${c.orders ? `<span class="mono" style="font-weight:700;min-width:3.2rem;text-align:right">${eur(c.cents)}</span>` : ""}
+          </div>`;
+        holder.innerHTML = club.length
+          ? club.slice(0, 60).map(line).join("") +
+            (rest.length ? `<p class="small" style="margin-top:.8rem">+ ${rest.length} customer${rest.length>1?"s":""} not in the club</p>` : "")
+          : `<p class="small">nobody has joined yet. every scan of the club QR lands here.</p>`;
+        const withPhone = club.filter((c) => c.phone).length;
+        document.getElementById("custSummary").textContent =
+          `${club.length} club member${club.length===1?"":"s"} · ${withPhone} gave a phone${club.length > 60 ? " · showing latest 60 (CSV has all)" : ""}`;
+        /* the actual next step: paste these into a WhatsApp broadcast or an email BCC */
+        window.__clubEmails = club.map((c) => c.email).filter(Boolean).join(", ");
+        window.__clubPhones = club.map((c) => c.phone).filter(Boolean).join(", ");
       } catch (e) { holder.innerHTML = `<p class="small">customers failed to load</p>`; }
     }
     document.addEventListener("click", (ev) => {
+      const copyOut = (text, btn, empty) => {
+        if (!text) { btn.textContent = empty; setTimeout(() => { btn.textContent = btn.dataset.label; }, 1600); return; }
+        const done = () => { btn.textContent = "copied ✓"; setTimeout(() => { btn.textContent = btn.dataset.label; }, 1600); };
+        (navigator.clipboard ? navigator.clipboard.writeText(text).then(done, done) : (function () {
+          const ta = document.createElement("textarea"); ta.value = text; document.body.appendChild(ta);
+          ta.select(); try { document.execCommand("copy"); } catch (e) {} ta.remove(); done();
+        })());
+      };
+      if (ev.target && ev.target.id === "custEmails") {
+        ev.target.dataset.label = "copy emails";
+        copyOut(window.__clubEmails, ev.target, "none yet");
+      }
+      if (ev.target && ev.target.id === "custPhones") {
+        ev.target.dataset.label = "copy numbers";
+        copyOut(window.__clubPhones, ev.target, "none yet");
+      }
       if (ev.target && ev.target.id === "custCsv") {
         const esc = (v) => { let s = String(v == null ? "" : v); if (/^[=+\-@\t\r]/.test(s)) s = "'" + s; /* neutralize spreadsheet formula injection */ return `"${s.replace(/"/g, '""')}"`; };
         const csv = ["club_no,club_joined,email,name,phone,address,postal,city,company,wholesale,newsletter,points,orders,total_eur,joined",
