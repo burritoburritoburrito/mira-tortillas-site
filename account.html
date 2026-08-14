@@ -94,10 +94,8 @@
           <form id="loginForm" style="max-width:340px;margin:0 auto;display:grid;gap:.7rem">
             <input id="loginEmail" type="email" placeholder="email" autocomplete="email" required
               style="font-family:var(--font-mono);font-size:.95rem;padding:.85rem 1rem;border:3px solid var(--ink);border-radius:12px;background:#fff;width:100%">
-            <label style="display:flex;align-items:flex-start;gap:.5rem;font-family:var(--font-mono);font-size:.72rem;line-height:1.5;text-align:left;cursor:pointer">
-              <input type="checkbox" id="loginNews" style="margin-top:.15rem;accent-color:var(--oxblood)">
-              <span>email me about drops &amp; news · quero receber novidades</span>
-            </label>
+            <!-- no marketing opt-in here: signing in is not signing up. The same
+                 checkbox lives in Profile, which is where someone changes it. -->
             <button class="btn btn--green" id="sendCode" type="submit" style="justify-content:center;width:100%">send code · enviar</button>
             <div id="codeRow" style="display:none;gap:.7rem">
               <input id="loginCode" inputmode="numeric" maxlength="6" placeholder="123456" autocomplete="one-time-code"
