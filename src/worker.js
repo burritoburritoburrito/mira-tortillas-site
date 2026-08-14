@@ -182,7 +182,29 @@ async function brevoBackup(env, { email, name, phone, lang, clubNo, src }) {
         })(),
       }),
     });
-    return r.ok;
+    if (r.ok) return true;
+    /* Brevo treats SMS as a UNIQUE identifier: if two members share a number
+       (a couple signing up together, or a typo) it rejects the whole contact —
+       name and email included — with duplicate_parameter. Losing the person
+       entirely is worse than losing their phone, so retry without the number.
+       D1 still has it either way. */
+    const err = await r.json().catch(() => ({}));
+    if (err.code === "duplicate_parameter") {
+      const retry = await fetch("https://api.brevo.com/v3/contacts", {
+        method: "POST",
+        headers: { "api-key": env.BREVO_API_KEY, "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email, updateEnabled: true, listIds: [BREVO_CLUB_LIST],
+          attributes: {
+            NOME: (name || "").trim().split(/\s+/)[0] || "",
+            SOBRENOME: (name || "").trim().split(/\s+/).slice(1).join(" "),
+            LANG: lang || "en", CLUB_NO: String(clubNo || ""), SOURCE: src || "",
+          },
+        }),
+      });
+      return retry.ok;
+    }
+    return false;
   } catch { return false; }
 }
 
