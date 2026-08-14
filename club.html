@@ -44,10 +44,6 @@
     /* wordmark + h1 form one lockup: the script IS the "mira" in "mira tortilla club" */
     .wordmark { height: 46px; display: block; margin: 0 auto .1rem; animation: wob .5s .15s cubic-bezier(.2,1.6,.4,1) both; }
     @keyframes wob { from { opacity: 0; transform: rotate(-5deg) scale(.7); } }
-    .club-kicker {
-      font-family: var(--font-mono); font-size: .72rem; letter-spacing: .16em;
-      text-transform: uppercase; text-align: center; opacity: .65; margin-bottom: 1.1rem;
-    }
     h1 {
       font-family: "Archivo Black", var(--font-display); font-size: clamp(1.7rem, 7vw, 2.2rem);
       line-height: 1.02; text-align: center; text-transform: lowercase; margin-bottom: .25rem;
@@ -115,7 +111,7 @@
     /* NB: must be `.done .hello` — a bare `.hello` loses to `.done p` on specificity. */
     .done .hello {
       font-family: "Archivo Black", var(--font-display); font-size: 1.15rem;
-      text-transform: lowercase; margin-top: .8rem; margin-bottom: -.35rem;
+      text-transform: lowercase; margin-top: 1.35rem; margin-bottom: -.35rem;
     }
     /* their name keeps its capital — it's the one word here that isn't brand copy */
     .done .hello b { font-weight: inherit; text-transform: none; }
@@ -169,18 +165,16 @@
 
     <!-- already signed in: recognise them instead of asking them to join again -->
     <div class="done" id="memberView">
-      <!-- "tortilla club" only: the wordmark above already says mira, and the
-           join screen's <h1> is set the same way. Still reads mira tortilla club. -->
-      <p class="club-kicker">tortilla club</p>
+      <!-- no kicker here on purpose: the wordmark names the club, and the greeting
+           is this screen's headline. On join, "tortilla club" IS the h1 instead. -->
       <p class="hello" id="doneHello" hidden></p>
       <p data-t="touch">we'll email you when there's tortillas.</p>
       <a class="site-link" href="/account">your account &amp; points →</a>
     </div>
 
     <div class="done" id="doneView">
-      <!-- "tortilla club" only: the wordmark above already says mira, and the
-           join screen's <h1> is set the same way. Still reads mira tortilla club. -->
-      <p class="club-kicker">tortilla club</p>
+      <!-- no kicker here on purpose: the wordmark names the club, and the greeting
+           is this screen's headline. On join, "tortilla club" IS the h1 instead. -->
       <p class="hello" id="joinHello" hidden></p>
       <p data-t="touch">we'll email you when there's tortillas.</p>
       <a class="site-link" href="https://instagram.com/miratortillas" target="_blank" rel="noopener" data-t="follow">follow @miratortillas →</a>
