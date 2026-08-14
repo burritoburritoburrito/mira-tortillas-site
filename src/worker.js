@@ -143,6 +143,37 @@ async function stripePost(env, path, params) {
 }
 
 /* transactional email via Brevo (BREVO_API_KEY + MAIL_FROM env) */
+/* Off-site copy of a club signup, written the moment they join.
+   D1 is the source of truth, but it's a single point of failure — this puts the
+   same person in Brevo (list 3, "mira tortilla club") straight away, which is
+   also the list we'll actually mail from. updateEnabled means re-joining just
+   refreshes their details instead of erroring. Never throws: a signup must
+   never fail because a third party is down. */
+const BREVO_CLUB_LIST = 3;
+async function brevoBackup(env, { email, name, phone, lang, clubNo, src }) {
+  if (!env.BREVO_API_KEY || !email) return false;
+  try {
+    const r = await fetch("https://api.brevo.com/v3/contacts", {
+      method: "POST",
+      headers: { "api-key": env.BREVO_API_KEY, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        email,
+        updateEnabled: true,
+        listIds: [BREVO_CLUB_LIST],
+        attributes: {
+          FIRSTNAME: (name || "").trim().split(/\s+/)[0] || "",
+          FULLNAME: name || "",
+          SMS: phone ? (phone.startsWith("+") ? phone : "+351" + phone.replace(/\D/g, "")) : "",
+          LANG: lang || "en",
+          CLUB_NO: clubNo || "",
+          SOURCE: src || "",
+        },
+      }),
+    });
+    return r.ok;
+  } catch { return false; }
+}
+
 async function sendEmail(env, to, subject, text, attachments) {
   if (!env.BREVO_API_KEY) return false;
   const payload = {
@@ -432,7 +463,20 @@ export default {
       }
       if (alert)
         await sendEmail(env, "ola@miratortillas.pt", "⚠️ mira self-check FAILED", alert + "\ncheck: https://dash.cloudflare.com → mira-shop");
-      if (new Date().getUTCDay() === 1) {
+      /* Backup runs DAILY, not just Mondays: a week's worth of signups is too much
+         to lose, and a pop-up can add a whole roster in one afternoon. To avoid
+         becoming noise, it only sends when the data actually changed since the last
+         backup — quiet days stay silent, and Mondays always send as a heartbeat so
+         a long silence still means "the cron is alive". */
+      const sigRow = await env.DB.prepare(
+        `SELECT c AS cust, o AS ord, k AS klub FROM (
+           SELECT (SELECT COUNT(*) FROM customers) c,
+                  (SELECT COUNT(*) FROM orders) o,
+                  (SELECT COUNT(*) FROM club_members) k)`).first();
+      const sig = `${sigRow?.cust || 0}:${sigRow?.ord || 0}:${sigRow?.klub || 0}`;
+      const prevSig = (await env.DB.prepare(`SELECT v FROM settings WHERE k='last_backup_sig'`).first())?.v || "";
+      const isMonday = new Date().getUTCDay() === 1;
+      if (sig !== prevSig || isMonday) {
         const cell = (v) => '"' + String(v ?? "").replace(/"/g, '""') + '"'; /* RFC-4180 CSV escaping */
         const csv = (rows) => rows.length
           ? Object.keys(rows[0]).join(",") + "\n" + rows.map((r) => Object.values(r).map(cell).join(",")).join("\n")
@@ -451,8 +495,9 @@ export default {
         const revenue = ord.reduce((n, o) => n + ((Number(o.amount_total) || 0) - (Number(o.refunded_cents) || 0)), 0);
         /* human summary on top; raw CSV still below AND attached, so it's readable + fully restorable */
         const summary =
-          `automatic Monday backup — your safety net. the CSVs are attached (open in Sheets/Excel); keep this email.\n\n` +
-          `THIS WEEK\n` +
+          `automatic backup — your safety net. the CSVs are attached (open in Sheets/Excel); keep this email.\n` +
+          `every one of these is a complete restore copy, so keeping the latest is enough.\n\n` +
+          `WHERE THINGS STAND\n` +
           `· customers: ${cust.length} total${newThisWeek ? ` (${newThisWeek} new this week)` : ""}\n` +
           `· tortilla club: ${club.length} members${clubNew ? ` (${clubNew} new this week)` : ""}\n` +
           `· on the newsletter: ${newsletter}\n` +
@@ -462,18 +507,23 @@ export default {
           `CUSTOMERS\n${csv(cust)}\n\nORDERS\n${csv(ord)}\n\nCLUB\n${csv(club)}`;
         const stamp = new Date().toISOString().slice(0, 10);
         await sendEmail(env, "ola@miratortillas.pt",
-          `📦 mira weekly backup — ${cust.length} customers · ${ord.length} orders · ${club.length} club`,
+          `📦 mira backup — ${cust.length} customers · ${ord.length} orders · ${club.length} club`,
           summary,
           [
             { content: b64utf8(csv(cust)), name: `mira-customers-${stamp}.csv` },
             { content: b64utf8(csv(ord)), name: `mira-orders-${stamp}.csv` },
             { content: b64utf8(csv(club)), name: `mira-club-${stamp}.csv` },
           ]);
+        await env.DB.prepare(
+          `INSERT INTO settings (k, v) VALUES ('last_backup_sig', ?1)
+           ON CONFLICT(k) DO UPDATE SET v = excluded.v`).bind(sig).run();
       }
     })());
   },
 
-  async fetch(request, env) {
+  /* ctx is needed for waitUntil — background work (the Brevo backup) must outlive
+     the response, otherwise it gets cancelled the moment we reply to the browser. */
+  async fetch(request, env, ctx) {
     const url = new URL(request.url);
 
     /* canonical host: www + .com variants 301 to the apex (workers.dev stays live for testing) */
@@ -1463,6 +1513,10 @@ export default {
           await sendEmail(env, email, "mira tortilla club", `olá${hi}!\n\n— mira`);
         } catch (e) { /* never block a signup */ }
       }
+
+      /* off-site copy immediately — not awaited into the response path so a slow
+         Brevo can't make someone stand at the stall watching a spinner */
+      ctx.waitUntil(brevoBackup(env, { email, name, phone, lang, clubNo: memberNo, src }));
 
       return json({ ok: true, n: memberNo });
     }
