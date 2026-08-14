@@ -171,14 +171,14 @@
     <div class="done" id="memberView">
       <p class="club-kicker">mira tortilla club</p>
       <p class="hello" id="doneHello" hidden></p>
-      <p data-t="touch">we'll email you before the next batch. that's the only time you'll hear from us.</p>
+      <p data-t="touch">we'll email you when there's tortillas.</p>
       <a class="site-link" href="/account">your account &amp; points →</a>
     </div>
 
     <div class="done" id="doneView">
       <p class="club-kicker">mira tortilla club</p>
       <p class="hello" id="joinHello" hidden></p>
-      <p data-t="touch">we'll email you before the next batch. that's the only time you'll hear from us.</p>
+      <p data-t="touch">we'll email you when there's tortillas.</p>
       <a class="site-link" href="https://instagram.com/miratortillas" target="_blank" rel="noopener" data-t="follow">follow @miratortillas →</a>
     </div>
 
@@ -194,7 +194,8 @@
           hint: "no spam, just tortillas", join: "join",
           legal: "we'll only write to you about tortillas", privacy: "privacy", follow: "follow @miratortillas →",
           already: "already a member?", signin: "sign in",
-          touch: "we'll email you before the next batch. that's the only time you'll hear from us.",
+          touch: "we'll email you when there's tortillas.",
+          greet_in: "you're in", greet_again: "you're already in",
           back: "que bom ver-te outra vez.", other: "PT",
         },
         pt: {
@@ -203,7 +204,8 @@
           hint: "sem spam, só tortillas", join: "entrar",
           legal: "só falamos contigo sobre tortillas", privacidade: "privacidade", privacy: "privacidade", follow: "segue @miratortillas →",
           already: "já és membro?", signin: "entrar",
-          touch: "escrevemos-te antes do próximo lote. é a única altura em que te escrevemos.",
+          touch: "escrevemos-te quando houver tortillas.",
+          greet_in: "estás dentro", greet_again: "já estás dentro",
           back: "que bom ver-te outra vez.", other: "EN",
         },
       };
@@ -217,10 +219,29 @@
         document.querySelectorAll("[data-tp]").forEach(function (el) {
           var k = el.getAttribute("data-tp"); if (d[k]) el.placeholder = d[k];
         });
+        /* The greeting is built in JS, so it has no data-t to translate. It carries
+           its key + the name instead, and gets re-rendered here on every toggle. */
+        document.querySelectorAll("[data-greet]").forEach(function (el) {
+          var k = el.getAttribute("data-greet");
+          var n = el.getAttribute("data-name") || "";
+          if (!d[k] || !n) return;
+          el.innerHTML = d[k] + ", <b>" + n.replace(/[&<>"]/g, function (c) {
+            return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c];
+          }) + "</b>";
+        });
         document.getElementById("langBtn").textContent = d.other;
         document.documentElement.lang = lang;
         window.__miraClubLang = lang;
       }
+      /* second IIFE sets the name, then asks for a re-render in the current lang */
+      window.__miraGreet = function (el, key, name) {
+        var f = (name || "").trim().split(/\s+/)[0] || "";
+        if (!f) return;
+        el.setAttribute("data-greet", key);
+        el.setAttribute("data-name", f.charAt(0).toUpperCase() + f.slice(1).toLowerCase());
+        el.hidden = false;
+        apply();
+      };
       document.getElementById("langBtn").addEventListener("click", function () {
         lang = lang === "pt" ? "en" : "pt";
         try { localStorage.setItem("mira-lang", lang); } catch (e) {}
@@ -229,30 +250,14 @@
       apply();
     })();
     (function () {
-      /* First name, normalised: "ANA" and "ana" both come back "Ana", so we never
-         shout their name back at them. Escaped because it goes in via innerHTML. */
-      function firstName(n) {
-        var f = (n || "").trim().split(/\s+/)[0] || "";
-        return f ? f.charAt(0).toUpperCase() + f.slice(1).toLowerCase() : "";
-      }
-      function greet(el, greeting, name) {
-        var f = firstName(name);
-        if (!f) return;
-        el.innerHTML = greeting + "<b>" +
-          f.replace(/[&<>"]/g, function (c) {
-            return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c];
-          }) + "</b>";
-        el.hidden = false;
-      }
+      var greet = window.__miraGreet;
 
       /* ONBOARDING STATE 1: already signed in → recognise them, don't ask again */
       fetch("/api/me", { credentials: "same-origin" })
         .then(function (r) { return r.json(); })
         .then(function (me) {
           if (!me || !me.loggedIn || !me.customer || !me.customer.clubNo) return;
-          greet(document.getElementById("doneHello"),
-            window.__miraClubLang === "pt" ? "olá outra vez, " : "hey again, ",
-            me.customer.name);
+          greet(document.getElementById("doneHello"), "greet_again", me.customer.name);
           document.getElementById("joinView").style.display = "none";
           document.getElementById("memberView").classList.add("on");
         })
@@ -305,12 +310,8 @@
             var dv = document.getElementById("doneView");
             /* STATE 2: returning member → greet them back, don't pretend it's new.
                The difference lives in this one line; the body copy stays the same. */
-            var pt = window.__miraClubLang === "pt";
             greet(document.getElementById("joinHello"),
-              x.d.again
-                ? (pt ? "bom ver-te outra vez, " : "good to see you again, ")
-                : (pt ? "até breve, " : "see you soon, "),
-              name);
+              x.d.again ? "greet_again" : "greet_in", name);
             dv.classList.add("on");
             if (!x.d.again) confetti(); /* confetti is for actually joining */
           })
