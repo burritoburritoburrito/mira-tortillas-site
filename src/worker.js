@@ -208,14 +208,15 @@ async function brevoBackup(env, { email, name, phone, lang, clubNo, src }) {
   } catch { return false; }
 }
 
-async function sendEmail(env, to, subject, text, attachments) {
+async function sendEmail(env, to, subject, text, attachments, html) {
   if (!env.BREVO_API_KEY) return false;
   const payload = {
     sender: { name: "mira tortillas", email: env.MAIL_FROM || "ola@miratortillas.pt" },
     to: [{ email: to }],
     subject,
-    textContent: text,
+    textContent: text, /* always sent too — plain-text fallback + better deliverability */
   };
+  if (html) payload.htmlContent = html;
   if (attachments && attachments.length) payload.attachment = attachments; /* [{content: base64, name}] */
   const res = await fetch("https://api.brevo.com/v3/smtp/email", {
     method: "POST",
@@ -223,6 +224,27 @@ async function sendEmail(env, to, subject, text, attachments) {
     body: JSON.stringify(payload),
   });
   return res.ok;
+}
+
+/* Branded email shell. Tables + inline styles on purpose: email clients strip
+   <style> blocks and don't do flex/grid. Cream card on a soft ground, same as
+   the club page, so an email looks like it came from the same place as the
+   thing they just scanned. */
+function emailShell(innerHtml) {
+  return `<!doctype html><html><body style="margin:0;padding:0;background:#e9e3d6">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#e9e3d6;padding:28px 12px">
+<tr><td align="center">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:440px;background:#f4eee1;border:3px solid #141412;border-radius:18px">
+    <tr><td style="padding:26px 26px 22px;text-align:center;font-family:Helvetica,Arial,sans-serif;color:#141412">
+      <img src="https://miratortillas.pt/assets/mira-wordmark.png" width="112" alt="mira"
+           style="display:block;margin:0 auto 14px;width:112px;height:auto">
+      ${innerHtml}
+    </td></tr>
+  </table>
+  <div style="font-family:Helvetica,Arial,sans-serif;font-size:11px;color:#6b665c;padding-top:14px">
+    mira tortillas · Lisboa · <a href="https://miratortillas.pt" style="color:#6b665c">miratortillas.pt</a>
+  </div>
+</td></tr></table></body></html>`;
 }
 
 /* base64-encode a UTF-8 string (chunked, so accents in names/addresses survive
@@ -974,8 +996,24 @@ export default {
          ON CONFLICT(email) DO UPDATE SET code = excluded.code, attempts = 0,
            ip = excluded.ip, expires_at = excluded.expires_at, created_at = datetime('now')`
       ).bind(email, code, ip).run();
-      const sent = await sendEmail(env, email, "your mira login code",
-        `your login code: ${code}\n\nit's valid for 30 minutes, no rush.\n\no teu código de acesso: ${code} (válido por 30 minutos, sem pressa)\n\n— mira tortillas`);
+      /* ONE language per person. Sending EN and PT stacked in the same mail is the
+         thing that makes it read as machine-generated — we already know their
+         language from signup, so use it (falling back to what the page tells us). */
+      const who = await env.DB.prepare(`SELECT lang FROM customers WHERE email = ?1`).bind(email).first();
+      const isPt = (who?.lang || body.lang) === "pt";
+      const t = isPt
+        ? { subject: "o teu código mira", lead: "o teu código de acesso", note: "válido 30 minutos, sem pressa.",
+            ignore: "não pediste? ignora este email." }
+        : { subject: "your mira login code", lead: "your login code", note: "good for 30 minutes, no rush.",
+            ignore: "didn't ask for this? just ignore it." };
+      const sent = await sendEmail(env, email, t.subject,
+        `${t.lead}: ${code}\n\n${t.note}\n\n— mira tortillas`,
+        null,
+        emailShell(
+          `<p style="margin:0 0 6px;font-size:14px;color:#544f45">${t.lead}</p>
+           <p style="margin:0 0 14px;font-size:38px;font-weight:bold;letter-spacing:.16em;color:#141412;font-family:'Courier New',Courier,monospace">${code}</p>
+           <p style="margin:0 0 4px;font-size:13px;color:#544f45">${t.note}</p>
+           <p style="margin:14px 0 0;font-size:11px;color:#8a8577">${t.ignore}</p>`));
       if (!sent) return json({ error: "couldn't send the email — try again in a minute" }, 502);
       return json({ ok: true });
     }
